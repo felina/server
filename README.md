@@ -2,6 +2,8 @@
 
 This is the server backend for Project Felina, the wildlife image analysis service.
 
+It manages user authentication and image and metadata upload and storage. It also provides a facility for executing native computer vision executables that can access the database. The API responses are JSON and the database is MySQL.
+
 ## Installation
 
 Get Node and npm, then
