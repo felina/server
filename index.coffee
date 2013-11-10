@@ -5,12 +5,19 @@ passport   = require 'passport'
 app = express()
 app.use(express.logger())
 
+stuffDict = {}
+
 passport.use(new Strategy((username, password, done) ->
         console.log username, password, done
     )
 )
 
-app.get('/', (request, response) -> response.send('Hello World!'))
+app.get('/', (request, response) -> response.send('Hello World!\n'))
+
+app.get('/:key/:value', (request, response) -> 
+	stuffDict[request.params.key] = request.params.value
+	response.send((k + " -> " + v + "\n" for k, v of stuffDict).join(""))
+)
 
 app.post('/login', passport.authenticate('local'))
 
