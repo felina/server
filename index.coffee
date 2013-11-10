@@ -14,5 +14,9 @@ app.get('/', (request, response) -> response.send('Hello World!'))
 
 app.post('/login', passport.authenticate('local'))
 
+app.post('/', (request, response) -> 
+	console.log request
+)
+
 port = process.env.PORT or 5000
 app.listen(port, -> console.log("Listening on #{port}"))
