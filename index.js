@@ -8,8 +8,14 @@ fs = require('fs');
 
 // Init express application
 app = express();
-app.use(express.logger());
-app.use(express.bodyParser());
+
+app.configure(function () {
+    app.use(express.static('public'));
+    app.use(express.logger());
+    app.use(express.bodyParser());
+    app.use(passport.initialize());
+    app.use(app.router);
+});
 
 stuffDict = {};
 
@@ -17,7 +23,17 @@ stuffDict = {};
 passport.use(new Strategy(
     function (username, password, done) {
         // TODO: Auth method
-        return console.log(username, password, done);
+        console.log('Hi');
+        return done(null, 'ali');
+        console.log('User: ' + username,
+                    'Pass: ' + password);
+
+        if (username == 'ali' && password == 'pass') {
+            return done(null, 'ali');
+        }
+        else {
+            return done(null, false, { message: 'Bad login.' });
+        }
     }
 ));
 
@@ -54,13 +70,17 @@ app.get('/:key/:value', function(req, res) {
 
 // Login callback - user auth
 app.post('/login',
-    passport.authenticate('local',
-    function (req, res) {
+    passport.authenticate('local', {
+        successRedirect: '/',
+        failureRedirect: '/hello?name=LOLfail'
+    })
+    /*function (req, res) {
         // Called on success
-        //return res.redirect('/user/' + req.user.username);
-        return;
-    }
-));
+        console.log(req);
+        console.log(res);
+        return res.redirect('/user/' + req.user.username);
+    }*/
+);
 
 // Root callback - show req
 app.post('/', function (req, res) {
