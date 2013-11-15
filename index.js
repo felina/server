@@ -94,24 +94,26 @@ app.post('/login', function (req, res) {
     var password = req.get('password');
 
     // DB Async get user
-    var sql = "SELECT * FROM test.users WHERE username='" + conn.escape(username);
+    var sql = "SELECT * FROM test.users WHERE username=" + conn.escape(username);
     conn.query(sql, function (err, rows, fields) {
         console.log('\nUsername: ' + username);
         console.log('Password: ' + password + '\n');
 
-        // Error if username not present
+        // Error catching
         if (err) {
-            res.send('Sorry, username not recognized');
+            console.log(err);
+            res.send('Error in query!');
         }
         // Check password
-        else if (password == rows[0].password) {
-            console.log(username + ' attempting login...');
-            if (password == 'pass') {
+        else {
+            console.log(rows[0]);
+
+            if (rows[0] && password == rows[0].password) {
                 console.log('Password valid');
                 res.redirect('/hello?name=' + username);
             }
             else {
-                res.status(401);
+                res.status(401).send("Invalid login");
             }
         }
     });
