@@ -77,11 +77,16 @@ app.get('/:key/:value', function(req, res) {
 
 // Login callback - user auth
 app.post('/login', function (req, res) {
-    // Check username / password (POST)
-    var username = req.get('username');
-    var password = req.get('password');
+    // Get username / password 
+    // Basic Auth
+    var header = req.headers['authorization'] || '',
+        token = header.split(/\s+/).pop() || '',
+        auth = new Buffer(token, 'base64').toString(),
+        parts = auth.split(/:/),
+        username = parts[0],
+        password = parts[1];
 
-    // DB Async get user
+    // DB asynchronous select user
     var sql = "SELECT * FROM test.users WHERE username=" + conn.escape(username);
     conn.query(sql, function (err, rows, fields) {
         console.log('\nUsername: ' + username);
@@ -90,18 +95,21 @@ app.post('/login', function (req, res) {
         // Error catching
         if (err) {
             console.log(err);
-            res.send('Error in query!');
+            res.send({ 'err': err });
         }
         // Check password
         else {
-            console.log(rows[0]);
-
-            if (rows[0] && password == rows[0].password) {
-                console.log('Password valid');
-                res.send( {'name' : username, 'id' : rows[0].idusers, 'online' : true} );
+            if (rows[0]) {
+                if (password == rows[0].password) {
+                    console.log('Password valid');
+                    res.send({ 'err': null, 'name': username, 'id': rows[0].idusers, 'online': true });
+                }
+                else {
+                    res.status(401).send({ 'err': 'Invalid Password' });
+                }
             }
             else {
-                res.status(401).send("Invalid login");
+                res.status(401).send({ 'err' : 'User not found' });
             }
         }
     });
