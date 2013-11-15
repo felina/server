@@ -9,7 +9,6 @@ It manages user authentication and image and metadata upload and storage. It als
 Get Node and npm, then
 
 ```bash
-npm install -g coffee-script
 git clone https://github.com/felina/server.git
 cd server
 npm install
@@ -18,7 +17,7 @@ npm install
 ## Running
 
 ```bash
-coffee index.coffee
+node index.js
 ```
 
 ## License
