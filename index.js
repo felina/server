@@ -1,8 +1,6 @@
-var Strategy, app, express, fs, passport, mysql, conn, path, port, stuffDict;
+var Strategy, app, express, fs, mysql, conn, path, port, stuffDict;
 
 express = require('express');
-passport = require('passport');
-LocalStrategy = require('passport-local').Strategy;
 path = require('path');
 fs = require('fs');
 mysql = require('mysql');
@@ -12,9 +10,8 @@ app = express();
 
 app.configure(function () {
     app.use(express.static('public'));
-    app.use(express.logger());
-    //app.use(express.bodyParser());
-    //app.use(passport.initialize());
+    //app.use(express.logger());
+    app.use(express.bodyParser());
     app.use(app.router);
 });
 
@@ -24,41 +21,25 @@ stuffDict = {};
 conn = mysql.createConnection({
     host:       'localhost',
     user:       'serv',
-    password:   'pass'
+    password:   'passy'
+});
+
+// TEMP Hello world
+app.get('/', function(req, res) {
+    return res.send('Hello World!\n');
 });
 
 conn.connect(function (err) {
     // Connected, unless 'err' is set
     if (err) {
-        console.log('Unable to connect to MySQL DB');
+        console.log('Unable to connect to MySQL DB:\n' + err);
+        process.exit(1);
     }
     else {
         console.log('Connected to MySQL DB!');
     }
 });
 
-// User login config
-passport.use(new LocalStrategy(
-    function (username, password, done) {
-        // TODO: Auth method
-        console.log('Hi');
-        return done(null, 'ali');
-        console.log('User: ' + username,
-                    'Pass: ' + password);
-
-        if (username == 'ali' && password == 'pass') {
-            return done(null, 'ali');
-        }
-        else {
-            return done(null, false, { message: 'Bad login.' });
-        }
-    }
-));
-
-// TEMP Hello world
-app.get('/', function(req, res) {
-    return res.send('Hello World!\n');
-});
 
 // ...?
 app.get('/:key/:value', function(req, res) {
@@ -118,7 +99,8 @@ app.post('/login', function (req, res) {
 
 // Root callback - show req
 app.post('/', function (req, res) {
-    return console.log(req);
+    console.log(req);
+    return res.send('Ack');
 });
 
 // File request callback
@@ -132,6 +114,22 @@ app.post('/start', function(req, res) {
         console.log('File does not exist');
     }
     return res.send("Some image thing recieved\n");
+});
+
+// Job check
+app.get('/progress', function (req, res) {
+    var jobID = req.get('jobID');
+    console.log('Job progress req: jobID ' + jobID);
+    // TODO: Query job server
+    var progress = 0.74;
+    return res.send({ 'progress': progress });
+});
+
+// Job results
+app.get('/results', function (req, res) {
+    var jobID = req.get('jobID');
+    console.log('Job results req: jobID ' + jobID);
+    // TODO: Query job server
 });
 
 // Start listening
