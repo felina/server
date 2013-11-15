@@ -22,9 +22,9 @@ stuffDict = {};
 
 // Init DB conn
 conn = mysql.createConnection({
-    host: 'localhost',
-    user: 'serv',
-    password: 'pass'
+    host:       'localhost',
+    user:       'serv',
+    password:   'pass'
 });
 
 conn.connect(function (err) {
