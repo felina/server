@@ -60,7 +60,7 @@ app.post('/start', function(req, res) {
     if (req.files) {
         console.log('File exists');
         // console.log(req.files);
-        console.log('Num files: ' + req.files.keys.size)
+        console.log('Num files: ' + Object.keys(req.files).length)
 
     } else {
         console.log('File does not exist');
