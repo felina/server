@@ -12,8 +12,8 @@ app = express();
 app.configure(function () {
     app.use(express.static('public'));
     app.use(express.logger());
-    app.use(express.bodyParser());
-    app.use(passport.initialize());
+    //app.use(express.bodyParser());
+    //app.use(passport.initialize());
     app.use(app.router);
 });
 
@@ -42,11 +42,12 @@ app.get('/', function(req, res) {
     return res.send('Hello World!\n');
 });
 
+// TEMP Hello response
 app.get('/hello', function (req, res) {
     var name = req.param('name');
     if (name) {
         console.log('Received name: ' + name + '\n');
-        return res.send('Your name is ' + name + '.');
+        return res.send({ 'name': name });
     }
     else {
         return res.send('Nothing received');
@@ -70,12 +71,27 @@ app.get('/:key/:value', function(req, res) {
 
 // Login callback - user auth
 app.post('/login',
-    passport.authenticate('local'),
     function (req, res) {
-        // Called on success
-        console.log(req);
-        console.log(res);
-        return res.redirect('/hello?name=' + req.user.username);
+        // Check username / password (POST)
+        var username = req.get('username');
+        var password = req.get('password');
+
+        console.log('\nUsername: ' + username);
+        console.log('Password: ' + password + '\n');
+
+        if (username == 'admin') {
+            console.log(username + ' attempting login...');
+            if (password == 'pass') {
+                console.log('Password valid');
+                return res.redirect('/hello?name=' + username);
+            }
+            else {
+                return res.status(401);
+            }
+        }
+        else {
+            return res.send('Sorry, username not recognized!');
+        }
     }
 );
 
