@@ -2,7 +2,7 @@ var Strategy, app, express, fs, passport, path, port, stuffDict;
 
 express = require('express');
 passport = require('passport');
-Strategy = require('passport-local').Strategy;
+LocalStrategy = require('passport-local').Strategy;
 path = require('path');
 fs = require('fs');
 
@@ -20,7 +20,7 @@ app.configure(function () {
 stuffDict = {};
 
 // User login config
-passport.use(new Strategy(
+passport.use(new LocalStrategy(
     function (username, password, done) {
         // TODO: Auth method
         console.log('Hi');
@@ -70,16 +70,13 @@ app.get('/:key/:value', function(req, res) {
 
 // Login callback - user auth
 app.post('/login',
-    passport.authenticate('local', {
-        successRedirect: '/',
-        failureRedirect: '/hello?name=LOLfail'
-    })
-    /*function (req, res) {
+    passport.authenticate('local'),
+    function (req, res) {
         // Called on success
         console.log(req);
         console.log(res);
-        return res.redirect('/user/' + req.user.username);
-    }*/
+        return res.redirect('/hello?name=' + req.user.username);
+    }
 );
 
 // Root callback - show req
