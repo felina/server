@@ -56,10 +56,12 @@ app.post('/', function (req, res) {
 });
 
 // File request callback
-app.post('/file', function(req, res) {
-    console.log('here1');
+app.post('/start', function(req, res) {
     if (req.files) {
         console.log('File exists');
+        // console.log(req.files);
+        console.log('Num files: ' + req.files.keys.size)
+
     } else {
         console.log('File does not exist');
     }
