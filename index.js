@@ -7,20 +7,27 @@
     path = require('path');
     fs = require('fs');
 
+    // Init express application
     app = express();
     app.use(express.logger());
     app.use(express.bodyParser());
 
     stuffDict = {};
 
-    passport.use(new Strategy(function(username, password, done) {
-        return console.log(username, password, done);
-    }));
+    // User login config
+    passport.use(new Strategy(
+        function (username, password, done) {
+            // TODO: Auth method
+            return console.log(username, password, done);
+        }
+    ));
 
+    // TEMP Hello world
     app.get('/', function(req, res) {
         return res.send('Hello World!\n');
     });
 
+    // ...?
     app.get('/:key/:value', function(req, res) {
         var k, v;
         stuffDict[req.params.key] = req.params.value;
@@ -35,12 +42,21 @@
         })()).join(""));
     });
 
-    app.post('/login', passport.authenticate('local'));
+    // Login callback - user auth
+    app.post('/login',
+        passport.authenticate('local',
+        function (req, res) {
+            // Called on success
+            // e.g: res.redirect('/users/' + req.user.username);
+        }
+    ));
 
-    app.post('/', function(req, res) {
+    // Root callback - show req
+    app.post('/', function (req, res) {
         return console.log(req);
     });
 
+    // File request callback
     app.post('/file', function(req, res) {
         console.log('here1');
         if (req.files) {
@@ -51,6 +67,7 @@
         return res.send("Some image thing recieved\n");
     });
 
+    // Start listening
     port = process.env.PORT || 5000;
 
     app.listen(port, function() {
