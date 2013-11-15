@@ -26,6 +26,17 @@ app.get('/', function(req, res) {
     return res.send('Hello World!\n');
 });
 
+app.get('/hello', function (req, res) {
+    var name = req.param('name');
+    if (name) {
+        console.log('Received name: ' + name + '\n');
+        return res.send('Your name is ' + name + '.');
+    }
+    else {
+        return res.send('Nothing received');
+    }
+});
+
 // ...?
 app.get('/:key/:value', function(req, res) {
     var k, v;
@@ -46,7 +57,8 @@ app.post('/login',
     passport.authenticate('local',
     function (req, res) {
         // Called on success
-        // e.g: res.redirect('/users/' + req.user.username);
+        //return res.redirect('/user/' + req.user.username);
+        return;
     }
 ));
 
