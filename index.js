@@ -60,18 +60,6 @@ app.get('/', function(req, res) {
     return res.send('Hello World!\n');
 });
 
-// TEMP Hello response
-app.get('/hello', function (req, res) {
-    var name = req.param('name');
-    if (name) {
-        console.log('Received name: ' + name + '\n');
-        return res.send({ 'name': name });
-    }
-    else {
-        return res.send('Nothing received');
-    }
-});
-
 // ...?
 app.get('/:key/:value', function(req, res) {
     var k, v;
@@ -110,7 +98,7 @@ app.post('/login', function (req, res) {
 
             if (rows[0] && password == rows[0].password) {
                 console.log('Password valid');
-                res.redirect('/hello?name=' + username);
+                res.send( {'name' : username, 'id' : rows[0].idusers, 'online' : true} );
             }
             else {
                 res.status(401).send("Invalid login");
