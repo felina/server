@@ -88,30 +88,35 @@ app.get('/:key/:value', function(req, res) {
 });
 
 // Login callback - user auth
-app.post('/login',
-    function (req, res) {
-        // Check username / password (POST)
-        var username = req.get('username');
-        var password = req.get('password');
+app.post('/login', function (req, res) {
+    // Check username / password (POST)
+    var username = req.get('username');
+    var password = req.get('password');
 
+    // DB Async get user
+    var sql = "SELECT * FROM test.users WHERE username='" + conn.escape(username);
+    conn.query(sql, function (err, rows, fields) {
         console.log('\nUsername: ' + username);
         console.log('Password: ' + password + '\n');
 
-        if (username == 'admin') {
+        // Error if username not present
+        if (err) {
+            res.send('Sorry, username not recognized');
+        }
+        // Check password
+        else if (password == rows[0].password) {
             console.log(username + ' attempting login...');
             if (password == 'pass') {
                 console.log('Password valid');
-                return res.redirect('/hello?name=' + username);
+                res.redirect('/hello?name=' + username);
             }
             else {
-                return res.status(401);
+                res.status(401);
             }
         }
-        else {
-            return res.send('Sorry, username not recognized!');
-        }
-    }
-);
+    });
+});
+
 
 // Root callback - show req
 app.post('/', function (req, res) {
