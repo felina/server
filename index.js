@@ -1,10 +1,11 @@
-var Strategy, app, express, fs, passport, path, port, stuffDict;
+var Strategy, app, express, fs, passport, mysql, conn, path, port, stuffDict;
 
 express = require('express');
 passport = require('passport');
 LocalStrategy = require('passport-local').Strategy;
 path = require('path');
 fs = require('fs');
+mysql = require('mysql');
 
 // Init express application
 app = express();
@@ -18,6 +19,23 @@ app.configure(function () {
 });
 
 stuffDict = {};
+
+// Init DB conn
+conn = mysql.createConnection({
+    host: 'localhost',
+    user: 'serv',
+    password: 'pass'
+});
+
+conn.connect(function (err) {
+    // Connected, unless 'err' is set
+    if (err) {
+        console.log('Unable to connect to MySQL DB');
+    }
+    else {
+        console.log('Connected to MySQL DB!');
+    }
+});
 
 // User login config
 passport.use(new LocalStrategy(
