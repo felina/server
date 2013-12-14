@@ -7,7 +7,6 @@ mysql = require('mysql');
 _ = require('underscore');
 md5 = require('MD5');
 aws = require('aws-sdk');
-
 // png = require('png-js');
 
 // Init express application
@@ -20,8 +19,10 @@ app.configure(function () {
     app.use(express.bodyParser());
     app.use(app.router);
     aws.config.loadFromPath('./config.json');
-    console.log(aws.config);
+    // console.log(aws.config);
 });
+
+var s3 = new aws.S3();
 
 stuffDict = {};
 
@@ -126,6 +127,15 @@ function fileType(filePath) {
 
 // Image/s upload endpoint
 app.post('/upload/img', function (req, res) {
+
+    s3.listBuckets(function (err, data) {
+        if (err) {
+            console.log(err);
+        } else {
+            console.log(data);
+        }
+    });
+
     var resultObject = {};
     resultObject["status"] = {};
 
