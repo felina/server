@@ -1,4 +1,4 @@
-var Strategy, app, express, fs, mysql, conn, path, port, stuffDict, _, md5;
+var Strategy, app, express, fs, mysql, conn, path, port, stuffDict, _, md5, aws;//, png;
 
 express = require('express');
 path = require('path');
@@ -6,8 +6,12 @@ fs = require('fs');
 mysql = require('mysql');
 _ = require('underscore');
 md5 = require('MD5');
+aws = require('aws-sdk');
+// png = require('png-js');
+
 // Init express application
 app = express();
+
 
 app.configure(function () {
     app.use(express.static('public'));
@@ -107,6 +111,17 @@ app.post('/', function (req, res) {
     return res.send('Ack');
 });
 
+function fileType(filePath) {
+    filetype = ""
+    for (var i = filePath.length; i > 0; i--) {
+        if (filePath[i] === '.') {
+            return filePath.slice(i + 1, filePath.length);
+        }
+    }
+    return null;
+}
+
+// Image/s upload endpoint
 app.post('/upload/img', function (req, res) {
     var resultObject = {};
     resultObject["status"] = {};
@@ -117,15 +132,25 @@ app.post('/upload/img', function (req, res) {
         images.push(idData[imageName]);
     }
     if (images.length > 0) {
-
+        resultObject["data"] = []
         resultObject["status"]["code"] = 0;
         resultObject["status"]["message"] = images.length.toString().concat(" images uploaded successfully");
         var imageIDs = [];
         for (var i = 0; i < images.length; i++) {
-            var image1FilePath = images[i]["path"];
-            console.log(image1FilePath);
-            var fileContents = fs.readFileSync(image1FilePath, 'utf8');
-            imageIDs.push(md5(fileContents));
+            var image = {};
+            var imageFilePath = images[i]["path"];
+            var fileContents = fs.readFileSync(imageFilePath, 'base64'); // Sketchy decoding
+            // var step = fileContents.length / 100;
+            var elementsToHash = "";
+            for (var j = 0; j < fileContents.length; j += fileContents.length / 100) {
+                elementsToHash += fileContents[j];
+            }
+            // console.log(elementsToHash);
+            imageIDs.push(md5(elementsToHash));
+
+            // if element hash not in database then upload to s3
+            uploadImages(images);
+            resultObject["data"].push({"imageData" : fileContents, "imageType" : fileType(imageFilePath)});
         }
         resultObject["ids"] = imageIDs;
     } else {
@@ -134,6 +159,10 @@ app.post('/upload/img', function (req, res) {
     }
     return res.send(resultObject);
 });
+
+function uploadImages(images) {
+    console.log("test");
+};
 
 // Job start req
 app.post('/start', function (req, res) {
