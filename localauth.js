@@ -6,15 +6,6 @@ var userstable = [
     {id: 2, username: 'fred', password: 'birthday', email: 'fred@example.com'}
 ];
 
-function findById(id, fn) {
-    var idx = id - 1;
-    if (users[idx]) {
-        fn(null, users[idx]);
-    } else {
-        fn(new Error('User ' + id + ' does not exist'));
-    }
-}
-
 function findByUsername(username, fn) {
     for (var i = 0, len = userstable.length; i < len; i++) {
         var user = userstable[i];
@@ -35,9 +26,11 @@ passport.use(new LocalStrategy(
     })
 );
 
-function testPass(username, password) {
+var testPass = function testPass(username, password) {
     var passHash = findByUsername(username, bcrypt.hashSync);
     return bcrypt.compareSync(password, passHash);
 }
 
-console.log(testPass("bob", "secret"));
+module.exports.testPass = testPass;
+
+// console.log(testPass("bob", "secret"));

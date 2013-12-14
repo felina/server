@@ -1,10 +1,9 @@
-var Strategy, app, express, fs, passport, path, port, stuffDict;
-
-express = require('express');
-passport = require('passport');
-Strategy = require('passport-local').Strategy;
-path = require('path');
-fs = require('fs');
+var express = require('express');
+var passport = require('passport');
+var Strategy = require('passport-local').Strategy;
+var path = require('path');
+var fs = require('fs');
+var localauth = require('./localauth.js');
 
 // Init express application
 app = express();
@@ -16,8 +15,7 @@ stuffDict = {};
 // User login config
 passport.use(new Strategy(
     function (username, password, done) {
-        // TODO: Auth method
-        return console.log(username, password, done);
+        return localauth.testPass(username, password);
     }
 ));
 
@@ -31,8 +29,7 @@ app.get('/:key/:value', function(req, res) {
     var k, v;
     stuffDict[req.params.key] = req.params.value;
     return res.send(((function() {
-        var _results;
-        _results = [];
+        var _results = [];
         for (k in stuffDict) {
             v = stuffDict[k];
             _results.push(k + " -> " + v + "\n");
@@ -42,7 +39,7 @@ app.get('/:key/:value', function(req, res) {
 });
 
 // Login callback - user auth
-app.post('/login',
+app.get('/login',
     passport.authenticate('local',
     function (req, res) {
         // Called on success
