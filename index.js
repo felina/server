@@ -7,6 +7,7 @@ mysql = require('mysql');
 _ = require('underscore');
 md5 = require('MD5');
 aws = require('aws-sdk');
+
 // png = require('png-js');
 
 // Init express application
@@ -18,6 +19,8 @@ app.configure(function () {
     //app.use(express.logger());
     app.use(express.bodyParser());
     app.use(app.router);
+    aws.config.loadFromPath('./config.json');
+    console.log(aws.config);
 });
 
 stuffDict = {};
