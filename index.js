@@ -1,10 +1,11 @@
-var Strategy, app, express, fs, mysql, conn, path, port, stuffDict;
+var Strategy, app, express, fs, mysql, conn, path, port, stuffDict, _, md5;
 
 express = require('express');
 path = require('path');
 fs = require('fs');
 mysql = require('mysql');
-
+_ = require('underscore');
+md5 = require('MD5');
 // Init express application
 app = express();
 
@@ -17,28 +18,31 @@ app.configure(function () {
 
 stuffDict = {};
 
+// Database stuff
+
 // Init DB conn
-conn = mysql.createConnection({
-    host:       'localhost',
-    user:       'serv',
-    password:   'pass'
-});
+// conn = mysql.createConnection({
+//     host:       'localhost',
+//     user:       'serv',
+//     password:   'pass'
+// });
+
+// conn.connect(function (err) {
+//     // Connected, unless 'err' is set
+//     if (err) {
+//         console.log('Unable to connect to MySQL DB:\n' + err);
+//         process.exit(1);
+//     }
+//     else {
+//         console.log('Connected to MySQL DB!');
+//     }
+// });
 
 // TEMP Hello world
 app.get('/', function(req, res) {
     return res.send('Hello World!\n');
 });
 
-conn.connect(function (err) {
-    // Connected, unless 'err' is set
-    if (err) {
-        console.log('Unable to connect to MySQL DB:\n' + err);
-        process.exit(1);
-    }
-    else {
-        console.log('Connected to MySQL DB!');
-    }
-});
 
 
 // ...?
@@ -103,17 +107,45 @@ app.post('/', function (req, res) {
     return res.send('Ack');
 });
 
+app.post('/upload/img', function (req, res) {
+    var resultObject = {};
+    resultObject["status"] = {};
+
+    var idData = req.files;
+    var images = [];
+    for (var imageName in idData) {
+        images.push(idData[imageName]);
+    }
+    if (images.length > 0) {
+
+        resultObject["status"]["code"] = 0;
+        resultObject["status"]["message"] = images.length.toString().concat(" images uploaded successfully");
+        var imageIDs = [];
+        for (var i = 0; i < images.length; i++) {
+            var image1FilePath = images[i]["path"];
+            console.log(image1FilePath);
+            var fileContents = fs.readFileSync(image1FilePath, 'utf8');
+            imageIDs.push(md5(fileContents));
+        }
+        resultObject["ids"] = imageIDs;
+    } else {
+        resultObject["status"]["code"] = 1;
+        resultObject["status"]["message"] = "No images uploaded";
+    }
+    return res.send(resultObject);
+});
+
 // Job start req
 app.post('/start', function (req, res) {
     // Get the image IDs for processing
-    var idData = req.get('images');
-
-    if (idData) {
-        var imageIDs = idData.split(',');
-        console.log(imageIDs);
-        return res.send('Some image IDs received');
+    var idData = req.files;
+    var images = [];
+    for (var imageName in idData) {
+        images.push(idData[imageName]);
     }
-    else {
+    if (images.length > 0) {
+        return res.send('Some image IDs received');
+    } else {
         return res.send('Need to specify images for job');
     }
 
