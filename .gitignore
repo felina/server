@@ -2,3 +2,4 @@ node_modules
 
 # Private
 db_settings.json
+config.json

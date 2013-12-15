@@ -19,6 +19,10 @@
     "express": "~3.4.4",
     "passport-local": "~0.1.6",
     "passport": "~0.1.17",
-    "mysql": "~2.0.0-alpha9"
+    "mysql": "~2.0.0-rc1",
+    "underscore": "~1.5.2",
+    "MD5": "~1.2.0",
+    "aws-sdk": "~2.0.0-rc3",
+    "bcrypt-nodejs": "~0.0.3"
   }
 }
