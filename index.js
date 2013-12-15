@@ -136,11 +136,12 @@ app.post('/upload/img', function (req, res) {
         images.push(idData[imageName]);
     }
     if (images.length > 0) {
-        resultObject["status"]["code"] = 0;
-        resultObject["status"]["message"] = images.length.toString().concat(" images uploaded successfully");
-        resultObject["ids"] = [];
+        resultObject.status.code = 0;
+        resultObject.status.code = 0;
+        resultObject.status.message = images.length.toString().concat(" images uploaded successfully");
+        resultObject.ids = [];
         for (var i = 0; i < images.length; i++) {
-            var imageFilePath = images[i]["path"];
+            var imageFilePath = images[i].path;
             var fileContents = fs.readFileSync(imageFilePath); // semi sketchy decoding
             var elementsToHash = "";
             for (var j = 0; j < fileContents.length; j += fileContents.length / 100) {
@@ -148,14 +149,14 @@ app.post('/upload/img', function (req, res) {
             }
             // console.log(elementsToHash);
             var imageHash = md5(elementsToHash);
-            resultObject["ids"].push(imageHash);
+            resultObject.ids.push(imageHash);
             // if element hash not in database then upload to s3
             var imageObject = {"imageData" : fileContents, "imageType" : fileType(imageFilePath), "imageHash" : imageHash};
             uploadImage(imageObject);
         }
     } else {
-        resultObject["status"]["code"] = 1;
-        resultObject["status"]["message"] = "No images uploaded";
+        resultObject.status.code = 1;
+        resultObject.status.message = "No images uploaded";
     }
     return res.send(resultObject);
 });
