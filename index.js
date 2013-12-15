@@ -60,7 +60,6 @@ app.post('/register', function(req, res) {
 app.post('/login',
     passport.authenticate('local', { failureRedirect: '/' }),
     function (req, res) {
-		console.log(req);
         // Called on success
         // e.g: res.redirect('/users/' + req.user.username);
 		res.send('You logged in.\n');

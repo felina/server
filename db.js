@@ -57,16 +57,11 @@ function checkUserHash(email, pass, callback) {
 		} else {
 			if (res.length == 0) {
 				callback(null, false, { message: "Not registered." });
-			} else {
-                var details = res[0];
-                if (bcrypt.compareSync(pass, details.hash)) {
-                    console.log(details);
-                    var user = new users.User(details.userid, details.name. details.email, users.privilegeFromString(details.usertype));
-                    console.log("Login OK");
-                    callback(null, user);
-                } else {
-                    callback(null, false, { message: "Incorrect password." });
-                }
+			} else if (bcrypt.compareSync(pass, res[0].hash)) {
+                var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
+                callback(null, user);
+            } else {
+                callback(null, false, { message: "Incorrect password." });
             }
 		}
 	});

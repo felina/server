@@ -6,14 +6,16 @@ var PrivilegeLevel = Object.freeze({
     ADMIN       : { i:3, dbs:"admin" }
 });
 
+var PLs = [PrivilegeLevel.USER, PrivilegeLevel.RESEARCHER, PrivilegeLevel.ADMIN];
+
 function privilegeFromString(dbs) {
-    for (var level in PrivilegeLevel) {
-        if (dbs === level.dbs) {
-            return level.i;
+    var res = false;
+    PLs.forEach(function (lvl) {
+        if (dbs === lvl.dbs) {
+            res = lvl.i;
         }
-    }
-    
-    return false;
+    });
+    return res;
 }
 
 function User (id, name, email, privilege) {
