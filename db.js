@@ -1,6 +1,6 @@
 var mysql = require('mysql');
 var dbCFG = require('./dbSettings.json');
-
+var bcrypt = require('bcrypt-nodejs');
 var conn = mysql.createConnection(dbCFG);
 
 function init() {
@@ -13,6 +13,8 @@ function init() {
 		}
 		});
 }
+
+init();
 
 // Adds a new user to users/local auth. TODO: Use a user object.
 function addNewUser(email, privilege, auth) {
@@ -45,22 +47,28 @@ function setUserHash(id, auth) {
 	});
 }
 
-// Looks up a users bcrypt hash from their registered email	
-function getUserHash(email) {
+// Looks up a users bcrypt hash from their registered email, compare pass, and give results to callback.
+// callback(err/null, user/false, info)
+function checkUserHash(email, pass, callback) {
 	var query = "SELECT `hash` FROM `local_auth` INNER JOIN `users` USING (`userid`) WHERE `email` = ?";
 	var sub = [email];
 	query = mysql.format(query, sub);
 	conn.query(query, function(err, res) {
 		if (err) {
 			// The query failed, respond to the error.
-			console.log(err.code);
+			callback(err);
 		} else {
-			console.log(res);
-			return res;
+			if (res.length === 0) {
+				callback(null, false, { message: "Not registered." });
+			} else if (bcrypt.compareSync(pass, res[0].hash)) {
+				callback(null, {username: 'some user', id: 123});
+			} else {
+				callback(null, false, { message: "Incorrect password." });
+			}
 		}
 	});
 }
 
 module.exports.init = init;
-module.exports.getUserHash = getUserHash;
+module.exports.checkUserHash = checkUserHash;
 module.exports.addNewUser = addNewUser;

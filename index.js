@@ -3,21 +3,28 @@ var passport = require('passport');
 var Strategy = require('passport-local').Strategy;
 var path = require('path');
 var fs = require('fs');
-var localauth = require('./localauth.js');
+var auth = require('./localauth.js');
+
+// TODO: Actually be useful
+passport.serializeUser(function(user, done) {
+	done(null, user);
+});
+
+passport.deserializeUser(function(id, done) {
+	done(null, user);
+});
+
+// User login config
+passport.use(auth.LocalStrategy);
 
 // Init express application
 app = express();
 app.use(express.logger());
 app.use(express.bodyParser());
+app.use(passport.initialize());
+app.use(passport.session());
 
 stuffDict = {};
-
-// User login config
-passport.use(new Strategy(
-    function (username, password, done) {
-        return localauth.testPass(username, password);
-    }
-));
 
 // TEMP Hello world
 app.get('/', function(req, res) {
@@ -38,14 +45,38 @@ app.get('/:key/:value', function(req, res) {
     })()).join(""));
 });
 
+app.get('/register', function(req, res) {
+	var mail = req.query.mail;
+	var pass = req.query.pass;
+	auth.register(mail, pass);
+	return res.send(["Registered user:",mail,pass].join(" "));
+});
+
 // Login callback - user auth
-app.get('/login',
-    passport.authenticate('local',
+app.post('/login',
+    passport.authenticate('local', { failureRedirect: '/' }),
     function (req, res) {
+		console.log(req);
         // Called on success
         // e.g: res.redirect('/users/' + req.user.username);
+		res.send('You logged in.\n');
     }
-));
+);
+
+/*	app.post('/login', function(req, res, next) {
+	passport.authenticate('local', function(err, user, info) {
+	console.log("WUT");
+	if (err) { return next(err) }
+	if (!user) {
+	req.flash('error', info.message);
+	return res.redirect('/login')
+	}
+	req.logIn(user, function(err) {
+	if (err) { return next(err); }
+	return res.redirect('/users/' + user.username);
+	});
+	})(req, res, next);
+	});*/
 
 // Root callback - show req
 app.post('/', function (req, res) {
