@@ -128,7 +128,7 @@ function fileType(filePath) {
 // Image/s upload endpoint
 app.post('/upload/img', function (req, res) {
     var resultObject = {};
-    resultObject["status"] = {};
+    resultObject.status = {};
 
     var idData = req.files;
     var images = [];
