@@ -29,11 +29,12 @@ app.configure(function () {
     app.use(express.static('public'));
     //app.use(express.logger());
     app.use(express.bodyParser());
-    app.use(app.router);
     aws.config.loadFromPath('./config.json');
     // console.log(aws.config);
+    //app.use(express.session({ secret: 'I should be something else' }));
     app.use(passport.initialize());
     app.use(passport.session());
+    app.use(app.router);
 });
 
 var s3 = new aws.S3();
