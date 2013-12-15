@@ -4,6 +4,7 @@ var Strategy = require('passport-local').Strategy;
 var path = require('path');
 var fs = require('fs');
 var auth = require('./localauth.js');
+var users = require('./user.js');
 
 // TODO: Actually be useful
 passport.serializeUser(function(user, done) {
@@ -45,11 +46,14 @@ app.get('/:key/:value', function(req, res) {
     })()).join(""));
 });
 
-app.get('/register', function(req, res) {
-	var mail = req.query.mail;
-	var pass = req.query.pass;
-	auth.register(mail, pass);
-	return res.send(["Registered user:",mail,pass].join(" "));
+app.post('/register', function(req, res) {
+    var mail = req.body.user.mail;
+    var name = req.body.user.name;
+	var pass = req.body.user.pass;
+    var priv = users.PrivilegeLevel.USER.i;
+    var user = new users.User(-1, name, mail, priv);
+	auth.register(user, pass);
+	return res.send(["Registered user:",mail,pass,name,priv].join(" "));
 });
 
 // Login callback - user auth
@@ -62,21 +66,6 @@ app.post('/login',
 		res.send('You logged in.\n');
     }
 );
-
-/*	app.post('/login', function(req, res, next) {
-	passport.authenticate('local', function(err, user, info) {
-	console.log("WUT");
-	if (err) { return next(err) }
-	if (!user) {
-	req.flash('error', info.message);
-	return res.redirect('/login')
-	}
-	req.logIn(user, function(err) {
-	if (err) { return next(err); }
-	return res.redirect('/users/' + user.username);
-	});
-	})(req, res, next);
-	});*/
 
 // Root callback - show req
 app.post('/', function (req, res) {

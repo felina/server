@@ -2,15 +2,14 @@ SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';
 
-CREATE SCHEMA IF NOT EXISTS `mydb` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci ;
-USE `mydb` ;
 
 -- -----------------------------------------------------
--- Table `mydb`.`users`
+-- Table `felina`.`users`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`users` (
+CREATE TABLE IF NOT EXISTS `felina`.`users` (
   `userid` INT NOT NULL AUTO_INCREMENT,
   `email` VARCHAR(80) NOT NULL,
+  `name` VARCHAR(30) NOT NULL DEFAULT 'An Anonymous User',
   `usertype` ENUM('user', 'researcher', 'admin') NOT NULL,
   PRIMARY KEY (`userid`),
   UNIQUE INDEX `email_UNIQUE` (`email` ASC))
@@ -18,40 +17,40 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`local_auth`
+-- Table `felina`.`local_auth`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`local_auth` (
+CREATE TABLE IF NOT EXISTS `felina`.`local_auth` (
   `userid` INT NOT NULL,
   `hash` CHAR(60) NOT NULL,
   PRIMARY KEY (`userid`),
-  CONSTRAINT `userid`
+  CONSTRAINT `user_local_rel`
     FOREIGN KEY (`userid`)
-    REFERENCES `mydb`.`users` (`userid`)
+    REFERENCES `felina`.`users` (`userid`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`ext_auth`
+-- Table `felina`.`ext_auth`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`ext_auth` (
+CREATE TABLE IF NOT EXISTS `felina`.`ext_auth` (
   `userid` INT NOT NULL,
   `provider` VARCHAR(60) NOT NULL,
   `service_id` VARCHAR(60) NOT NULL,
   PRIMARY KEY (`userid`, `provider`),
-  CONSTRAINT `userid`
+  CONSTRAINT `user_ext_rel`
     FOREIGN KEY (`userid`)
-    REFERENCES `mydb`.`users` (`userid`)
+    REFERENCES `felina`.`users` (`userid`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`projects`
+-- Table `felina`.`projects`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`projects` (
+CREATE TABLE IF NOT EXISTS `felina`.`projects` (
   `projectid` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(45) NOT NULL,
   `desc` VARCHAR(255) NOT NULL,
@@ -62,10 +61,10 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`images`
+-- Table `felina`.`images`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`images` (
-  `imageid` INT NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `felina`.`images` (
+  `imageid` CHAR(32) NOT NULL,
   `ownerid` INT NOT NULL,
   `projectid` INT NOT NULL,
   `datetime` DATETIME NULL,
@@ -74,23 +73,23 @@ CREATE TABLE IF NOT EXISTS `mydb`.`images` (
   PRIMARY KEY (`imageid`),
   INDEX `ownerid_idx` (`ownerid` ASC),
   INDEX `projectid_idx` (`projectid` ASC),
-  CONSTRAINT `ownerid`
+  CONSTRAINT `user_image_rel`
     FOREIGN KEY (`ownerid`)
-    REFERENCES `mydb`.`users` (`userid`)
+    REFERENCES `felina`.`users` (`userid`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `projectid`
+  CONSTRAINT `project_image_rel`
     FOREIGN KEY (`projectid`)
-    REFERENCES `mydb`.`projects` (`projectid`)
+    REFERENCES `felina`.`projects` (`projectid`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`project_fields`
+-- Table `felina`.`project_fields`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`project_fields` (
+CREATE TABLE IF NOT EXISTS `felina`.`project_fields` (
   `fieldid` INT NOT NULL AUTO_INCREMENT,
   `projectid` INT NOT NULL,
   `name` VARCHAR(45) NOT NULL,
@@ -98,53 +97,53 @@ CREATE TABLE IF NOT EXISTS `mydb`.`project_fields` (
   `type` VARCHAR(45) NOT NULL DEFAULT 'text',
   PRIMARY KEY (`fieldid`),
   INDEX `projectid_idx` (`projectid` ASC),
-  CONSTRAINT `projectid`
+  CONSTRAINT `project_pfield_rel`
     FOREIGN KEY (`projectid`)
-    REFERENCES `mydb`.`projects` (`projectid`)
+    REFERENCES `felina`.`projects` (`projectid`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`image_metadata`
+-- Table `felina`.`image_metadata`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`image_metadata` (
-  `imageid` INT NOT NULL,
+CREATE TABLE IF NOT EXISTS `felina`.`image_metadata` (
+  `imageid` CHAR(32) NOT NULL,
   `fieldid` INT NOT NULL,
   `value` VARCHAR(45) NULL,
   PRIMARY KEY (`imageid`, `fieldid`),
   INDEX `fieldid_idx` (`fieldid` ASC),
-  CONSTRAINT `imageid`
+  CONSTRAINT `image_meta_rel`
     FOREIGN KEY (`imageid`)
-    REFERENCES `mydb`.`images` (`imageid`)
+    REFERENCES `felina`.`images` (`imageid`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `fieldid`
+  CONSTRAINT `pfield_field_rel`
     FOREIGN KEY (`fieldid`)
-    REFERENCES `mydb`.`project_fields` (`fieldid`)
+    REFERENCES `felina`.`project_fields` (`fieldid`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`project_rights`
+-- Table `felina`.`project_rights`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`project_rights` (
+CREATE TABLE IF NOT EXISTS `felina`.`project_rights` (
   `projectid` INT NOT NULL,
   `userid` INT NOT NULL,
   `access_level` INT NOT NULL,
   PRIMARY KEY (`projectid`, `userid`),
   INDEX `userid_idx` (`userid` ASC),
-  CONSTRAINT `projectid`
+  CONSTRAINT `project_rights_rel`
     FOREIGN KEY (`projectid`)
-    REFERENCES `mydb`.`projects` (`projectid`)
+    REFERENCES `felina`.`projects` (`projectid`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `userid`
+  CONSTRAINT `user_rights_rel`
     FOREIGN KEY (`userid`)
-    REFERENCES `mydb`.`users` (`userid`)
+    REFERENCES `felina`.`users` (`userid`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;

@@ -1,6 +1,7 @@
 var mysql = require('mysql');
-var dbCFG = require('./dbSettings.json');
+var dbCFG = require('./db_settings.json');
 var bcrypt = require('bcrypt-nodejs');
+var users = require('./user.js');
 var conn = mysql.createConnection(dbCFG);
 
 function init() {
@@ -11,22 +12,19 @@ function init() {
 		} else {
 			console.log("DB connected.");
 		}
-		});
+	});
 }
 
-init();
-
 // Adds a new user to users/local auth. TODO: Use a user object.
-function addNewUser(email, privilege, auth) {
-	var query = "INSERT INTO `users` VALUE (null,?,?)"
-	var sub = [email, privilege];
+function addNewUser(user, phash) {
+	var query = "INSERT INTO `users` VALUE (null,?,?,?)"
+	var sub = [user.email, user.name, "user"];
 	query = mysql.format(query, sub);
 	conn.query(query, function(err, res) {
 		if (err) {
 			console.log(err.code);
-			return false;
 		} else {
-			return setUserHash(res.insertId, auth);
+			setUserHash(res.insertId, phash);
 		}
 	});
 }
@@ -39,10 +37,6 @@ function setUserHash(id, auth) {
 		if (err) {
 			// The query failed, respond to the error.
 			console.log(err.code);
-			return false;
-		} else {
-			console.log(res);
-			return true;
 		}
 	});
 }
@@ -50,7 +44,10 @@ function setUserHash(id, auth) {
 // Looks up a users bcrypt hash from their registered email, compare pass, and give results to callback.
 // callback(err/null, user/false, info)
 function checkUserHash(email, pass, callback) {
-	var query = "SELECT `hash` FROM `local_auth` INNER JOIN `users` USING (`userid`) WHERE `email` = ?";
+	var query = "SELECT `users`.`userid`, `name`, `email`, `hash`, `usertype` "
+              + "FROM `local_auth` "
+              + "INNER JOIN `users` USING (`userid`) "
+              + "WHERE `email` = ?";
 	var sub = [email];
 	query = mysql.format(query, sub);
 	conn.query(query, function(err, res) {
@@ -58,17 +55,21 @@ function checkUserHash(email, pass, callback) {
 			// The query failed, respond to the error.
 			callback(err);
 		} else {
-			if (res.length === 0) {
+			if (res.length == 0) {
 				callback(null, false, { message: "Not registered." });
-			} else if (bcrypt.compareSync(pass, res[0].hash)) {
-				callback(null, {username: 'some user', id: 123});
 			} else {
-				callback(null, false, { message: "Incorrect password." });
-			}
+                var details = res[0];
+                if (bcrypt.compareSync(pass, details.hash)) {
+                    console.log(details);
+                    var user = new users.User(details.userid, details.name. details.email, users.privilegeFromString(details.usertype));
+                    console.log("Login OK");
+                    callback(null, user);
+                } else {
+                    callback(null, false, { message: "Incorrect password." });
+                }
+            }
 		}
 	});
 }
 
-module.exports.init = init;
-module.exports.checkUserHash = checkUserHash;
-module.exports.addNewUser = addNewUser;
+module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser};
