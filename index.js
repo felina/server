@@ -127,15 +127,6 @@ function fileType(filePath) {
 
 // Image/s upload endpoint
 app.post('/upload/img', function (req, res) {
-
-    s3.listBuckets(function (err, data) {
-        if (err) {
-            console.log(err);
-        } else {
-            console.log(data);
-        }
-    });
-
     var resultObject = {};
     resultObject["status"] = {};
 
@@ -145,27 +136,23 @@ app.post('/upload/img', function (req, res) {
         images.push(idData[imageName]);
     }
     if (images.length > 0) {
-        resultObject["data"] = []
         resultObject["status"]["code"] = 0;
         resultObject["status"]["message"] = images.length.toString().concat(" images uploaded successfully");
-        var imageIDs = [];
+        resultObject["ids"] = [];
         for (var i = 0; i < images.length; i++) {
-            var image = {};
             var imageFilePath = images[i]["path"];
-            var fileContents = fs.readFileSync(imageFilePath, 'base64'); // Sketchy decoding
-            // var step = fileContents.length / 100;
+            var fileContents = fs.readFileSync(imageFilePath); // semi sketchy decoding
             var elementsToHash = "";
             for (var j = 0; j < fileContents.length; j += fileContents.length / 100) {
-                elementsToHash += fileContents[j];
+                elementsToHash += fileContents[Math.floor(j)];
             }
             // console.log(elementsToHash);
-            imageIDs.push(md5(elementsToHash));
-
+            var imageHash = md5(elementsToHash);
+            resultObject["ids"].push(imageHash);
             // if element hash not in database then upload to s3
-            uploadImages(images);
-            resultObject["data"].push({"imageData" : fileContents, "imageType" : fileType(imageFilePath)});
+            var imageObject = {"imageData" : fileContents, "imageType" : fileType(imageFilePath), "imageHash" : imageHash};
+            uploadImage(imageObject);
         }
-        resultObject["ids"] = imageIDs;
     } else {
         resultObject["status"]["code"] = 1;
         resultObject["status"]["message"] = "No images uploaded";
@@ -173,8 +160,19 @@ app.post('/upload/img', function (req, res) {
     return res.send(resultObject);
 });
 
-function uploadImages(images) {
-    console.log("test");
+// app.get('img/:name')
+
+function uploadImage(imageObject) {
+    params = {};
+    params["Bucket"] = 'citizen.science.image.storage';
+    params["Body"] = imageObject['imageData'];
+    params["Key"] = imageObject['imageHash'];
+    s3.putObject(params, function (err, data) {
+        if (err) {
+            console.log("error: " + err);
+        }
+        console.log(data);
+    })
 };
 
 // Job start req
