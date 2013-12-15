@@ -165,9 +165,9 @@ app.post('/upload/img', function (req, res) {
 
 function uploadImage(imageObject) {
     params = {};
-    params["Bucket"] = 'citizen.science.image.storage';
-    params["Body"] = imageObject['imageData'];
-    params["Key"] = imageObject['imageHash'];
+    params.Bucket = 'citizen.science.image.storage';
+    params.Body = imageObject.imageData;
+    params.Key = imageObject.imageHash;
     s3.putObject(params, function (err, data) {
         if (err) {
             console.log("error: " + err);
