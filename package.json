@@ -23,6 +23,7 @@
     "underscore": "~1.5.2",
     "MD5": "~1.2.0",
     "aws-sdk": "~2.0.0-rc3",
-    "bcrypt-nodejs": "~0.0.3"
+    "bcrypt-nodejs": "~0.0.3",
+    "email-validator": "~0.1.2"
   }
 }
