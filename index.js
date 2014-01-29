@@ -25,7 +25,27 @@ passport.use(auth.LocalStrategy);
 // Init express application
 app = express();
 
+
+// Forgotten headers?
+var allowCrossDomain = function(req, res, next) {
+    // res.header('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Origin', 'http://localhost:9000');
+    // res.header('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With, Cache-Control');
+
+    // intercept OPTIONS method
+    if ('OPTIONS' == req.method) {
+      res.send(200);
+    }
+    else {
+      next();
+    }
+};
+
+
 app.configure(function () {
+    app.use(allowCrossDomain);
     app.use(express.static('public'));
     //app.use(express.logger());
     app.use(express.bodyParser());
@@ -43,23 +63,8 @@ stuffDict = {};
 
 // TEMP Hello world
 app.get('/', function(req, res) {
+    console.log("Hello world");
     return res.send('Hello World!\n');
-});
-
-
-
-// ...?
-app.get('/:key/:value', function(req, res) {
-    var k, v;
-    stuffDict[req.params.key] = req.params.value;
-    return res.send(((function() {
-        var _results = [];
-        for (k in stuffDict) {
-            v = stuffDict[k];
-            _results.push(k + " -> " + v + "\n");
-        }
-        return _results;
-    })()).join(""));
 });
 
 app.post('/register', function(req, res) {
@@ -140,7 +145,7 @@ function fileType(filePath) {
 }
 
 // Image/s upload endpoint
-app.post('/upload/img', function (req, res) {
+app.post('/upload/img', function (req, res, next) {
     var resultObject = {};
     resultObject.status = {};
 
@@ -150,7 +155,7 @@ app.post('/upload/img', function (req, res) {
         images.push(idData[imageName]);
     }
     if (images.length > 0) {
-        resultObject.status.code = 0;
+        // resultObject.status.code = 0;
         resultObject.status.code = 0;
         resultObject.status.message = images.length.toString().concat(" images uploaded successfully");
         resultObject.ids = [];
@@ -184,7 +189,7 @@ function uploadImage(imageObject) {
     params.Key = imageObject.imageHash;
     s3.putObject(params, function (err, data) {
         if (err) {
-            console.log("error: " + err);
+            console.log("uploadImage error: " + err);
         }
         console.log(data);
     })
@@ -240,6 +245,10 @@ app.get('/results', function (req, res) {
     else {
         return res.send('No jobID provided');
     }
+});
+
+app.post('/target', function (req, res) {
+    console.log('posted executable to target')
 });
 
 // Start listening
