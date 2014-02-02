@@ -8,18 +8,21 @@ var mysql = require('mysql');
 var _ = require('underscore');
 var md5 = require('MD5');
 var aws = require('aws-sdk');
+var db = require('./db.js');
 // var png = require('png-js');
 
-// TODO: Actually be useful
 passport.serializeUser(function(user, done) {
-	done(null, user);
+    // Stores the user's id into session so we can retrieve their info on next load.
+    done(null, user.id);
 });
 
 passport.deserializeUser(function(id, done) {
-	done(null, user);
+    // Loads the user object by id and returns it via the callback.
+    db.getUser(id, done);
 });
 
 // User login config
+// TODO: This looks wrong.
 passport.use(auth.LocalStrategy);
 
 // Init express application
@@ -48,10 +51,11 @@ app.configure(function () {
     app.use(allowCrossDomain);
     app.use(express.static('public'));
     //app.use(express.logger());
+    app.use(express.cookieParser());
     app.use(express.bodyParser());
     aws.config.loadFromPath('./config.json');
     // console.log(aws.config);
-    //app.use(express.session({ secret: 'I should be something else' }));
+    app.use(express.session({ secret: 'I should be something else' }));
     app.use(passport.initialize());
     app.use(passport.session());
     app.use(app.router);
@@ -86,6 +90,18 @@ app.post('/login',
 		res.send('Logged in.\n');
     }
 );
+
+// Debug page to check session state.
+app.get('/logincheck', function(req, res) {
+    if (req.user) {
+	res.send('YOU ARE LOGGED IN.\n');
+	console.log(req.user);
+	res.send(req.user);
+    } else {
+	res.send('NOT LOGGED IN.\n');
+    }
+    res.end();
+});
 
 /*
 app.post('/login', function (req, res) {

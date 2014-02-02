@@ -15,18 +15,42 @@ function init() {
 	});
 }
 
+// Attempts to deserialize a user, passing it to the done callback.
+// done(err, user)
+function getUser(id, done) {
+    var query = "SELECT `email`, `name`, `usertype` "
+        + "FROM `users` "
+        + "WHERE `userid` = ?";
+    var sub = [id];
+    query = mysql.format(query, sub);
+    conn.query(query, function(err, res) {
+	console.log("QUERIED USER");
+	if (err) {
+	    // The query failed, respond to the error.
+	    done(err, null);
+	} else {
+	    if (res.length == 0) {
+		done(null, false);
+	    } else {
+                var user = new users.User(id, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
+                done(null, user);
+            }
+	}
+    });
+}
+
 // Adds a new user to users/local auth. TODO: Use a user object.
 function addNewUser(user, phash) {
-	var query = "INSERT INTO `users` VALUE (null,?,?,?)"
-	var sub = [user.email, user.name, "user"];
-	query = mysql.format(query, sub);
-	conn.query(query, function(err, res) {
-		if (err) {
-			console.log(err.code);
-		} else {
-			setUserHash(res.insertId, phash);
-		}
-	});
+    var query = "INSERT INTO `users` VALUE (null,?,?,?)"
+    var sub = [user.email, user.name, "user"];
+    query = mysql.format(query, sub);
+    conn.query(query, function(err, res) {
+	if (err) {
+	    console.log(err.code);
+	} else {
+	    setUserHash(res.insertId, phash);
+	}
+    });
 }
 
 function setUserHash(id, auth) {
@@ -67,4 +91,4 @@ function checkUserHash(email, pass, callback) {
 	});
 }
 
-module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser};
+module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser};
