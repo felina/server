@@ -3,8 +3,9 @@ var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var db = require('./db.js');
 
-function register(user, password) {
-	db.addNewUser(user, bcrypt.hashSync(password));
+// callback(err, id)
+function register(user, password, callback) {
+    db.addNewUser(user, bcrypt.hashSync(password), callback);
 }
 
 function compare(pass, hash) {

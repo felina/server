@@ -67,18 +67,40 @@ stuffDict = {};
 
 // TEMP Hello world
 app.get('/', function(req, res) {
-    console.log("Hello world");
-    return res.send('Hello World!\n');
+    return res.send('FELINA API SERVER\n');
 });
 
 app.post('/register', function(req, res) {
-    var mail = req.body.user.mail;
-    var name = req.body.user.name;
+    if (req.body.user) {
+	var mail = req.body.user.mail;
+	var name = req.body.user.name;
 	var pass = req.body.user.pass;
-    var priv = users.PrivilegeLevel.USER.i;
-    var user = new users.User(-1, name, mail, priv);
-	auth.register(user, pass);
-	return res.send(["Registered user:",mail,pass,name,priv].join(" "));
+	var priv = users.PrivilegeLevel.USER.i;
+	var user = new users.User(-1, name, mail, priv);
+	auth.register(user, pass, function(err, id) {
+	    if (err) {
+		// Registration failed, notify api.
+		console.log('Registration failed:');
+		console.log(err);
+		res.send({'res':false, 'err':err});
+	    } else {
+		// Update id from DB insertion.
+		user.id = id;
+		console.log(['Registered user:',id,mail,pass,name,priv].join(" "));
+		res.send({'res':true, 'user':user});
+		// Login the newly registered user.
+		req.login(user, function(err) {
+		    if (err) {
+			// Login failed for some reason.
+			console.log('Post registration login failed:')
+			console.log(err);
+		    }
+		});
+	    }	
+	});
+    } else {
+	res.send({'res':false, 'err':'Invalid request.'});
+    }
 });
 
 // Login callback - user auth
@@ -94,11 +116,9 @@ app.post('/login',
 // Debug page to check session state.
 app.get('/logincheck', function(req, res) {
     if (req.user) {
-	res.send('YOU ARE LOGGED IN.\n');
-	console.log(req.user);
-	res.send(req.user);
+	res.write(JSON.stringify(req.user));
     } else {
-	res.send('NOT LOGGED IN.\n');
+	res.write(JSON.stringify({'err':'Not logged in.'}));
     }
     res.end();
 });

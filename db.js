@@ -40,15 +40,18 @@ function getUser(id, done) {
 }
 
 // Adds a new user to users/local auth. TODO: Use a user object.
-function addNewUser(user, phash) {
+// callbaack(err, id)
+function addNewUser(user, phash, callback) {
     var query = "INSERT INTO `users` VALUE (null,?,?,?)"
     var sub = [user.email, user.name, "user"];
     query = mysql.format(query, sub);
     conn.query(query, function(err, res) {
 	if (err) {
 	    console.log(err.code);
+	    callback(err, null);
 	} else {
 	    setUserHash(res.insertId, phash);
+	    callback(null, res.insertId);
 	}
     });
 }
