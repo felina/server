@@ -63,8 +63,6 @@ app.configure(function () {
 
 var s3 = new aws.S3();
 
-stuffDict = {};
-
 // TEMP Hello world
 app.get('/', function(req, res) {
     return res.send('FELINA API SERVER\n');
@@ -122,47 +120,6 @@ app.get('/logincheck', function(req, res) {
     }
     res.end();
 });
-
-/*
-app.post('/login', function (req, res) {
-    // Get username / password 
-    // Basic Auth
-    var header = req.headers['authorization'] || '',
-        token = header.split(/\s+/).pop() || '',
-        auth = new Buffer(token, 'base64').toString(),
-        parts = auth.split(/:/),
-        username = parts[0],
-        password = parts[1];
-
-    // DB asynchronous select user
-    var sql = "SELECT * FROM test.users WHERE username=" + conn.escape(username);
-    conn.query(sql, function (err, rows, fields) {
-        console.log('\nUsername: ' + username);
-        console.log('Password: ' + password + '\n');
-
-        // Error catching
-        if (err) {
-            console.log(err);
-            res.send({ 'err': err });
-        }
-        // Check password
-        else {
-            if (rows[0]) {
-                if (password == rows[0].password) {
-                    console.log('Password valid');
-                    res.send({ 'err': null, 'name': username, 'id': rows[0].idusers, 'online': true });
-                }
-                else {
-                    res.status(401).send({ 'err': 'Invalid Password' });
-                }
-            }
-            else {
-                res.status(401).send({ 'err' : 'User not found' });
-            }
-        }
-    });
-});
-*/
 
 // Root callback - show req
 app.post('/', function (req, res) {
