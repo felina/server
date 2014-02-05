@@ -70,9 +70,9 @@ app.get('/', function(req, res) {
 
 app.post('/register', function(req, res) {
     if (req.body.user) {
-	var mail = req.body.user.mail;
-	var name = req.body.user.name;
-	var pass = req.body.user.pass;
+	var mail = req.body.mail;
+	var name = req.body.name;
+	var pass = req.body.pass;
 	var priv = users.PrivilegeLevel.USER.i;
 	var user = new users.User(-1, name, mail, priv);
 	auth.register(user, pass, function(err, id) {
@@ -102,14 +102,22 @@ app.post('/register', function(req, res) {
 });
 
 // Login callback - user auth
-app.post('/login',
-    passport.authenticate('local', { failureRedirect: '/' }),
-    function (req, res) {
-        // Called on success
-        // e.g: res.redirect('/users/' + req.user.username);
-		res.send('Logged in.\n');
-    }
-);
+app.post('/login', function(req, res, next) {
+    passport.authenticate('local', function(err, user, info) {
+	if (err) {
+	    return next(err);
+	} else if (!user) {
+	    return res.send({'res':false, 'err':'No user'});
+	}
+	req.logIn(user, function(err) {
+	    if (err) {
+		return next(err);
+	    } else {
+		return res.send({'res':true, 'user':user});
+	    }
+	});
+    })(req, res, next);
+});
 
 // Middleware to enforce login.
 // stackoverflow.com/questions/18739725/
@@ -190,7 +198,9 @@ function uploadImage(imageObject) {
     s3.putObject(params, function (err, data) {
         if (err) {
             console.log("uploadImage error: " + err);
-        }
+        } else {
+	    db.addNewImages({'id':10}, 'dummy', [imageObject]);
+	}
         console.log(data);
     })
 };

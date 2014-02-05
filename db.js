@@ -15,6 +15,24 @@ function init() {
 	});
 }
 
+// Adds a new image to the database.
+function addNewImages(user, project, images) {
+    var query = "INSERT INTO `images` (imageid, ownerid, projectid) VALUE (?,?,?)"
+    var sub = [images[0].imageHash, user.id, 1];
+    query = mysql.format(query, sub);
+    console.log(query);
+    conn.query(query, function(err, res) {
+	if (err) {
+	    console.log(err.code);
+	    //callback(err, null);
+	} else {
+	    console.log('inserted');
+	    //setUserHash(res.insertId, phash);
+	    //callback(null, res.insertId);
+	}
+    });
+}
+
 // Attempts to deserialize a user, passing it to the done callback.
 // done(err, user)
 function getUser(id, done) {
@@ -94,4 +112,4 @@ function checkUserHash(email, pass, callback) {
 	});
 }
 
-module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser};
+module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, addNewImages:addNewImages};
