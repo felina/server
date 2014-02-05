@@ -111,14 +111,21 @@ app.post('/login',
     }
 );
 
-// Debug page to check session state.
-app.get('/logincheck', function(req, res) {
+// Middleware to enforce login.
+// stackoverflow.com/questions/18739725/
+function enforceLogin(req, res, next) {
+    // user will be set if logged in
     if (req.user) {
-	res.write(JSON.stringify(req.user));
+	next(); // Skip to next middleware
     } else {
-	res.write(JSON.stringify({'err':'Not logged in.'}));
+	// Send a generic error response.
+	res.send({'err':{'code':1, 'msg':'You must be logged in to access this feature.'}});
     }
-    res.end();
+}
+
+// Debug page to check session state.
+app.get('/logincheck', enforceLogin, function(req, res) {
+    res.send(req.user);
 });
 
 // Root callback - show req
