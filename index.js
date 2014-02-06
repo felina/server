@@ -1,5 +1,7 @@
 var express = require('express');
 var passport = require('passport');
+var fbStrategy = require('passport-facebook').Strategy;
+var fbConfig = require('./fb.json');
 var path = require('path');
 var fs = require('fs');
 var auth = require('./localauth.js');
@@ -24,6 +26,15 @@ passport.deserializeUser(function(id, done) {
 // User login config
 // TODO: This looks wrong.
 passport.use(auth.LocalStrategy);
+passport.use(new fbStrategy(fbConfig, function(accessToken, refreshToken, profile, done) {
+    db.extGetUser(profile.id, profile.provider, function(err, user) {
+    if (err) {
+	return done(err);
+    } else {
+	done(null, user);
+    }
+    });
+}));
 
 // Init express application
 app = express();
@@ -43,7 +54,6 @@ var allowCrossDomain = function(req, res, next) {
       next();
     }
 };
-
 
 app.configure(function () {
     app.use(allowCrossDomain);
@@ -69,6 +79,10 @@ var s3 = new aws.S3();
 app.get('/', function(req, res) {
     return res.send('FELINA API SERVER\n');
 });
+
+// Facebook auth routes
+app.get('/login/facebook', passport.authenticate('facebook'));
+app.get('/login/facebook/callback', passport.authenticate('facebook', {successRedirect: '/logincheck', failureRedirect: '/logincheck'}));
 
 app.get('/logout', function(req, res) {
     if (req.user) {

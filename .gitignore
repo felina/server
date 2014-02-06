@@ -4,3 +4,4 @@ node_modules
 db_settings.json
 config.json
 aws.json
+fb.json

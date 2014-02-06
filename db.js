@@ -86,6 +86,33 @@ function getUser(id, done) {
     });
 }
 
+// Attempts to deserialize a user, passing it to the done callback.
+// done(err, user)
+function extGetUser(id, provider, done) {
+    var query = "SELECT `users`.`userid`, `email`, `name`, `usertype` "
+        + "FROM `users` "
+	+ "INNER JOIN `ext_auth` USING (`userid`) "
+        + "WHERE `provider` = ? AND `service_id` = ?";
+    var sub = [provider, id];
+    query = mysql.format(query, sub);
+    console.log(query);
+    conn.query(query, function(err, res) {
+	if (err) {
+	    // The query failed, respond to the error.
+	    console.log(err.code);
+	    done(err, null);
+	} else {
+	    if (res.length == 0) {
+		console.log('New ext auth user.');
+		done(null, false);
+	    } else {
+                var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
+                done(null, user);
+            }
+	}
+    });
+}
+
 // Adds a new user to users/local auth. TODO: Use a user object.
 // callbaack(err, id)
 function addNewUser(user, phash, callback) {
@@ -141,4 +168,4 @@ function checkUserHash(email, pass, callback) {
 	});
 }
 
-module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm};
+module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm};
