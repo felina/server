@@ -55,7 +55,7 @@ app.configure(function () {
     //app.use(express.bodyParser()); 
     app.use(express.json());
     app.use(express.urlencoded());
-    aws.config.loadFromPath('./config.json');
+    aws.config.loadFromPath('./aws.json');
     // console.log(aws.config);
     app.use(express.session({ secret: 'I should be something else' }));
     app.use(passport.initialize());
