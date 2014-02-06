@@ -70,6 +70,13 @@ app.get('/', function(req, res) {
     return res.send('FELINA API SERVER\n');
 });
 
+app.get('/logout', function(req, res) {
+    if (req.user) {
+	req.logout();
+    }
+    res.send({'res':true});
+});
+
 app.post('/register', function(req, res) {
     if (req.body.user) {
 	var mail = req.body.mail;
