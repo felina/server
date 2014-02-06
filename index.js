@@ -28,7 +28,6 @@ passport.use(auth.LocalStrategy);
 // Init express application
 app = express();
 
-
 // Forgotten headers?
 var allowCrossDomain = function(req, res, next) {
     res.set('Access-Control-Allow-Origin', 'http://localhost:9000');
@@ -49,6 +48,7 @@ var allowCrossDomain = function(req, res, next) {
 app.configure(function () {
     app.use(allowCrossDomain);
     app.use(express.static('public'));
+    app.use(express.static(__dirname + '/static'));
     //app.use(express.logger());
     app.use(express.cookieParser());
     app.use(express.bodyParser());
@@ -150,6 +150,37 @@ function fileType(filePath) {
     }
     return null;
 }
+
+// Endpoint to get list of images
+app.get('/images', enforceLogin, function(req, res) {
+    db.getUserImages(req.user, function(err, result) {
+	if (err) {
+	    res.send({'res':false, 'err':{'code':2, 'msg':'Could not load image list.'}});
+	} else {
+	    res.send({'res':true, 'images':result});
+	}
+    });
+});
+
+app.get('/img/:id', function(req, res) {
+    //req.params.id
+    if (req.user) {
+	db.checkImagePerm(req.user, req.params.id, function(err, bool) {
+	    if (bool) {
+		proxyImage(req.params.id, res);
+	    } else {
+		res.redirect('/Padlock.png');
+	    }
+	});
+    } else {
+	res.redirect('/Padlock.png');
+    }
+});
+
+function proxyImage(id, res) {
+    var params = {'Bucket':'citizen.science.image.storage', 'Key':id};
+    s3.getObject(params).createReadStream().pipe(res);
+};
 
 // Image/s upload endpoint
 app.post('/upload/img', enforceLogin, function (req, res, next) {

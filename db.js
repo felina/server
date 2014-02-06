@@ -15,12 +15,43 @@ function init() {
 	});
 }
 
+// Checks eligibility to load an image.
+function checkImagePerm(user, id, callback) {
+    var query = "SELECT (`ownerid`=? OR NOT `private`) AS 'open' FROM `images` WHERE `imageid`=?";
+    var sub = [user.id, id];
+    query = mysql.format(query, sub);
+    conn.query(query, function(err, res) {
+	if (err) {
+	    console.log(err.code);
+	    callback(err, false);
+	} else if (res.length === 0) {
+	    callback(null, false);
+	} else {
+	    callback(null, res[0].open);
+	}
+    }); 
+}
+
+// Returns a list of all images uploaded by a user.
+function getUserImages(user, callback) {
+    var query = "SELECT `imageid` FROM `images` WHERE `ownerid`=?";
+    var sub = [user.id];
+    query = mysql.format(query, sub);
+    conn.query(query, function(err, res) {
+	if (err) {
+	    console.log(err.code);
+	    callback(err, null);
+	} else {
+	    callback(null, res);
+	}
+    });
+}
+
 // Adds a new image to the database.
 function addNewImage(user, project, image) {
-    var query = "INSERT INTO `images` (imageid, ownerid, projectid) VALUE (?,?,?)"
+    var query = "INSERT INTO `images` (imageid, ownerid, projectid) VALUE (?,?,?)";
     var sub = [image.imageHash, user.id, project.id];
     query = mysql.format(query, sub);
-    console.log(query);
     conn.query(query, function(err, res) {
 	if (err) {
 	    console.log(err.code);
@@ -41,7 +72,6 @@ function getUser(id, done) {
     var sub = [id];
     query = mysql.format(query, sub);
     conn.query(query, function(err, res) {
-	console.log("QUERIED USER");
 	if (err) {
 	    // The query failed, respond to the error.
 	    done(err, null);
@@ -111,4 +141,4 @@ function checkUserHash(email, pass, callback) {
 	});
 }
 
-module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, addNewImage:addNewImage};
+module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm};
