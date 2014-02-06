@@ -51,7 +51,10 @@ app.configure(function () {
     app.use(express.static(__dirname + '/static'));
     //app.use(express.logger());
     app.use(express.cookieParser());
-    app.use(express.bodyParser());
+    // bodyParser is deprecated, replaced by json and urlencoded
+    //app.use(express.bodyParser()); 
+    app.use(express.json());
+    app.use(express.urlencoded());
     aws.config.loadFromPath('./config.json');
     // console.log(aws.config);
     app.use(express.session({ secret: 'I should be something else' }));
