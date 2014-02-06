@@ -16,9 +16,9 @@ function init() {
 }
 
 // Adds a new image to the database.
-function addNewImages(user, project, images) {
+function addNewImage(user, project, image) {
     var query = "INSERT INTO `images` (imageid, ownerid, projectid) VALUE (?,?,?)"
-    var sub = [images[0].imageHash, user.id, 1];
+    var sub = [image.imageHash, user.id, project.id];
     query = mysql.format(query, sub);
     console.log(query);
     conn.query(query, function(err, res) {
@@ -26,8 +26,7 @@ function addNewImages(user, project, images) {
 	    console.log(err.code);
 	    //callback(err, null);
 	} else {
-	    console.log('inserted');
-	    //setUserHash(res.insertId, phash);
+	    console.log('Inserted image into db.');
 	    //callback(null, res.insertId);
 	}
     });
@@ -112,4 +111,4 @@ function checkUserHash(email, pass, callback) {
 	});
 }
 
-module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, addNewImages:addNewImages};
+module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, addNewImage:addNewImage};

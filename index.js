@@ -31,7 +31,6 @@ app = express();
 
 // Forgotten headers?
 var allowCrossDomain = function(req, res, next) {
-    // res.header('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Origin', 'http://localhost:9000');
     // res.header('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
@@ -127,13 +126,13 @@ function enforceLogin(req, res, next) {
 	next(); // Skip to next middleware
     } else {
 	// Send a generic error response.
-	res.send({'err':{'code':1, 'msg':'You must be logged in to access this feature.'}});
+	res.send({'res':false, 'err':{'code':1, 'msg':'You must be logged in to access this feature.'}});
     }
 }
 
-// Debug page to check session state.
+// Checks if user is logged in, returns the user object.
 app.get('/logincheck', enforceLogin, function(req, res) {
-    res.send(req.user);
+    res.send({'res':true, 'user':req.user});
 });
 
 // Root callback - show req
@@ -153,7 +152,7 @@ function fileType(filePath) {
 }
 
 // Image/s upload endpoint
-app.post('/upload/img', function (req, res, next) {
+app.post('/upload/img', enforceLogin, function (req, res, next) {
     var resultObject = {};
     resultObject.status = {};
 
@@ -179,7 +178,7 @@ app.post('/upload/img', function (req, res, next) {
             resultObject.ids.push(imageHash);
             // if element hash not in database then upload to s3
             var imageObject = {"imageData" : fileContents, "imageType" : fileType(imageFilePath), "imageHash" : imageHash};
-            uploadImage(imageObject);
+            uploadImage(req.user, imageObject);
         }
     } else {
         resultObject.status.code = 1;
@@ -190,7 +189,7 @@ app.post('/upload/img', function (req, res, next) {
 
 // app.get('img/:name')
 
-function uploadImage(imageObject) {
+function uploadImage(user, imageObject) {
     params = {};
     params.Bucket = 'citizen.science.image.storage';
     params.Body = imageObject.imageData;
@@ -199,7 +198,7 @@ function uploadImage(imageObject) {
         if (err) {
             console.log("uploadImage error: " + err);
         } else {
-	    db.addNewImages({'id':10}, 'dummy', [imageObject]);
+	    db.addNewImage(user, {'id':1, 'name':'dummy'}, imageObject);
 	}
         console.log(data);
     })
