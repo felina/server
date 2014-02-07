@@ -88,7 +88,7 @@ function getUser(id, done) {
 
 // Attempts to deserialize a user, passing it to the done callback.
 // done(err, user)
-function extGetUser(id, provider, done) {
+function extGetUser(id, provider, loginUser, done) {
     var query = "SELECT `users`.`userid`, `email`, `name`, `usertype` "
         + "FROM `users` "
 	+ "INNER JOIN `ext_auth` USING (`userid`) "
@@ -104,12 +104,35 @@ function extGetUser(id, provider, done) {
 	} else {
 	    if (res.length == 0) {
 		console.log('New ext auth user.');
-		done(null, false);
+		if (loginUser) {
+		    // User is already logged in, join the accounts.
+		    extAssocUser(id, provider, loginUser, done);
+		} else {
+		    // User is not logged in and account does not exist.
+		    done(null, false);
+		}
 	    } else {
                 var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
                 done(null, user);
             }
 	}
+    });
+}
+
+// Associates an external auth account with a user.
+function extAssocUser(id, provider, loginUser, done) {
+    var query = "INSERT INTO `ext_auth` VALUE (?,?,?)";
+    var sub = [loginUser.id, provider, id];
+    query = mysql.format(query, sub);
+    console.log(query);
+    conn.query(query, function(err, res) {
+	if (err) {
+	    // The query failed, respond to the error.
+	    console.log(err.code);
+	    done(err, null);
+	} else {
+	    done(null, loginUser);
+        }
     });
 }
 

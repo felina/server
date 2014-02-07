@@ -24,15 +24,17 @@ passport.deserializeUser(function(id, done) {
 });
 
 // User login config
-// TODO: This looks wrong.
+// TODO: This looks wrong?
 passport.use(auth.LocalStrategy);
-passport.use(new fbStrategy(fbConfig, function(accessToken, refreshToken, profile, done) {
-    db.extGetUser(profile.id, profile.provider, function(err, user) {
-    if (err) {
-	return done(err);
-    } else {
-	done(null, user);
-    }
+// Make sure that passReq is enabled in fbConfig
+fbConfig.passReqToCallback = true;
+passport.use(new fbStrategy(fbConfig, function(req, accessToken, refreshToken, profile, done) {
+    db.extGetUser(profile.id, profile.provider, req.user, function(err, user) {
+	if (err) {
+	    return done(err);
+	} else {
+	    done(null, user);
+	}
     });
 }));
 
@@ -83,6 +85,7 @@ app.get('/', function(req, res) {
 // Facebook auth routes
 app.get('/login/facebook', passport.authenticate('facebook'));
 app.get('/login/facebook/callback', passport.authenticate('facebook', {successRedirect: '/logincheck', failureRedirect: '/logincheck'}));
+// End Facebook auth
 
 app.get('/logout', function(req, res) {
     if (req.user) {
