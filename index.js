@@ -79,7 +79,7 @@ app.configure(function () {
     app.use(allowCrossDomain);
     app.use(express.static('public'));
     app.use(express.static(__dirname + '/static'));
-    //app.use(express.logger());
+    app.use(express.logger());
     app.use(express.cookieParser());
     // bodyParser is deprecated, replaced by json and urlencoded
     //app.use(express.bodyParser()); 
@@ -113,8 +113,8 @@ app.get('/logout', function(req, res) {
 });
 
 app.post('/register', function(req, res) {
-    if (req.body.mail && req.body.pass) {
-	var mail = req.body.mail;
+    if (req.body.email && req.body.pass) {
+	var mail = req.body.email;
 	var name = req.body.name;
 	var pass = req.body.pass;
 	var priv = users.PrivilegeLevel.USER.i;
@@ -184,6 +184,11 @@ app.get('/logincheck', enforceLogin, function(req, res) {
 app.post('/', function (req, res) {
     console.log(req);
     return res.send('Ack');
+});
+
+app.post('/upload/metadata', enforceLogin, function(req, res) {
+    console.log(req.body);
+    res.send(req.body.a);
 });
 
 function fileType(filePath) {
