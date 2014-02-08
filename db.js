@@ -86,8 +86,7 @@ function getUser(id, done) {
     });
 }
 
-// Attempts to deserialize a user, passing it to the done callback.
-// done(err, user)
+// Attempts to get a user (initialise login) via an external provider
 function extGetUser(id, provider, loginUser, done) {
     var query = "SELECT `users`.`userid`, `email`, `name`, `usertype` "
         + "FROM `users` "
@@ -102,20 +101,36 @@ function extGetUser(id, provider, loginUser, done) {
 	    console.log(err.code);
 	    done(err, null);
 	} else {
-	    if (res.length == 0) {
-		console.log('New ext auth user.');
-		if (loginUser) {
-		    // User is already logged in, join the accounts.
-		    extAssocUser(id, provider, loginUser, done);
+	    console.log('Using ext auth.');
+	    if (loginUser) {
+		if (res.length >= 1 && loginUser.id === res[0].userid) {
+		    // We know this provider and we already have it linked to this account. Do nothing.
+		    done(0, loginUser);
+		} else if (res.length >= 1) {
+		    // We know this provider/id but it's associated with another account!
+		    console.log('Tried to join already associated external account to a different user!');
+		    var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
+		    done(1, user);
 		} else {
-		    // User is not logged in and account does not exist.
-		    done(null, false);
+		    // User is already logged in, join the accounts.
+		    console.log('Associating new provider with existing account.');
+		    extAssocUser(id, provider, loginUser, done);
+		    done(2, loginUser);
 		}
 	    } else {
-                var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
-                done(null, user);
-            }
-	}
+		if (res.length === 0) {
+		    // User is not logged in and provider/id combo not recognised.
+		    // TODO: Register
+		    console.log('Not logged in not recognised.');
+		    done(3);
+		} else {
+		    // User not logged in, but we know these credentials
+		    console.log('Not logged in, known user.');
+		    var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
+		    done(0, user);
+		}
+	    }
+        }
     });
 }
 

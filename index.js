@@ -29,11 +29,28 @@ passport.use(auth.LocalStrategy);
 // Make sure that passReq is enabled in fbConfig
 fbConfig.passReqToCallback = true;
 passport.use(new fbStrategy(fbConfig, function(req, accessToken, refreshToken, profile, done) {
-    db.extGetUser(profile.id, profile.provider, req.user, function(err, user) {
-	if (err) {
-	    return done(err);
-	} else {
-	    done(null, user);
+    db.extGetUser(profile.id, profile.provider, req.user, function(outcome, user) {
+	switch (outcome) {
+	case 0:
+	    // Login succeeded or we were already done.
+	    return done(null, user);
+	    break;
+	case 1:
+	    // This FB account has been seen before with another user! Invalidate session.
+	    return done(JSON.stringify);
+	    break;
+	case 2:
+	    // This account is new, it has been linked to the current user.
+	    return done(null, user);
+	    break;
+	case 3:
+	    // New user, UNSUPPORTED
+	    return done(JSON.stringify({'code':2, 'msg':'Unsupported new user'}), null);
+	    break;
+	default:
+	    // ???
+	    return done('Facebook login failed');
+	    break;
 	}
     });
 }));
@@ -43,10 +60,11 @@ app = express();
 
 // Forgotten headers?
 var allowCrossDomain = function(req, res, next) {
-    res.set('Access-Control-Allow-Origin', 'http://localhost:9000');
-    // res.header('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Credentials', 'true');
+    //res.set('Access-Control-Allow-Origin', 'http://localhost:9000');
+    res.set('Access-Control-Allow-Origin', req.headers.origin);
     res.set('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With, Cache-Control');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With, Cache-Control, X-HTTP-Method-Override, Accept');
 
     // intercept OPTIONS method
     if ('OPTIONS' == req.method) {
@@ -95,7 +113,7 @@ app.get('/logout', function(req, res) {
 });
 
 app.post('/register', function(req, res) {
-    if (req.body.user) {
+    if (req.body.mail && req.body.pass) {
 	var mail = req.body.mail;
 	var name = req.body.name;
 	var pass = req.body.pass;
