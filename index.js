@@ -85,6 +85,7 @@ app.configure(function () {
     //app.use(express.bodyParser()); 
     app.use(express.json());
     app.use(express.urlencoded());
+    app.use(express.multipart());
     aws.config.loadFromPath('./aws.json');
     // console.log(aws.config);
     app.use(express.session({ secret: 'I should be something else' }));
@@ -186,9 +187,16 @@ app.post('/', function (req, res) {
     return res.send('Ack');
 });
 
-app.post('/upload/metadata', enforceLogin, function(req, res) {
-    console.log(req.body);
-    res.send(req.body.a);
+app.post('/upload/metadata', /*enforceLogin,*/ function(req, res) {
+    // Check that we've been sent an array
+    if (_.isArray(req.body)) {
+	var datetime = null;
+	if (req.body.time) {
+	}
+    } else {
+	
+    }
+    res.send('lolwut\n');
 });
 
 function fileType(filePath) {
@@ -233,6 +241,7 @@ function proxyImage(id, res) {
 };
 
 // Image/s upload endpoint
+// Uses express.multipart - this is deprecated and bad! TODO: Replace me!
 app.post('/upload/img', enforceLogin, function (req, res, next) {
     var resultObject = {};
     resultObject.status = {};
