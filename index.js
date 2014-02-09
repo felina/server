@@ -194,21 +194,25 @@ app.post('/', function (req, res) {
 app.post('/upload/metadata', /*enforceLogin,*/ function(req, res) {
     // Check that we've been sent an array
     if (_.isArray(req.body)) {
-	console.log(req.body);
-	for (var md in req.body) {
+	var md = null;
+	// This is very un-node like. array.forEach(...)!
+	for (var i = 0; i < req.body.length; i++) {
+	    md = req.body[i];
+	    console.log(md.id);
 	    var id = null;
 	    if (md.id) {
+		id = md.id;
 		var datetime = null;
 		if (md.datetime) {
-		    datetime = req.body.time;
+		    datetime = md.datetime;
 		}
 		var location = null;
 		if (md.location) {
-		    location = req.body.location;
+		    location = md.location;
 		}
 		var priv = true;
 		if (md.priv) {
-		    priv = req.body.priv;
+		    priv = md.priv;
 		}
 		var annotations = [];
 		if (md.annotations && _.isArray(md.annotations)) {

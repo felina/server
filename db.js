@@ -20,11 +20,13 @@ function init() {
 function addImageMeta(id, datetime, location, priv, annotations, callback) {
     var query = "UPDATE `images` SET "
 	+ "`datetime`=?, "
-	+ "`location`=?, "
+	+ "`location`=PointFromText(?), "
 	+ "`private`=? "
 	+ "WHERE `imageid`=?";
-    var sub = [datetime, location, priv, id];
+    var point="POINT(" + location.lat + " " + location.lon + ")";
+    var sub = [datetime, point, priv, id];
     query = mysql.format(query, sub);
+    console.log(query);
     conn.query(query, function(err, res) {
 	if (err) {
 	    console.log(err.code);
@@ -95,7 +97,7 @@ function getUser(id, done) {
     conn.query(query, function(err, res) {
 	if (err) {
 	    // The query failed, respond to the error.
-	    done(err, null);
+	    done(err, false);
 	} else {
 	    if (res.length == 0) {
 		done(null, false);
