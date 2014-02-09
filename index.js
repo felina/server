@@ -258,6 +258,7 @@ app.get('/images', enforceLogin, function(req, res) {
 
 app.get('/img/:id', function(req, res) {
     //req.params.id
+    // TODO: Allow logged out viewing of public images
     if (req.user) {
 	db.checkImagePerm(req.user, req.params.id, function(err, bool) {
 	    if (bool) {
@@ -268,6 +269,27 @@ app.get('/img/:id', function(req, res) {
 	});
     } else {
 	res.redirect('/Padlock.png');
+    }
+});
+
+app.get('/img/:id/meta', function(req, res) {
+    // TODO: Allow logged out viewing
+    if (req.user) {
+	db.checkImagePerm(req.user, req.params.id, function(err, bool) {
+	    if (bool) {
+		db.getMetaBasic(req.user.id, req.params.id, function (err, meta) {
+		    if (err) {
+			res.send({'res':false, 'err':{'code':2, 'msg':'Failed to retrieve metadata.'}});
+		    } else {
+			res.send({'res':true, 'meta':meta});;
+		    }
+		});
+	    } else {
+		res.send({'res':false, 'error':{'code':1,'msg':'You do not have permission to access this image.'}});
+	    }
+	});
+    } else {
+	res.send({'res':false, 'excuse':'I AM BROKEN AND YOURE NOT LOGGED IN'});
     }
 });
 

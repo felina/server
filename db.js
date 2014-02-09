@@ -55,6 +55,24 @@ function checkImagePerm(user, id, callback) {
     }); 
 }
 
+function getMetaBasic(uid, iid, callback) {
+    var query = "SELECT `datetime`, AsText(`location`) AS 'loc', `private` FROM `images` WHERE `imageid`=? AND (`ownerid`=? OR NOT `private`)";
+    var sub = [iid, uid];
+    query = mysql.format(query, sub);
+    conn.query(query, function(err, res) {
+	if (err) {
+	    console.log(err.code);
+	    callback(err, null);
+	} else {
+	    if (res.length >= 0) {
+		callback(null, res[0]);
+	    } else {
+		callback(null, false);
+	    }
+	}
+    });
+}
+
 // Returns a list of all images uploaded by a user.
 function getUserImages(user, callback) {
     var query = "SELECT `imageid`, `datetime`, AsText(`location`) AS 'loc', `private` FROM `images` WHERE `ownerid`=?";
@@ -229,4 +247,4 @@ function checkUserHash(email, pass, callback) {
 	});
 }
 
-module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm, addImageMeta:addImageMeta};
+module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm, addImageMeta:addImageMeta, getMetaBasic:getMetaBasic};
