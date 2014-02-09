@@ -57,7 +57,7 @@ function checkImagePerm(user, id, callback) {
 
 // Returns a list of all images uploaded by a user.
 function getUserImages(user, callback) {
-    var query = "SELECT `imageid` FROM `images` WHERE `ownerid`=?";
+    var query = "SELECT `imageid`, `datetime`, AsText(`location`) AS 'loc', `private` FROM `images` WHERE `ownerid`=?";
     var sub = [user.id];
     query = mysql.format(query, sub);
     conn.query(query, function(err, res) {
