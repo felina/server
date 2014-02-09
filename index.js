@@ -109,8 +109,12 @@ app.get('/login/facebook/callback', passport.authenticate('facebook', {successRe
 app.get('/logout', function(req, res) {
     if (req.user) {
 	req.logout();
+	req.session.destroy(function (err) {
+	    res.send({'res':true});
+	});
+    } else {
+	res.send({'res':false});
     }
-    res.send({'res':true});
 });
 
 app.post('/register', function(req, res) {
@@ -190,11 +194,39 @@ app.post('/', function (req, res) {
 app.post('/upload/metadata', /*enforceLogin,*/ function(req, res) {
     // Check that we've been sent an array
     if (_.isArray(req.body)) {
-	var datetime = null;
-	if (req.body.time) {
+	console.log(req.body);
+	for (var md in req.body) {
+	    var id = null;
+	    if (md.id) {
+		var datetime = null;
+		if (md.datetime) {
+		    datetime = req.body.time;
+		}
+		var location = null;
+		if (md.location) {
+		    location = req.body.location;
+		}
+		var priv = true;
+		if (md.priv) {
+		    priv = req.body.priv;
+		}
+		var annotations = [];
+		if (md.annotations && _.isArray(md.annotations)) {
+		    annotations = md.annotations;
+		}
+		console.log('Adding md to db.');
+		db.addImageMeta(id, datetime, location, priv, annotations, function(err, out) {
+		    console.log(err);
+		    console.log(out);
+		});
+	    } else {
+		// No id specified! Mark as error.
+		console.log('Metadata missing id!');
+	    }
 	}
     } else {
-	
+	// Not sent a list!
+	console.log('Not a metadata list!');
     }
     res.send('lolwut\n');
 });

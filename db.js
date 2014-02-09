@@ -15,6 +15,27 @@ function init() {
 	});
 }
 
+
+// Updates image metadata TODO: Check privileges!
+function addImageMeta(id, datetime, location, priv, annotations, callback) {
+    var query = "UPDATE `images` SET "
+	+ "`datetime`=?, "
+	+ "`location`=?, "
+	+ "`private`=? "
+	+ "WHERE `imageid`=?";
+    var sub = [datetime, location, priv, id];
+    query = mysql.format(query, sub);
+    conn.query(query, function(err, res) {
+	if (err) {
+	    console.log(err.code);
+	    callback(err, null);
+	} else {
+	    console.log('Inserted image into db.');
+	    callback(null, res);
+	}
+    });
+}
+
 // Checks eligibility to load an image.
 function checkImagePerm(user, id, callback) {
     var query = "SELECT (`ownerid`=? OR NOT `private`) AS 'open' FROM `images` WHERE `imageid`=?";
@@ -206,4 +227,4 @@ function checkUserHash(email, pass, callback) {
 	});
 }
 
-module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm};
+module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm, addImageMeta:addImageMeta};
