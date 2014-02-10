@@ -1,7 +1,7 @@
 var bcrypt = require('bcrypt-nodejs');
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
-var db = require('./db.js');
+var db = require('../db.js');
 
 // callback(err, id)
 function register(user, password, callback) {

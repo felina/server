@@ -2,29 +2,15 @@ var express = require('express');
 var passport = require('passport');
 var path = require('path');
 var fs = require('fs');
-var loauth = require('./localauth.js');
-var extauth = require('./externalauth.js');
+var auth = require('./auth/auth.js');
 var users = require('./user.js');
 var _ = require('underscore');
 var md5 = require('MD5');
 var aws = require('aws-sdk');
 var db = require('./db.js');
 
-passport.serializeUser(function(user, done) {
-    // Stores the user's id into session so we can retrieve their info on next load.
-    done(null, user.id);
-});
-
-passport.deserializeUser(function(id, done) {
-    // Loads the user object by id and returns it via the callback.
-    db.getUser(id, done);
-});
-
-// User login config
-passport.use(loauth.LocalStrategy);
-
-// Use login provider from extauth to support FB login.
-passport.use(extauth.fbStrategy);
+// Setup passport
+auth.authSetup(passport);
 
 // Init express application
 app = express();
@@ -72,39 +58,8 @@ app.get('/', function(req, res) {
     return res.send('FELINA API SERVER\n');
 });
 
-// Import the facebook routes
-extauth.fbRoutes(app);
-
-// Import the local auth routes
-loauth.authRoutes(app);
-
-app.get('/logout', function(req, res) {
-    if (req.user) {
-	req.logout();
-	req.session.destroy(function (err) {
-	    res.send({'res':true});
-	});
-    } else {
-	res.send({'res':false});
-    }
-});
-
-// Middleware to enforce login.
-// stackoverflow.com/questions/18739725/
-function enforceLogin(req, res, next) {
-    // user will be set if logged in
-    if (req.user) {
-	next(); // Skip to next middleware
-    } else {
-	// Send a generic error response.
-	res.send({'res':false, 'err':{'code':1, 'msg':'You must be logged in to access this feature.'}});
-    }
-}
-
-// Checks if user is logged in, returns the user object.
-app.get('/logincheck', enforceLogin, function(req, res) {
-    res.send({'res':true, 'user':req.user});
-});
+// Import various auth routes/endpoints
+auth.authRoutes(app);
 
 // Root callback - show req
 app.post('/', function (req, res) {
@@ -112,7 +67,7 @@ app.post('/', function (req, res) {
     return res.send('Ack');
 });
 
-app.post('/upload/metadata', /*enforceLogin,*/ function(req, res) {
+app.post('/upload/metadata', /*auth.enforceLogin,*/ function(req, res) {
     // Check that we've been sent an array
     if (_.isArray(req.body)) {
 	var md = null;
@@ -167,7 +122,7 @@ function fileType(filePath) {
 }
 
 // Endpoint to get list of images
-app.get('/images', enforceLogin, function(req, res) {
+app.get('/images', auth.enforceLogin, function(req, res) {
     db.getUserImages(req.user, function(err, result) {
 	if (err) {
 	    res.send({'res':false, 'err':{'code':2, 'msg':'Could not load image list.'}});
@@ -221,7 +176,7 @@ function proxyImage(id, res) {
 
 // Image/s upload endpoint
 // Uses express.multipart - this is deprecated and bad! TODO: Replace me!
-app.post('/upload/img', enforceLogin, function (req, res, next) {
+app.post('/upload/img', auth.enforceLogin, function (req, res, next) {
     var resultObject = {};
     resultObject.status = {};
 
