@@ -124,29 +124,34 @@ app.post('/register', function(req, res) {
 	var pass = req.body.pass;
 	var priv = users.PrivilegeLevel.USER.i;
 	var user = new users.User(-1, name, mail, priv);
-	auth.register(user, pass, function(err, id) {
-	    if (err) {
-		// Registration failed, notify api.
-		console.log('Registration failed:');
-		console.log(err);
-		res.send({'res':false, 'err':err});
-	    } else {
-		// Update id from DB insertion.
-		user.id = id;
-		console.log(['Registered user:',id,mail,pass,name,priv].join(" "));
-		res.send({'res':true, 'user':user});
-		// Login the newly registered user.
-		req.login(user, function(err) {
-		    if (err) {
-			// Login failed for some reason.
-			console.log('Post registration login failed:')
-			console.log(err);
-		    }
-		});
-	    }	
-	});
+	if (user.id === false) {
+	    // Details of user are invalid.
+	    res.send({'res':false, 'err':{'code':1, 'msg':'User details are invalid!'}});
+	} else {
+	    auth.register(user, pass, function(err, id) {
+		if (err) {
+		    // Registration failed, notify api.
+		    console.log('Registration failed:');
+		    console.log(err);
+		    res.send({'res':false, 'err':{'code':2, 'msg':'Registration failed.'}});
+		} else {
+		    // Update id from DB insertion.
+		    user.id = id;
+		    console.log(['Registered user:',id,mail,pass,name,priv].join(" "));
+		    res.send({'res':true, 'user':user});
+		    // Login the newly registered user.
+		    req.login(user, function(err) {
+			if (err) {
+			    // Login failed for some reason.
+			    console.log('Post registration login failed:')
+			    console.log(err);
+			}
+		    });
+		}
+	    });
+	}
     } else {
-	res.send({'res':false, 'err':'Invalid request.'});
+	res.send({'res':false, 'err':{'code':3, 'msg':'Invalid request.'}});
     }
 });
 

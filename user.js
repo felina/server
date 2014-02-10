@@ -1,7 +1,7 @@
 var validator = require('email-validator');
 
 var PrivilegeLevel = Object.freeze({
-	USER        : { i:1, dbs:"user" },
+    USER        : { i:1, dbs:"user" },
     RESEARCHER  : { i:2, dbs:"researcher" },
     ADMIN       : { i:3, dbs:"admin" }
 });
@@ -19,20 +19,24 @@ function privilegeFromString(dbs) {
 }
 
 function User (id, name, email, privilege) {
-	if (typeof id !== 'number') {
-		throw new Error("Id given is not a number");
-	}
+    if (typeof id !== 'number') {
+	this.id = false;
+	return;
+    }
     if (typeof privilege !== 'number') {
-        throw new Error("Privilege given is not a number");
+	this.id = false;
+	return;
     }
     if (privilege < 1 || privilege > 3 ) {
-        throw new Error("Privilege level is out of bounds");
+        this.id = false;
+	return;
     }
     // May need to change if valid email addresses not being accepted
     if (validator.validate(email) !== true) {
-        throw new Error("Email is not valid");
+        this.id = false;
+	return;
     }
-	this.id = id;
+    this.id = id;
     this.name = name;
     this.email = email;
     this.privilege = privilege;

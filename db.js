@@ -15,7 +15,6 @@ function init() {
 	});
 }
 
-
 // Updates image metadata TODO: Check privileges!
 function addImageMeta(id, datetime, location, priv, annotations, callback) {
     var query = "UPDATE `images` SET "
@@ -121,7 +120,11 @@ function getUser(id, done) {
 		done(null, false);
 	    } else {
                 var user = new users.User(id, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
-                done(null, user);
+		if (user.id === false) {
+		    done('User settings invalid.', false);
+		} else {
+                    done(null, user);
+		}
             }
 	}
     });
