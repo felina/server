@@ -21,7 +21,7 @@ function proxyImage(id, res) {
     s3.getObject(params).createReadStream().pipe(res);
 };
 
-function imageRoutes(app, db, auth) {
+function imageRoutes(app, auth, db) {
     // Endpoint to get list of images
     app.get('/images', auth.enforceLogin, function(req, res) {
 	db.getUserImages(req.user, function(err, result) {
