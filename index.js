@@ -1,16 +1,12 @@
 var express = require('express');
 var passport = require('passport');
-var path = require('path');
-var fs = require('fs');
 var auth = require('./auth/auth.js');
-var users = require('./user.js');
 var _ = require('underscore');
-var md5 = require('MD5');
-var aws = require('aws-sdk');
 var db = require('./db.js');
 var images = require('./images.js');
 var jobs = require('./jobs.js');
 var meta = require('./meta.js');
+var aws = require('aws-sdk');
 
 // Setup passport
 auth.authSetup(passport);
@@ -58,17 +54,17 @@ var s3 = new aws.S3();
 
 // TEMP Hello world
 app.get('/', function(req, res) {
-    return res.send('FELINA API SERVER\n');
+    return res.send({'res':false, 'err':{'code':998, 'msg':'FELINA API SERVER\n'}});
 });
-
-// Import various auth routes/endpoints
-auth.authRoutes(app);
 
 // Root callback - show req
 app.post('/', function (req, res) {
     console.log(req);
-    return res.send('Ack');
+    return res.send({'res':false, 'err':{'code':999, 'msg':'FELINA API SERVER\n'}});
 });
+
+// Import various auth routes/endpoints
+auth.authRoutes(app);
 
 // Import image routes
 images.imageRoutes(app, auth, db);
@@ -85,4 +81,3 @@ port = process.env.PORT || 5000;
 app.listen(port, function() {
     return console.log("Listening on " + port);
 });
-
