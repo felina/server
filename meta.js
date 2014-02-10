@@ -76,6 +76,12 @@ function metaRoutes(app, auth, db) {
 		  ]
 		 });
     });
+
+    app.put('/img/:id/anno', function(req, res) {
+	// Dummy data accept
+	console.log(req.body.annotations);
+	res.send({'res':true});
+    });
 }
 
 module.exports = {metaRoutes:metaRoutes};
