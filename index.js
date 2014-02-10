@@ -1,17 +1,14 @@
 var express = require('express');
 var passport = require('passport');
-var fbStrategy = require('passport-facebook').Strategy;
-var fbConfig = require('./fb.json');
 var path = require('path');
 var fs = require('fs');
 var auth = require('./localauth.js');
+var extauth = require('./externalauth.js');
 var users = require('./user.js');
-var mysql = require('mysql');
 var _ = require('underscore');
 var md5 = require('MD5');
 var aws = require('aws-sdk');
 var db = require('./db.js');
-// var png = require('png-js');
 
 passport.serializeUser(function(user, done) {
     // Stores the user's id into session so we can retrieve their info on next load.
@@ -24,36 +21,10 @@ passport.deserializeUser(function(id, done) {
 });
 
 // User login config
-// TODO: This looks wrong?
 passport.use(auth.LocalStrategy);
-// Make sure that passReq is enabled in fbConfig
-fbConfig.passReqToCallback = true;
-passport.use(new fbStrategy(fbConfig, function(req, accessToken, refreshToken, profile, done) {
-    db.extGetUser(profile.id, profile.provider, req.user, function(outcome, user) {
-	switch (outcome) {
-	case 0:
-	    // Login succeeded or we were already done.
-	    return done(null, user);
-	    break;
-	case 1:
-	    // This FB account has been seen before with another user! Invalidate session.
-	    return done(JSON.stringify);
-	    break;
-	case 2:
-	    // This account is new, it has been linked to the current user.
-	    return done(null, user);
-	    break;
-	case 3:
-	    // New user, UNSUPPORTED
-	    return done(JSON.stringify({'code':2, 'msg':'Unsupported new user'}), null);
-	    break;
-	default:
-	    // ???
-	    return done('Facebook login failed');
-	    break;
-	}
-    });
-}));
+
+// Use login provider from extauth to support FB login.
+passport.use(extauth.fbStrategy);
 
 // Init express application
 app = express();
