@@ -42,7 +42,7 @@ app.configure(function () {
     app.use(express.json());
     app.use(express.urlencoded());
     app.use(express.multipart());
-    aws.config.loadFromPath('./aws.json');
+    //aws.config.loadFromPath('./aws.json');
     // console.log(aws.config);
     app.use(express.session({ secret: 'I should be something else' }));
     app.use(passport.initialize());
