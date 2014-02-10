@@ -27,7 +27,7 @@ function metaRoutes(app, auth, db) {
 			annotations = md.annotations;
 		    }
 		    console.log('Adding md to db.');
-		    db.addImageMeta(id, datetime, location, priv, annotations, function(err, out) {
+		    db.addImageMeta(id, datetime, location, priv, function(err, out) {
 			console.log(err);
 			console.log(out);
 		    });
@@ -77,10 +77,15 @@ function metaRoutes(app, auth, db) {
 		 });
     });
 
-    app.put('/img/:id/anno', function(req, res) {
-	// Dummy data accept
+    app.put('/img/:id/anno', /*auth.enforceLogin,*/ function(req, res) {
 	console.log(req.body.annotations);
-	res.send({'res':true});
+	addImageAnno(req.body.annotations, function(err, out) {
+	    if (err) {
+		res.send({'res':false, 'err':{'code':1, 'msg':'Failed to store annotations.'}});
+	    } else {
+		res.send({'res':true});
+	    }
+	});
     });
 }
 

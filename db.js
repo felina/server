@@ -15,8 +15,48 @@ function init() {
 	});
 }
 
+function pointsToGeom(region) {
+    // TODO: region parsing and sanity checks
+    return "POINT(1 1)";
+}
+
+// Adds annotation to an image.
+function addImageAnno(annotations, callback) {
+    var query = "INSERT INTO `image_annotations` (imageid, region, tag) VALUES ";
+    if (annotations.length <= 0) {
+	console.log('Tried to insert empty annotations list!');
+	return callback('No annotations provided', false);
+    } else {
+	var sub = new Array(annotations.length * 3);
+	for (var i = 0; i < annotations.length - 1; i++) {
+	    query = query + "(?,?,?),";
+	    sub[i * 3] = annotations[i].imageid;
+	    sub[(i * 3) + 1] = pointsToGeom(annotations[i].region);
+	    sub[(i * 3) + 2] = annotations[i].tag;
+	}
+	// Add the final record
+	query = query + "(?,?,?)";
+	sub[i * 3] = annotations[i].imageid;
+	sub[(i * 3) + 1] = pointsToGeom(annotations[i].region);
+	sub[(i * 3) + 2] = annotations[i].tag;
+
+	query = mysql.format(query, sub);
+	console.log(query);
+	conn.query(query, function(err, res) {
+	    if (err) {
+		console.log(err.code);
+		callback(err, null);
+	    } else {
+		console.log('Inserted ' + annotations.length + ' annotations into db.');
+		console.log(res);
+		callback(null, res);
+	    }
+	});
+    }
+}
+
 // Updates image metadata TODO: Check privileges!
-function addImageMeta(id, datetime, location, priv, annotations, callback) {
+function addImageMeta(id, datetime, location, priv, callback) {
     var query = "UPDATE `images` SET "
 	+ "`datetime`=?, "
 	+ "`location`=PointFromText(?), "
