@@ -33,4 +33,11 @@ var FacebookStrategy = new fbStrat(fbConfig, function(req, accessToken, refreshT
     });
 });
 
-module.exports = {fbStrategy:FacebookStrategy};
+function fbRoutes(app) {
+    // Facebook auth routes
+    app.get('/login/facebook', passport.authenticate('facebook'));
+    app.get('/login/facebook/callback', passport.authenticate('facebook', {successRedirect: '/logincheck', failureRedirect: '/logincheck'}));
+    // End Facebook auth
+}
+
+module.exports = {fbStrategy:FacebookStrategy, fbRoutes:fbRoutes};

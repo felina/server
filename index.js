@@ -72,10 +72,8 @@ app.get('/', function(req, res) {
     return res.send('FELINA API SERVER\n');
 });
 
-// Facebook auth routes
-app.get('/login/facebook', passport.authenticate('facebook'));
-app.get('/login/facebook/callback', passport.authenticate('facebook', {successRedirect: '/logincheck', failureRedirect: '/logincheck'}));
-// End Facebook auth
+// Import the facebook routes
+extauth.fbRoutes(app);
 
 app.get('/logout', function(req, res) {
     if (req.user) {
