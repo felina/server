@@ -1,5 +1,5 @@
 function metaRoutes(app, auth, db) {
-    app.post('/upload/metadata', /*auth.enforceLogin,*/ function(req, res) {
+    app.post('/upload/metadata', auth.enforceLogin, function(req, res) {
 	// Check that we've been sent an array
 	if (_.isArray(req.body)) {
 	    var md = null;
@@ -56,12 +56,25 @@ function metaRoutes(app, auth, db) {
 			}
 		    });
 		} else {
-		    res.send({'res':false, 'error':{'code':1,'msg':'You do not have permission to access this image.'}});
+		    res.send({'res':false, 'err':{'code':1,'msg':'You do not have permission to access this image.'}});
 		}
 	    });
 	} else {
 	    res.send({'res':false, 'excuse':'I AM BROKEN AND YOURE NOT LOGGED IN'});
 	}
+    });
+
+    app.get('/img/:id/anno', function(req, res) {
+	// Dummy data return
+	// Should we enforce login here?
+	res.send({'res':true, 'annotations':
+		  [
+		      {
+			  'region': [{'x':20, 'y':40}, {'x':20, 'y':10}, {'x':40, 'y':10}, {'x':40, 'y':40}],
+			  'tag': 'face'
+		      }
+		  ]
+		 });
     });
 }
 
