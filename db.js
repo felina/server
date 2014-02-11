@@ -8,11 +8,21 @@ function init() {
 	conn.connect(function(err) {
 		if (err) {
 			console.log(err.code);
-				console.log(err.fatal);
+			console.log(err.fatal);
+			setTimeout(init, 2000);
 		} else {
 			console.log("DB connected.");
 		}
 	});
+
+	conn.on('error', function(err) {
+	    console.log('db error', err);
+	    if(err.code === 'PROTOCOL_CONNECTION_LOST') { // Connection to the MySQL server is usually
+	      init();                         // lost due to either server restart, or a
+	    } else {                                      // connnection idle timeout (the wait_timeout
+	      throw err;                                  // server variable configures this)
+	    }
+  });
 }
 
 function pointsToGeom(region) {
