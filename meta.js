@@ -30,6 +30,23 @@ function metaRoutes(app, auth, db) {
 		    db.addImageMeta(id, datetime, location, priv, function(err, out) {
 			console.log(err);
 			console.log(out);
+			if (err) {
+			    console.log(err);
+			    res.send({'res':false, 'err':{'code':1, 'msg':'Failed to save metadata.'}});
+			} else {
+			    if (annotations.length === 0) {
+				res.send({'res':true});
+			    } else {
+				db.addImageAnno(annotations, function (err2, out2) {
+				    if (err2) {
+					console.log(err);
+					res.send({'res':false, 'err':{'code':2, 'msg':'Failed to save annotations.'}});
+				    } else {
+					res.send({'res':true});
+				    }
+				});
+			    }
+			}
 		    });
 		} else {
 		    // No id specified! Mark as error.
