@@ -37,32 +37,47 @@ function pointsToGeomWKT(region) {
 	var i;
 	var wkt = "POLYGON((";
 	for (i = 0; i < region.length - 1; i++) {
-	    wkt += region[i].x+" "region[i].y+", ";
+	    wkt += region[i].x+" "+region[i].y+", ";
 	}
 	wkt += region[i].x+" "+region[i].y+"))";
 	return wkt;
     }
 }
 
+function condenseAnnotations(annotations) {
+    // To make query generation simpler, we will create a condensed array of only valid regions.
+    var cond = [];
+    for (var i = 0; i < annotations.length; i++) {
+	if (annotations[i] !== false) {
+	    // This must contain a valid region, keep it.
+	    cond.push(annotations[i]);
+	}
+    }
+    return cond;
+}
+
 // Adds annotation to an image.
 function addImageAnno(annotations, callback) {
-    var query = "INSERT INTO `image_annotations` (imageid, region, tag) VALUES ";
-    if (annotations.length <= 0) {
+    var anno = condenseAnnotations(annotations);
+
+    if (anno.length <= 0) {
 	console.log('Tried to insert empty annotations list!');
-	return callback('No annotations provided', false);
+	return callback('No valid annotations provided', false);
     } else {
-	var sub = new Array(annotations.length * 3);
-	for (var i = 0; i < annotations.length - 1; i++) {
+	var query = "INSERT INTO `image_annotations` (imageid, region, tag) VALUES ";
+	var sub = new Array(anno.length * 3);
+	var i;
+	for (i = 0; i < anno.length - 1; i++) {
 	    query = query + "(?,?,?),";
-	    sub[i * 3] = annotations[i].imageid;
-	    sub[(i * 3) + 1] = pointsToGeomWKT(annotations[i].region);
-	    sub[(i * 3) + 2] = annotations[i].tag;
+	    sub[i * 3] = anno[i].imageid;
+	    sub[(i * 3) + 1] = pointsToGeomWKT(anno[i].region);
+	    sub[(i * 3) + 2] = (anno[i].tag === false) ? null : anno[i].tag;
 	}
 	// Add the final record
 	query = query + "(?,?,?)";
-	sub[i * 3] = annotations[i].imageid;
-	sub[(i * 3) + 1] = pointsToGeomWKT(annotations[i].region);
-	sub[(i * 3) + 2] = annotations[i].tag;
+	sub[i * 3] = anno[i].imageid;
+	sub[(i * 3) + 1] = pointsToGeomWKT(anno[i].region);
+	sub[(i * 3) + 2] = (anno[i].tag === false) ? null : anno[i].tag;
 
 	query = mysql.format(query, sub);
 	console.log(query);
@@ -71,7 +86,7 @@ function addImageAnno(annotations, callback) {
 		console.log(err.code);
 		callback(err, null);
 	    } else {
-		console.log('Inserted ' + annotations.length + ' annotations into db.');
+		console.log('Inserted ' + anno.length + '/' + annotations.length + ' annotations into db.');
 		console.log(res);
 		callback(null, res);
 	    }
