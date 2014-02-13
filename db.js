@@ -25,9 +25,23 @@ function init() {
   });
 }
 
-function pointsToGeom(region) {
-    // TODO: region parsing and sanity checks
-    return "POINT(1 1)";
+function pointsToGeomWKT(region) {
+    if (region.length === 1) {
+	// A single point.
+	return "POINT("+region[0].x+" "+region[0].y+")";
+    } else if (region.length === 2) {
+	// A simple line.
+	return "LINESTRING("+region[0].x+" "+region[0].y+", "+region[1].x+" "+region[1].y+")";
+    } else {
+	// A polygon.
+	var i;
+	var wkt = "POLYGON((";
+	for (i = 0; i < region.length - 1; i++) {
+	    wkt += region[i].x+" "region[i].y+", ";
+	}
+	wkt += region[i].x+" "+region[i].y+"))";
+	return wkt;
+    }
 }
 
 // Adds annotation to an image.
