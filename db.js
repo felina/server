@@ -5,24 +5,24 @@ var users = require('./user.js');
 var conn = mysql.createConnection(dbCFG);
 
 function init() {
-	conn.connect(function(err) {
-		if (err) {
-			console.log(err.code);
-			console.log(err.fatal);
-			setTimeout(init, 2000);
-		} else {
-			console.log("DB connected.");
-		}
-	});
+    conn.connect(function(err) {
+	if (err) {
+	    console.log(err.code);
+	    console.log(err.fatal);
+	    setTimeout(init, 2000);
+	} else {
+	    console.log("DB connected.");
+	}
+    });
 
-	conn.on('error', function(err) {
-	    console.log('db error', err);
-	    if(err.code === 'PROTOCOL_CONNECTION_LOST') { // Connection to the MySQL server is usually
-	      init();                         // lost due to either server restart, or a
-	    } else {                                      // connnection idle timeout (the wait_timeout
-	      throw err;                                  // server variable configures this)
-	    }
-  });
+    conn.on('error', function(err) {
+	console.log('db error', err);
+	if (err.code === 'PROTOCOL_CONNECTION_LOST') { // Connection to the MySQL server is usually
+	    init();                                    // lost due to either server restart, or a
+	} else {                                       // connnection idle timeout (the wait_timeout
+	    throw err;                                 // server variable configures this)
+	}
+    });
 }
 
 function pointsToGeomWKT(region) {
@@ -55,13 +55,13 @@ function addImageAnno(annotations, callback) {
 	for (var i = 0; i < annotations.length - 1; i++) {
 	    query = query + "(?,?,?),";
 	    sub[i * 3] = annotations[i].imageid;
-	    sub[(i * 3) + 1] = pointsToGeom(annotations[i].region);
+	    sub[(i * 3) + 1] = pointsToGeomWKT(annotations[i].region);
 	    sub[(i * 3) + 2] = annotations[i].tag;
 	}
 	// Add the final record
 	query = query + "(?,?,?)";
 	sub[i * 3] = annotations[i].imageid;
-	sub[(i * 3) + 1] = pointsToGeom(annotations[i].region);
+	sub[(i * 3) + 1] = pointsToGeomWKT(annotations[i].region);
 	sub[(i * 3) + 2] = annotations[i].tag;
 
 	query = mysql.format(query, sub);
@@ -80,25 +80,54 @@ function addImageAnno(annotations, callback) {
 }
 
 // Updates image metadata TODO: Check privileges!
-function addImageMeta(id, datetime, location, priv, callback) {
-    var query = "UPDATE `images` SET "
-	+ "`datetime`=?, "
-	+ "`location`=PointFromText(?), "
-	+ "`private`=? "
-	+ "WHERE `imageid`=?";
-    var point="POINT(" + location.lat + " " + location.lon + ")";
-    var sub = [datetime, point, priv, id];
-    query = mysql.format(query, sub);
-    console.log(query);
-    conn.query(query, function(err, res) {
-	if (err) {
-	    console.log(err.code);
-	    callback(err, null);
-	} else {
-	    console.log('Inserted image into db.');
-	    callback(null, res);
+function addImageMeta(md, callback) {
+    var first = true;
+    var query = "UPDATE `images` SET";
+    var sub = [];
+    if (md.datetime) {
+	if (!first) {
+	    query += ",";
 	}
-    });
+	query += " `datetime`=?";
+	sub.push(md.datetime);
+	first = false;
+    }
+    if (md.location) {
+	if (!first) {
+	    query += ",";
+	}
+	query += " `location`=PointFromText(?)";
+	var point="POINT(" + md.location.lat + " " + md.location.lon + ")";
+	sub.push(point);
+	first = false;
+    }
+    if (md.priv === null) {
+	if (!first) {
+	    query += ",";
+	}
+	query += " `private`=?";
+	sub.push(md.priv);
+	first = false;
+    }
+    query += " WHERE `imageid`=?";
+    sub.push(md.id);
+
+    // If first, we are updating nothing, we should do nothing.
+    if (!first) {
+	query = mysql.format(query, sub);
+	console.log(query);
+	conn.query(query, function(err, res) {
+	    if (err) {
+		console.log(err.code);
+		callback(err, null);
+	    } else {
+		console.log('Inserted image into db.');
+		callback(null, res);
+	    }
+	});
+    } else {
+	callback('No changes', null);
+    }
 }
 
 // Checks eligibility to load an image.
