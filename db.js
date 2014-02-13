@@ -94,7 +94,7 @@ function addImageAnno(annotations, callback) {
     }
 }
 
-// Updates image metadata TODO: Check privileges!
+// Updates image metadata TODO: Check privileges! TODO: Lists!!!
 function addImageMeta(md, callback) {
     var first = true;
     var query = "UPDATE `images` SET";
@@ -137,7 +137,11 @@ function addImageMeta(md, callback) {
 		callback(err, null);
 	    } else {
 		console.log('Inserted image into db.');
-		callback(null, res);
+		if (md.annotations !== null || md.annotations.length > 0) {
+		    addImageAnno(md.annotations, callback);
+		} else {
+		    callback(null, res);
+		}
 	    }
 	});
     } else {
