@@ -19,7 +19,12 @@ function fileType(filePath) {
 
 function proxyImage(id, res) {
     var params = {'Bucket':'citizen.science.image.storage', 'Key':id};
-    s3.getObject(params).createReadStream().pipe(res);
+    //s3.getObject(params).createReadStream().pipe(res);
+    try {
+	fs.createReadStream('/tmp/' + id).pipe(res);
+    } catch (err) {
+	res.redirect('/Padlock.png');
+    }
 };
 
 function imageRoutes(app, auth, db) {
@@ -79,6 +84,14 @@ function imageRoutes(app, auth, db) {
 		// if element hash not in database then upload to s3
 		var imageObject = {"imageData" : fileContents, "imageType" : fileType(imageFilePath), "imageHash" : imageHash};
 		uploadImage(req.user, imageObject);
+		require('child_process').exec('cp ' + imageFilePath + ' /tmp/' + imageHash, function(err, out) {
+		    if (err) {
+			resultObject.status.code = 2;
+			resultObject.status.message = 'Image upload error.';
+		    } else {
+			resultObject.status.code = 0;
+			resultObject.status.message = 'Okay';
+		    }});
             }
 	} else {
             resultObject.status.code = 1;
@@ -90,18 +103,19 @@ function imageRoutes(app, auth, db) {
     // app.get('img/:name')
 
     function uploadImage(user, imageObject) {
-	params = {};
-	params.Bucket = 'citizen.science.image.storage';
-	params.Body = imageObject.imageData;
-	params.Key = imageObject.imageHash;
-	s3.putObject(params, function (err, data) {
-            if (err) {
-		console.log("uploadImage error: " + err);
-            } else {
-		db.addNewImage(user, {'id':1, 'name':'dummy'}, imageObject);
-	    }
-            console.log(data);
-	})
+	
+	// params = {};
+	// params.Bucket = 'citizen.science.image.storage';
+	// params.Body = imageObject.imageData;
+	// params.Key = imageObject.imageHash;
+	// s3.putObject(params, function (err, data) {
+        //     if (err) {
+	// 	console.log("uploadImage error: " + err);
+        //     } else {
+	 	db.addNewImage(user, {'id':1, 'name':'dummy'}, imageObject);
+	//     }
+        //     console.log(data);
+	// })
     };
 }
 
