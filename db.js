@@ -5,36 +5,148 @@ var users = require('./user.js');
 var conn = mysql.createConnection(dbCFG);
 
 function init() {
-	conn.connect(function(err) {
-		if (err) {
-			console.log(err.code);
-				console.log(err.fatal);
-		} else {
-			console.log("DB connected.");
-		}
-	});
-}
-
-// Updates image metadata TODO: Check privileges!
-function addImageMeta(id, datetime, location, priv, annotations, callback) {
-    var query = "UPDATE `images` SET "
-	+ "`datetime`=?, "
-	+ "`location`=PointFromText(?), "
-	+ "`private`=? "
-	+ "WHERE `imageid`=?";
-    var point="POINT(" + location.lat + " " + location.lon + ")";
-    var sub = [datetime, point, priv, id];
-    query = mysql.format(query, sub);
-    console.log(query);
-    conn.query(query, function(err, res) {
+    conn.connect(function(err) {
 	if (err) {
 	    console.log(err.code);
-	    callback(err, null);
+	    console.log(err.fatal);
+	    setTimeout(init, 2000);
 	} else {
-	    console.log('Inserted image into db.');
-	    callback(null, res);
+	    console.log("DB connected.");
 	}
     });
+
+    conn.on('error', function(err) {
+	console.log('db error', err);
+	if (err.code === 'PROTOCOL_CONNECTION_LOST') { // Connection to the MySQL server is usually
+	    init();                                    // lost due to either server restart, or a
+	} else {                                       // connnection idle timeout (the wait_timeout
+	    throw err;                                 // server variable configures this)
+	}
+    });
+}
+
+function pointsToGeomWKT(region) {
+    if (region.length === 1) {
+	// A single point.
+	return "POINT("+region[0].x+" "+region[0].y+")";
+    } else if (region.length === 2) {
+	// A simple line.
+	return "LINESTRING("+region[0].x+" "+region[0].y+", "+region[1].x+" "+region[1].y+")";
+    } else {
+	// A polygon.
+	var i;
+	var wkt = "POLYGON((";
+	for (i = 0; i < region.length - 1; i++) {
+	    wkt += region[i].x+" "+region[i].y+", ";
+	}
+	wkt += region[i].x+" "+region[i].y+"))";
+	return wkt;
+    }
+}
+
+function condenseAnnotations(annotations) {
+    // To make query generation simpler, we will create a condensed array of only valid regions.
+    var cond = [];
+    for (var i = 0; i < annotations.length; i++) {
+	if (annotations[i] !== false) {
+	    // This must contain a valid region, keep it.
+	    cond.push(annotations[i]);
+	}
+    }
+    return cond;
+}
+
+// Adds annotation to an image.
+function addImageAnno(annotations, callback) {
+    var anno = condenseAnnotations(annotations);
+
+    if (anno.length <= 0) {
+	console.log('Tried to insert empty annotations list!');
+	return callback('No valid annotations provided', false);
+    } else {
+	var query = "INSERT INTO `image_annotations` (imageid, region, tag) VALUES ";
+	var sub = new Array(anno.length * 3);
+	var i;
+	for (i = 0; i < anno.length - 1; i++) {
+	    query = query + "(?,?,?),";
+	    sub[i * 3] = anno[i].imageid;
+	    sub[(i * 3) + 1] = pointsToGeomWKT(anno[i].region);
+	    sub[(i * 3) + 2] = (anno[i].tag === false) ? null : anno[i].tag;
+	}
+	// Add the final record
+	query = query + "(?,?,?)";
+	sub[i * 3] = anno[i].imageid;
+	sub[(i * 3) + 1] = pointsToGeomWKT(anno[i].region);
+	sub[(i * 3) + 2] = (anno[i].tag === false) ? null : anno[i].tag;
+
+	query = mysql.format(query, sub);
+	console.log(query);
+	conn.query(query, function(err, res) {
+	    if (err) {
+		console.log(err.code);
+		callback(err, null);
+	    } else {
+		console.log('Inserted ' + anno.length + '/' + annotations.length + ' annotations into db.');
+		console.log(res);
+		callback(null, res);
+	    }
+	});
+    }
+}
+
+// Updates image metadata TODO: Check privileges! TODO: Lists!!!
+function addImageMeta(md, callback) {
+    var first = true;
+    var query = "UPDATE `images` SET";
+    var sub = [];
+    if (md.datetime) {
+	if (!first) {
+	    query += ",";
+	}
+	query += " `datetime`=?";
+	sub.push(md.datetime);
+	first = false;
+    }
+    if (md.location) {
+	if (!first) {
+	    query += ",";
+	}
+	query += " `location`=PointFromText(?)";
+	var point="POINT(" + md.location.lat + " " + md.location.lon + ")";
+	sub.push(point);
+	first = false;
+    }
+    if (md.priv === null) {
+	if (!first) {
+	    query += ",";
+	}
+	query += " `private`=?";
+	sub.push(md.priv);
+	first = false;
+    }
+    query += " WHERE `imageid`=?";
+    sub.push(md.id);
+
+    // If first, we are updating nothing, we should do nothing.
+    if (!first) {
+	query = mysql.format(query, sub);
+	console.log(query);
+	conn.query(query, function(err, res) {
+	    if (err) {
+		console.log(err.code);
+		callback(err, null);
+	    } else {
+		console.log('Inserted image into db.');
+		if (md.annotations !== null || md.annotations.length > 0) {
+		    addImageAnno(md.annotations, callback);
+		} else {
+		    callback(null, res);
+		}
+	    }
+	});
+    } else {
+	callback('No changes', null);
+    }
 }
 
 // Checks eligibility to load an image.

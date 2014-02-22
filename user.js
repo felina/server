@@ -61,4 +61,9 @@ function Researcher (name, email, groups) {
     this.groups = groups;
 }
 
-module.exports = {PrivilegeLevel:PrivilegeLevel, User:User, Researcher:Researcher, privilegeFromString:privilegeFromString};
+function userRoutes(app, db) {
+    // app.put('/user')
+    // For updating fields e.g. email, gravatar, privilege level...
+}
+
+module.exports = {PrivilegeLevel:PrivilegeLevel, User:User, Researcher:Researcher, privilegeFromString:privilegeFromString, userRoutes:userRoutes};

@@ -2,6 +2,7 @@ var bcrypt = require('bcrypt-nodejs');
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var db = require('../db.js');
+var users = require('../user.js');
 
 // callback(err, id)
 function register(user, password, callback) {
@@ -36,7 +37,7 @@ function authRoutes(app) {
 		// Details of user are invalid.
 		res.send({'res':false, 'err':{'code':1, 'msg':'User details are invalid!'}});
 	    } else {
-		auth.register(user, pass, function(err, id) {
+		register(user, pass, function(err, id) {
 		    if (err) {
 			// Registration failed, notify api.
 			console.log('Registration failed:');
