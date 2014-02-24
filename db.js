@@ -233,6 +233,26 @@ function getMetaBasic(uid, iid, callback) {
     });
 }
 
+function getAnnotations(uid, iid, callback) {
+    var query = "SELECT `annoid` AS 'id', AsText(`region`) AS 'region', `tag` " +
+	"FROM `image_annotations` " +
+	"INNER JOIN `images` USING (`imageid`) " +
+	"WHERE `imageid`=? AND (`images`.`ownerid`=? OR NOT `images`.`private`)";
+    var sub = [iid, uid];
+    query = mysql.format(query, sub);
+    conn.query(query, function(err, res) {
+	if (err) {
+	    console.log(err.code);
+	    callback(err, null);
+	} else {
+	    res.forEach(function(entry) {
+		entry.region = geomWKTToPoints(entry.region);
+	    });
+	    callback(null, res);
+	}
+    });
+}
+
 // Returns a list of all images uploaded by a user.
 function getUserImages(user, callback) {
     var query = "SELECT `imageid`, `datetime`, AsText(`location`) AS 'loc', `private` FROM `images` WHERE `ownerid`=?";
@@ -411,4 +431,4 @@ function checkUserHash(email, pass, callback) {
 	});
 }
 
-module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm, addImageMeta:addImageMeta, getMetaBasic:getMetaBasic};
+module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm, addImageMeta:addImageMeta, getMetaBasic:getMetaBasic, getAnnotations:getAnnotations};

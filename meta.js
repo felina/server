@@ -152,27 +152,17 @@ function metaRoutes(app, auth, db) {
     });
 
     app.get('/img/:id/anno', function(req, res) {
-	// Dummy data return
-	// Should we enforce login here?
-	res.send({'res':true, 'annotations':
-		  [
-		      {
-			  'region': [{'x':20, 'y':40}, {'x':20, 'y':10}, {'x':40, 'y':10}, {'x':40, 'y':40}],
-			  'tag': 'face'
-		      }
-		  ]
-		 });
-    });
-
-    app.put('/img/:id/anno', /*auth.enforceLogin,*/ function(req, res) {
-	console.log(req.body.annotations);
-	addImageAnno(req.body.annotations, function(err, out) {
-	    if (err) {
-		res.send({'res':false, 'err':{'code':1, 'msg':'Failed to store annotations.'}});
-	    } else {
-		res.send({'res':true});
-	    }
-	});
+	if (req.user) {
+	    db.getAnnotations(req.user.id, req.params.id, function (err, anno) {
+		if (err) {
+		    res.send({'res':false, 'err':{'code':2, 'msg':'Failed to retrieve metadata.'}});
+		} else {
+		    res.send({'res':true, 'anno':anno});;
+		}
+	    });
+	} else {
+	    res.send({'res':false, 'excuse':'I AM BROKEN AND YOURE NOT LOGGED IN'});
+	}
     });
 }
 
