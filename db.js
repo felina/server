@@ -26,6 +26,33 @@ function init() {
     });
 }
 
+function geomWKTToPoints(WKT) {
+    // if (WKT.lastIndexOf('POINT(', 0) === 0) {
+    // 	console.log('Interpreted ' + WKT + ' as a point.');
+    // 	var params = _.map(WKT.substring(6, WKT.length - 1).split(' '), arg1(parseInt));
+    // 	var point = { 'region': [{'x': params[0], 'y':params[1]}] };
+    // 	return point;
+    // }
+    var parStart = WKT.lastIndexOf('(', 11);
+    var parEnd = WKT.indexOf(')', 6);
+    if (parStart < 0 || parEnd < 0 || parStart + 3 >= parEnd) {
+	console.log('WKT has invalid start or end! ' + WKT);
+	return false;
+    } else {
+	var paramGroups = WKT.substring(parStart + 1, parEnd).split(', ');
+	var region = new Array(paramGroups.length);
+	paramGroups.forEach(function(paramGroup, i) {
+	    var params = paramGroup.split(' ');
+	    if (params.length != 2) {
+		console.log('WKT param group is invalid ' + paramGroup);
+	    } else {
+		region[i] = {'x': params[0], 'y': params[1]};
+	    }
+	});
+	return region;
+    }
+}
+
 function pointsToGeomWKT(region) {
     if (region.length === 1) {
 	// A single point.
