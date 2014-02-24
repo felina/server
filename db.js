@@ -27,12 +27,6 @@ function init() {
 }
 
 function geomWKTToPoints(WKT) {
-    // if (WKT.lastIndexOf('POINT(', 0) === 0) {
-    // 	console.log('Interpreted ' + WKT + ' as a point.');
-    // 	var params = _.map(WKT.substring(6, WKT.length - 1).split(' '), arg1(parseInt));
-    // 	var point = { 'region': [{'x': params[0], 'y':params[1]}] };
-    // 	return point;
-    // }
     var parStart = WKT.lastIndexOf('(', 11);
     var parEnd = WKT.indexOf(')', 6);
     if (parStart < 0 || parEnd < 0 || parStart + 3 >= parEnd) {
@@ -219,7 +213,7 @@ function checkImagePerm(user, id, callback) {
 }
 
 function getMetaBasic(uid, iid, callback) {
-    var query = "SELECT `datetime`, AsText(`location`) AS 'loc', `private` FROM `images` WHERE `imageid`=? AND (`ownerid`=? OR NOT `private`)";
+    var query = "SELECT `datetime`, AsText(`location`) AS 'location', `private` FROM `images` WHERE `imageid`=? AND (`ownerid`=? OR NOT `private`)";
     var sub = [iid, uid];
     query = mysql.format(query, sub);
     conn.query(query, function(err, res) {
@@ -228,6 +222,9 @@ function getMetaBasic(uid, iid, callback) {
 	    callback(err, null);
 	} else {
 	    if (res.length >= 0) {
+		if (res[0].location != null) {
+		    res[0].location = geomWKTToPoints(res[0].location);
+		}
 		callback(null, res[0]);
 	    } else {
 		callback(null, false);
