@@ -120,22 +120,15 @@ function metaRoutes(app, auth, db) {
     //   - region : A list containing at least one point object, where a point simply wraps two numbers, x and y.
     // The four properties of a metadata object are all optional. If you do not wish to set one of these properties,
     // the property should be left undefined or set to null.
-    app.post('/upload/metadata', /*auth.enforceLogin,*/ function(req, res) {
+    app.post('/upload/metadata', auth.enforceLogin, function(req, res) {
 	// Check that we've been sent an array
 	parseMetadata(req.body);
-	saveMetadata(req.body, res);
-//	res.send(req.body);
-    });
-
-    function saveMetadata(mdArr, res) {
-	console.log('Adding md to db.');
-	parseMetadata(mdArr);
-
-	db.addImageMeta(mdArr, function(qArr) {
-	    console.log(qArr);
-	    res.send(qArr);
+	db.addImageMeta(req.body, function(sqlRes) {
+	    // sqlRes = Array of booleans
+	    // req.body = resultant parsed request
+	    res.send(sqlRes);
 	});
-    }
+    });
 
     app.get('/img/:id/meta', function(req, res) {
 	// TODO: Allow logged out viewing
