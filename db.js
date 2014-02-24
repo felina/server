@@ -102,14 +102,13 @@ function addImageAnno(iid, annotations, callback) {
 	sub[(i * 3) + 2] = (anno[i].tag === false) ? null : anno[i].tag;
 
 	query = mysql.format(query, sub);
-	console.log(query);
+
 	conn.query(query, function(err, res) {
 	    if (err) {
 		console.log(err.code);
 		callback(err, null);
 	    } else {
 		console.log('Inserted ' + anno.length + '/' + annotations.length + ' annotations into db.');
-		console.log(res);
 		callback(null, res);
 	    }
 	});
@@ -117,11 +116,8 @@ function addImageAnno(iid, annotations, callback) {
 }
 
 function updateMetaR(mdArr, callback, rSet) {
-    console.log('Rset: ' + rSet);
-    console.log('mdArr len: ' + mdArr.length);
     if (mdArr.length === 0) {
 	// Reached the end, send to callback.
-	console.log('Returning from update meta.');
 	return callback(rSet);
     }
 
@@ -147,7 +143,7 @@ function updateMetaR(mdArr, callback, rSet) {
 	sub.push(point);
 	first = false;
     }
-    if (md.priv === null) {
+    if (typeof md.priv !== 'undefined' && md.priv !== null) {
 	if (!first) {
 	    query += ",";
 	}
@@ -155,13 +151,14 @@ function updateMetaR(mdArr, callback, rSet) {
 	sub.push(md.priv);
 	first = false;
     }
+
     query += " WHERE `imageid`=?";
     sub.push(md.id);
 
     if (!first) {
 	// Not first, so we are updating at least one value.
 	query = mysql.format(query, sub);
-	console.log(query);
+
 	return conn.query(query, function(e, r) {
 	    if (e) {
 		console.log(e);
@@ -175,7 +172,7 @@ function updateMetaR(mdArr, callback, rSet) {
 		    } else {
 			rSet.push(true);
 		    }
-		    
+
 		    return updateMetaR(mdArr, callback, rSet);
 		});
 	    } else {
@@ -184,7 +181,8 @@ function updateMetaR(mdArr, callback, rSet) {
 	    
 	    return updateMetaR(mdArr, callback, rSet);
 	});
-    }  else {
+    } else {
+	console.log('Skipping entry with no meta.'); //TODO: anno support here
 	rSet.push(false);
 	return updateMetaR(mdArr, callback, rSet);
     }
