@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var errors = require('./error.js');
 
 function isUnset(x) {
     return  _.isUndefined(x) || _.isNull(x);
@@ -38,7 +39,6 @@ function parseAnnotations(an) {
 }
 
 function parseMetadata(mdArr) {
-    console.log(mdArr);
     if (!_.isArray(mdArr)) {
 	console.log('Metadata not a list.');
 	return false;
@@ -107,6 +107,12 @@ function parseMetadata(mdArr) {
     return mdArr;
 }
 
+function parseQueryCombine(parsed, qRes) {
+    return _.map(qRes, function (val, i) {
+	return (val === false) ? false : parsed[i];
+    });
+}
+
 function metaRoutes(app, auth, db) {
 
     // Takes an array of metadata objects (JSON). A metadata object must contain a 32 character id string,
@@ -122,12 +128,18 @@ function metaRoutes(app, auth, db) {
     // the property should be left undefined or set to null.
     app.post('/upload/metadata', auth.enforceLogin, function(req, res) {
 	// Check that we've been sent an array
-	parseMetadata(req.body);
-	db.addImageMeta(req.body, function(sqlRes) {
-	    // sqlRes = Array of booleans
-	    // req.body = resultant parsed request
-	    res.send(sqlRes);
-	});
+	if (parseMetadata(req.body) === false) {
+	    res.send({'res': false, 'err': new errors.APIError(1, 'Invalid request.')});
+	} else {
+	    var asParsed = req.body.slice(); // Use slice() to shallow copy the array, so we don't lose it's contents.
+	    db.addImageMeta(req.body, function(sqlRes) {
+		// sqlRes = Array of booleans
+		// asParsed = resultant parsed request
+		var errPresent = _.every(sqlRes); // TODO: Check for adjustments made in parser.
+		// TODO: res behaviour is inconsistent
+		res.send({'res': errPresent, 'detail': parseQueryCombine(asParsed, sqlRes)});
+	    });
+	}
     });
 
     app.get('/img/:id/meta', function(req, res) {
@@ -137,17 +149,17 @@ function metaRoutes(app, auth, db) {
 		if (bool) {
 		    db.getMetaBasic(req.user.id, req.params.id, function (err, meta) {
 			if (err) {
-			    res.send({'res':false, 'err':{'code':2, 'msg':'Failed to retrieve metadata.'}});
+			    res.send({'res':false, 'err': new errors.APIError(3, 'Failed to retrieve metadata.')});
 			} else {
 			    res.send({'res':true, 'meta':meta});;
 			}
 		    });
 		} else {
-		    res.send({'res':false, 'err':{'code':1,'msg':'You do not have permission to access this image.'}});
+		    res.send({'res':false, 'err': new errors.APIError(2, 'You do not have permission to access this image.')});
 		}
 	    });
 	} else {
-	    res.send({'res':false, 'excuse':'I AM BROKEN AND YOURE NOT LOGGED IN'});
+	    res.send({'res':false, 'err': new errors.APIError(1, 'You are not logged in.')});
 	}
     });
 
@@ -155,13 +167,13 @@ function metaRoutes(app, auth, db) {
 	if (req.user) {
 	    db.getAnnotations(req.user.id, req.params.id, function (err, anno) {
 		if (err) {
-		    res.send({'res':false, 'err':{'code':2, 'msg':'Failed to retrieve metadata.'}});
+		    res.send({'res':false, 'err': new errors.APIError(2, 'Failed to retrieve metadata.')});
 		} else {
 		    res.send({'res':true, 'anno':anno});;
 		}
 	    });
 	} else {
-	    res.send({'res':false, 'excuse':'I AM BROKEN AND YOURE NOT LOGGED IN'});
+	    res.send({'res':false, 'err': new errors.APIError(1, 'You are not logged in.')});
 	}
     });
 }
