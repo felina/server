@@ -106,35 +106,6 @@ function parseMetadata(mdArr) {
     }
     return mdArr;
 }
-		   
-function saveMetadata(mdArr, res) {
-    console.log('Adding md to db.');
-    parseMetadata(mdArr);
-    
-    // TODO: LISTS!
-    db.addImageMeta(mdArr[0], function(err, out) {
-	console.log(err);
-	console.log(out);
-	if (err) {
-	    console.log(err);
-	    res.send({'res':false, 'err':{'code':1, 'msg':'Failed to save metadata.'}});
-	} else {
-	    if (annotations.length === 0) {
-		res.send({'res':true});
-	    } else {
-		/*db.addImageAnno(annotations, function (err2, out2) {
-		    if (err2) {
-			console.log(err);
-			res.send({'res':false, 'err':{'code':2, 'msg':'Failed to save annotations.'}});
-		    } else {
-			res.send({'res':true});
-		    }
-		});*/
-		res.send({'res':false}); // TODO: Update me.
-	    }
-	}
-    });
-}		   
 
 function metaRoutes(app, auth, db) {
 
@@ -153,8 +124,18 @@ function metaRoutes(app, auth, db) {
 	// Check that we've been sent an array
 	parseMetadata(req.body);
 	saveMetadata(req.body, res);
-	//res.send(req.body);
+//	res.send(req.body);
     });
+
+    function saveMetadata(mdArr, res) {
+	console.log('Adding md to db.');
+	parseMetadata(mdArr);
+
+	db.addImageMeta(mdArr, function(qArr) {
+	    console.log(qArr);
+	    res.send(qArr);
+	});
+    }
 
     app.get('/img/:id/meta', function(req, res) {
 	// TODO: Allow logged out viewing

@@ -2,6 +2,7 @@ var mysql = require('mysql');
 var dbCFG = require('./db_settings.json');
 var bcrypt = require('bcrypt-nodejs');
 var users = require('./user.js');
+var errors = require('./error.js');
 var conn = mysql.createConnection(dbCFG);
 
 function init() {
@@ -57,7 +58,7 @@ function condenseAnnotations(annotations) {
 }
 
 // Adds annotation to an image.
-function addImageAnno(annotations, callback) {
+function addImageAnno(iid, annotations, callback) {
     var anno = condenseAnnotations(annotations);
 
     if (anno.length <= 0) {
@@ -68,14 +69,14 @@ function addImageAnno(annotations, callback) {
 	var sub = new Array(anno.length * 3);
 	var i;
 	for (i = 0; i < anno.length - 1; i++) {
-	    query = query + "(?,?,?),";
-	    sub[i * 3] = anno[i].imageid;
+	    query = query + "(?,GeomFromText(?),?),";
+	    sub[i * 3] = iid;
 	    sub[(i * 3) + 1] = pointsToGeomWKT(anno[i].region);
 	    sub[(i * 3) + 2] = (anno[i].tag === false) ? null : anno[i].tag;
 	}
 	// Add the final record
-	query = query + "(?,?,?)";
-	sub[i * 3] = anno[i].imageid;
+	query = query + "(?,GeomFromText(?),?)";
+	sub[i * 3] = iid;
 	sub[(i * 3) + 1] = pointsToGeomWKT(anno[i].region);
 	sub[(i * 3) + 2] = (anno[i].tag === false) ? null : anno[i].tag;
 
@@ -94,11 +95,20 @@ function addImageAnno(annotations, callback) {
     }
 }
 
-// Updates image metadata TODO: Check privileges! TODO: Lists!!!
-function addImageMeta(md, callback) {
+function updateMetaR(mdArr, callback, rSet) {
+    console.log('Rset: ' + rSet);
+    console.log('mdArr len: ' + mdArr.length);
+    if (mdArr.length === 0) {
+	// Reached the end, send to callback.
+	console.log('Returning from update meta.');
+	return callback(rSet);
+    }
+
     var first = true;
+    var md = mdArr.shift();
     var query = "UPDATE `images` SET";
     var sub = [];
+
     if (md.datetime) {
 	if (!first) {
 	    query += ",";
@@ -127,26 +137,41 @@ function addImageMeta(md, callback) {
     query += " WHERE `imageid`=?";
     sub.push(md.id);
 
-    // If first, we are updating nothing, we should do nothing.
     if (!first) {
+	// Not first, so we are updating at least one value.
 	query = mysql.format(query, sub);
 	console.log(query);
-	conn.query(query, function(err, res) {
-	    if (err) {
-		console.log(err.code);
-		callback(err, null);
+	return conn.query(query, function(e, r) {
+	    if (e) {
+		console.log(e);
+		// false if any errors occured in either query.
+		rSet.push(false);
+	    } else if (md.annotations !== null && md.annotations.length > 0) {
+		return addImageAnno(md.id, md.annotations, function (e2, r2) {
+		    if (e2) {
+			console.log(e2);
+			rSet.push(false);
+		    } else {
+			rSet.push(true);
+		    }
+		    
+		    return updateMetaR(mdArr, callback, rSet);
+		});
 	    } else {
-		console.log('Inserted image into db.');
-		if (md.annotations !== null || md.annotations.length > 0) {
-		    addImageAnno(md.annotations, callback);
-		} else {
-		    callback(null, res);
-		}
+		rSet.push(true);
 	    }
+	    
+	    return updateMetaR(mdArr, callback, rSet);
 	});
-    } else {
-	callback('No changes', null);
+    }  else {
+	rSet.push(false);
+	return updateMetaR(mdArr, callback, rSet);
     }
+}
+
+// Updates image metadata TODO: Check privileges! TODO: Lists!!!
+function addImageMeta(mdArr, callback) {
+    return updateMetaR(mdArr, callback, []);
 }
 
 // Checks eligibility to load an image.
