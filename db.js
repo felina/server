@@ -488,11 +488,11 @@ function setUserHash(id, auth) {
 }
 
 // Looks up a users bcrypt hash from their registered email, compare pass, and give results to callback.
-// callback(err/null, user/false, info)
-function checkUserHash(email, pass, callback) {
+// callback(err, hash, user)
+function getUserHash(email, callback) {
     var query = "SELECT `users`.`userid`, `name`, `email`, `hash`, `usertype` "
-        + "FROM `local_auth` "
-        + "INNER JOIN `users` USING (`userid`) "
+        + "FROM `users` "
+        + "INNER JOIN `local_auth` USING (`userid`) "
         + "WHERE `email` = ?";
     var sub = [email];
     query = mysql.format(query, sub);
@@ -505,15 +505,13 @@ function checkUserHash(email, pass, callback) {
 	conn.query(query, function(err, res) {
 	    if (err) {
 		// The query failed, respond to the error.
-		callback(err);
+		callback(err, null, null);
 	    } else {
 		if (res.length == 0) {
-		    callback(null, false, { message: "Not registered." });
-		} else if (bcrypt.compareSync(pass, res[0].hash)) {
-                    var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
-                    callback(null, user);
+		    callback(null, null, null);
 		} else {
-                    callback(null, false, { message: "Incorrect password." });
+                    var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
+                    callback(null, user, res[0].hash);
 		}
 	    }
 	});
@@ -522,4 +520,4 @@ function checkUserHash(email, pass, callback) {
     });
 }
 
-module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm, addImageMeta:addImageMeta, getMetaBasic:getMetaBasic, getAnnotations:getAnnotations};
+module.exports = {init:init, getUserHash:getUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm, addImageMeta:addImageMeta, getMetaBasic:getMetaBasic, getAnnotations:getAnnotations};

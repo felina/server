@@ -6,7 +6,15 @@ var users = require('../user.js');
 
 // callback(err, id)
 function register(user, password, callback) {
-    db.addNewUser(user, bcrypt.hashSync(password), callback);
+    bcrypt.hash(password, null, null, function(err, hash) {
+	if (err) {
+	    console.log('Failed to hash password.');
+	    console.log(err);
+	    callback(err, null);
+	} else {
+	    db.addNewUser(user, hash, callback);
+	}
+    });
 }
 
 function compare(pass, hash) {
@@ -14,8 +22,25 @@ function compare(pass, hash) {
 }
 
 function localVerify(username, password, done) {
-	console.log("Verifying user: " + username + " " + password);
-	var passHash = db.checkUserHash(username, password, done);
+    console.log("Verifying user: " + username);
+    var passHash = db.getUserHash(username, function(err, user, hash) {
+	if (err) {
+	    console.log(err);
+	    return done(err, null);
+	} else if (user === null || hash === null) {
+	    return done('Unregistered user.', null);
+	} else {
+	    bcrypt.compare(password, hash, function(hErr, correct) {
+		if (hErr) {
+		    return done(hErr, null);
+		} else if (correct) {
+		    return done(null, user);
+		} else {
+		    return done(null, false);
+		}
+	    });
+	}
+    });
 }
 
 var StrategyOptions = Object.freeze({
