@@ -5,7 +5,22 @@ var users = require('./user.js');
 var errors = require('./error.js');
 var connPool = mysql.createPool(dbCFG);
 
-function init() {}
+function init(callback) {
+    // Test connection parameters.
+    connPool.getConnection(function(connErr, conn) {
+	if (connErr) {
+	    return callback(connErr);
+	}
+
+	conn.query('SELECT `userid`, `email`, `name`, `usertype` FROM `users` LIMIT 0', function(err, res) {
+	    if (err) {
+		return callback(err);
+	    } else {
+		return callback(null);
+	    }
+	});
+    });
+}
 
 function geomWKTToPoints(WKT) {
     var parStart = WKT.lastIndexOf('(', 11);

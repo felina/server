@@ -8,6 +8,14 @@ var jobs = require('./jobs.js');
 var meta = require('./meta.js');
 var aws = require('aws-sdk');
 
+// Check db settings
+db.init(function(err) {
+    if (err) {
+	console.log(err);
+	throw new Error('Database Unvailable. Your database settings are incorrect, the server is down, or you have not completed installation. Refusing to start!');
+    }
+});       
+
 // Setup passport
 auth.authSetup(passport);
 
