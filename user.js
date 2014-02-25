@@ -18,7 +18,7 @@ function privilegeFromString(dbs) {
     return res;
 }
 
-function User (id, name, email, privilege) {
+function User (id, name, email, privilege, gravatar) {
     if (typeof id !== 'number') {
 	this.id = false;
 	return;
@@ -36,10 +36,14 @@ function User (id, name, email, privilege) {
         this.id = false;
 	return;
     }
+    if (typeof gravatar !== 'string' || gravatar.length !== 32) {
+	this.gravatar = null;
+    }
     this.id = id;
     this.name = name;
     this.email = email;
     this.privilege = privilege;
+    this.gravatar = gravatar;
 }
 
 User.prototype.isResearcher = function() {

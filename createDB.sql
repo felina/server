@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS `felina`.`users` (
   `email` VARCHAR(80) NOT NULL,
   `name` VARCHAR(30) NOT NULL DEFAULT 'An Anonymous User',
   `usertype` ENUM('user', 'researcher', 'admin') NOT NULL,
+  `gravatar` CHAR(32),
   PRIMARY KEY (`userid`),
   UNIQUE INDEX `email_UNIQUE` (`email` ASC))
 ENGINE = InnoDB;

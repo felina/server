@@ -57,7 +57,8 @@ function authRoutes(app) {
 	    var name = req.body.name;
 	    var pass = req.body.pass;
 	    var priv = users.PrivilegeLevel.USER.i;
-	    var user = new users.User(-1, name, mail, priv);
+	    var grav = req.body.gravatar;
+	    var user = new users.User(-1, name, mail, priv, grav);
 	    if (user.id === false) {
 		// Details of user are invalid.
 		res.send({'res':false, 'err':{'code':1, 'msg':'User details are invalid!'}});
@@ -71,7 +72,7 @@ function authRoutes(app) {
 		    } else {
 			// Update id from DB insertion.
 			user.id = id;
-			console.log(['Registered user:',id,mail,pass,name,priv].join(" "));
+			console.log(['Registered user:',id,mail,pass,name,priv,grav].join(" "));
 			res.send({'res':true, 'user':user});
 			// Login the newly registered user.
 			req.login(user, function(err) {

@@ -341,7 +341,7 @@ function addNewImage(user, project, image) {
 // Attempts to deserialize a user, passing it to the done callback.
 // done(err, user)
 function getUser(id, done) {
-    var query = "SELECT `email`, `name`, `usertype` "
+    var query = "SELECT `email`, `name`, `usertype`, `gravatar` "
         + "FROM `users` "
         + "WHERE `userid` = ?";
     var sub = [id];
@@ -360,7 +360,7 @@ function getUser(id, done) {
 		if (res.length == 0) {
 		    done(null, false);
 		} else {
-                    var user = new users.User(id, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
+                    var user = new users.User(id, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar);
 		    if (user.id === false) {
 			done('User settings invalid.', false);
 		    } else {
@@ -376,7 +376,7 @@ function getUser(id, done) {
 
 // Attempts to get a user (initialise login) via an external provider
 function extGetUser(id, provider, loginUser, done) {
-    var query = "SELECT `users`.`userid`, `email`, `name`, `usertype` "
+    var query = "SELECT `users`.`userid`, `email`, `name`, `usertype`, `gravatar` "
         + "FROM `users` "
 	+ "INNER JOIN `ext_auth` USING (`userid`) "
         + "WHERE `provider` = ? AND `service_id` = ?";
@@ -402,7 +402,7 @@ function extGetUser(id, provider, loginUser, done) {
 		    } else if (res.length >= 1) {
 			// We know this provider/id but it's associated with another account!
 			console.log('Tried to join already associated external account to a different user!');
-			var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
+			var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar);
 			done(1, user);
 		    } else {
 			// User is already logged in, join the accounts.
@@ -419,7 +419,7 @@ function extGetUser(id, provider, loginUser, done) {
 		    } else {
 			// User not logged in, but we know these credentials
 			console.log('Not logged in, known user.');
-			var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
+			var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar);
 			done(0, user);
 		    }
 		}
@@ -456,10 +456,10 @@ function extAssocUser(id, provider, loginUser, done) {
 }
 
 // Adds a new user to users/local auth. TODO: Use a user object.
-// callbaack(err, id)
+// callback(err, id)
 function addNewUser(user, phash, callback) {
-    var query = "INSERT INTO `users` VALUE (null,?,?,?)"
-    var sub = [user.email, user.name, "user"];
+    var query = "INSERT INTO `users` VALUE (null,?,?,?,?)"
+    var sub = [user.email, user.name, "user", user.gravatar];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
@@ -468,6 +468,8 @@ function addNewUser(user, phash, callback) {
 	}
 
 	conn.query(query, function(err, res) {
+	    conn.release();
+
 	    if (err) {
 		console.log(err.code);
 		callback(err, null);
@@ -476,8 +478,6 @@ function addNewUser(user, phash, callback) {
 		callback(null, res.insertId);
 	    }
 	});
-
-	conn.release();
     });
 }
 
@@ -505,7 +505,7 @@ function setUserHash(id, auth) {
 // Looks up a users bcrypt hash from their registered email, compare pass, and give results to callback.
 // callback(err, hash, user)
 function getUserHash(email, callback) {
-    var query = "SELECT `users`.`userid`, `name`, `email`, `hash`, `usertype` "
+    var query = "SELECT `users`.`userid`, `name`, `email`, `hash`, `usertype`, `gravatar` "
         + "FROM `users` "
         + "INNER JOIN `local_auth` USING (`userid`) "
         + "WHERE `email` = ?";
@@ -525,7 +525,7 @@ function getUserHash(email, callback) {
 		if (res.length == 0) {
 		    callback(null, null, null);
 		} else {
-                    var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
+                    var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar);
                     callback(null, user, res[0].hash);
 		}
 	    }
