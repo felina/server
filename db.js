@@ -3,28 +3,9 @@ var dbCFG = require('./db_settings.json');
 var bcrypt = require('bcrypt-nodejs');
 var users = require('./user.js');
 var errors = require('./error.js');
-var conn = mysql.createConnection(dbCFG);
+var connPool = mysql.createPool(dbCFG);
 
-function init() {
-    conn.connect(function(err) {
-	if (err) {
-	    console.log(err.code);
-	    console.log(err.fatal);
-	    setTimeout(init, 2000);
-	} else {
-	    console.log("DB connected.");
-	}
-    });
-
-    conn.on('error', function(err) {
-	console.log('db error', err);
-	if (err.code === 'PROTOCOL_CONNECTION_LOST') { // Connection to the MySQL server is usually
-	    init();                                    // lost due to either server restart, or a
-	} else {                                       // connnection idle timeout (the wait_timeout
-	    throw err;                                 // server variable configures this)
-	}
-    });
-}
+function init() {}
 
 function geomWKTToPoints(WKT) {
     var parStart = WKT.lastIndexOf('(', 11);
@@ -103,14 +84,21 @@ function addImageAnno(iid, annotations, callback) {
 
 	query = mysql.format(query, sub);
 
-	conn.query(query, function(err, res) {
-	    if (err) {
-		console.log(err.code);
-		callback(err, null);
-	    } else {
-		console.log('Inserted ' + anno.length + '/' + annotations.length + ' annotations into db.');
-		callback(null, res);
+	connPool.getConnection(function(connErr, conn) {
+	    if (connErr) {
+		return callback('Database error', false);
 	    }
+	    conn.query(query, function(err, res) {
+		if (err) {
+		    console.log(err.code);
+		    callback(err, null);
+		} else {
+		    console.log('Inserted ' + anno.length + '/' + annotations.length + ' annotations into db.');
+		    callback(null, res);
+		}
+	    });
+
+	    conn.release();
 	});
     }
 }
@@ -159,27 +147,35 @@ function updateMetaR(mdArr, callback, rSet) {
 	// Not first, so we are updating at least one value.
 	query = mysql.format(query, sub);
 
-	return conn.query(query, function(e, r) {
-	    if (e) {
-		console.log(e);
-		// false if any errors occured in either query.
-		rSet.push(false);
-	    } else if (md.annotations !== null && md.annotations.length > 0) {
-		return addImageAnno(md.id, md.annotations, function (e2, r2) {
-		    if (e2) {
-			console.log(e2);
-			rSet.push(false);
-		    } else {
-			rSet.push(true);
-		    }
-
-		    return updateMetaR(mdArr, callback, rSet);
-		});
-	    } else {
-		rSet.push(true);
+	connPool.getConnection(function(connErr, conn) {
+	    if (connErr) {
+		return callback(false);
 	    }
-	    
-	    return updateMetaR(mdArr, callback, rSet);
+
+	    return conn.query(query, function(e, r) {
+		conn.release();
+
+		if (e) {
+		    console.log(e);
+		    // false if any errors occured in either query.
+		    rSet.push(false);
+		} else if (md.annotations !== null && md.annotations.length > 0) {
+		    return addImageAnno(md.id, md.annotations, function (e2, r2) {
+			if (e2) {
+			    console.log(e2);
+			    rSet.push(false);
+			} else {
+			    rSet.push(true);
+			}
+
+			return updateMetaR(mdArr, callback, rSet);
+		    });
+		} else {
+		    rSet.push(true);
+		}
+		
+		return updateMetaR(mdArr, callback, rSet);
+	    });
 	});
     } else {
 	console.log('Skipping entry with no meta.'); //TODO: anno support here
@@ -198,36 +194,54 @@ function checkImagePerm(user, id, callback) {
     var query = "SELECT (`ownerid`=? OR NOT `private`) AS 'open' FROM `images` WHERE `imageid`=?";
     var sub = [user.id, id];
     query = mysql.format(query, sub);
-    conn.query(query, function(err, res) {
-	if (err) {
-	    console.log(err.code);
-	    callback(err, false);
-	} else if (res.length === 0) {
-	    callback(null, false);
-	} else {
-	    callback(null, res[0].open);
+
+    connPool.getConnection(function(connErr, conn) {
+	if (connErr) {
+	    return callback('Database error', false);
 	}
-    }); 
+
+	conn.query(query, function(err, res) {
+	    if (err) {
+		console.log(err.code);
+		callback(err, false);
+	    } else if (res.length === 0) {
+		callback(null, false);
+	    } else {
+		callback(null, res[0].open);
+	    }
+	});
+
+	conn.release();
+    });
 }
 
 function getMetaBasic(uid, iid, callback) {
     var query = "SELECT `datetime`, AsText(`location`) AS 'location', `private` FROM `images` WHERE `imageid`=? AND (`ownerid`=? OR NOT `private`)";
     var sub = [iid, uid];
     query = mysql.format(query, sub);
-    conn.query(query, function(err, res) {
-	if (err) {
-	    console.log(err.code);
-	    callback(err, null);
-	} else {
-	    if (res.length >= 0) {
-		if (res[0].location != null) {
-		    res[0].location = geomWKTToPoints(res[0].location);
-		}
-		callback(null, res[0]);
-	    } else {
-		callback(null, false);
-	    }
+
+    connPool.getConnection(function(connErr, conn) {
+	if (connErr) {
+	    return callback('Database error', false);
 	}
+
+	conn.query(query, function(err, res) {
+	    if (err) {
+		console.log(err.code);
+		callback(err, null);
+	    } else {
+		if (res.length >= 0) {
+		    if (res[0].location != null) {
+			res[0].location = geomWKTToPoints(res[0].location);
+		    }
+		    callback(null, res[0]);
+		} else {
+		    callback(null, false);
+		}
+	    }
+	});
+
+	conn.release();
     });
 }
 
@@ -238,16 +252,25 @@ function getAnnotations(uid, iid, callback) {
 	"WHERE `imageid`=? AND (`images`.`ownerid`=? OR NOT `images`.`private`)";
     var sub = [iid, uid];
     query = mysql.format(query, sub);
-    conn.query(query, function(err, res) {
-	if (err) {
-	    console.log(err.code);
-	    callback(err, null);
-	} else {
-	    res.forEach(function(entry) {
-		entry.region = geomWKTToPoints(entry.region);
-	    });
-	    callback(null, res);
+
+    connPool.getConnection(function(connErr, conn) {
+	if (connErr) {
+	    return callback('Database error', false);
 	}
+
+	conn.query(query, function(err, res) {
+	    if (err) {
+		console.log(err.code);
+		callback(err, null);
+	    } else {
+		res.forEach(function(entry) {
+		    entry.region = geomWKTToPoints(entry.region);
+		});
+		callback(null, res);
+	    }
+	});
+
+	conn.release();
     });
 }
 
@@ -256,13 +279,22 @@ function getUserImages(user, callback) {
     var query = "SELECT `imageid`, `datetime`, AsText(`location`) AS 'loc', `private` FROM `images` WHERE `ownerid`=?";
     var sub = [user.id];
     query = mysql.format(query, sub);
-    conn.query(query, function(err, res) {
-	if (err) {
-	    console.log(err.code);
-	    callback(err, null);
-	} else {
-	    callback(null, res);
+
+    connPool.getConnection(function(connErr, conn) {
+	if (connErr) {
+	    return callback('Database error', false);
 	}
+
+	conn.query(query, function(err, res) {
+	    if (err) {
+		console.log(err.code);
+		callback(err, null);
+	    } else {
+		callback(null, res);
+	    }
+	});
+
+	conn.release();
     });
 }
 
@@ -271,14 +303,23 @@ function addNewImage(user, project, image) {
     var query = "INSERT INTO `images` (imageid, ownerid, projectid) VALUE (?,?,?)";
     var sub = [image.imageHash, user.id, project.id];
     query = mysql.format(query, sub);
-    conn.query(query, function(err, res) {
-	if (err) {
-	    console.log(err.code);
-	    //callback(err, null);
-	} else {
-	    console.log('Inserted image into db.');
-	    //callback(null, res.insertId);
+
+    connPool.getConnection(function(connErr, conn) {
+	if (connErr) {
+	    return; //callback('Database error', false);
 	}
+
+	conn.query(query, function(err, res) {
+	    if (err) {
+		console.log(err.code);
+		//callback(err, null);
+	    } else {
+		console.log('Inserted image into db.');
+		//callback(null, res.insertId);
+	    }
+	});
+
+	conn.release();
     });
 }
 
@@ -290,22 +331,31 @@ function getUser(id, done) {
         + "WHERE `userid` = ?";
     var sub = [id];
     query = mysql.format(query, sub);
-    conn.query(query, function(err, res) {
-	if (err) {
-	    // The query failed, respond to the error.
-	    done(err, false);
-	} else {
-	    if (res.length == 0) {
-		done(null, false);
-	    } else {
-                var user = new users.User(id, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
-		if (user.id === false) {
-		    done('User settings invalid.', false);
-		} else {
-                    done(null, user);
-		}
-            }
+
+    connPool.getConnection(function(connErr, conn) {
+	if (connErr) {
+	    return callback('Database error', false);
 	}
+
+	conn.query(query, function(err, res) {
+	    if (err) {
+		// The query failed, respond to the error.
+		done(err, false);
+	    } else {
+		if (res.length == 0) {
+		    done(null, false);
+		} else {
+                    var user = new users.User(id, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
+		    if (user.id === false) {
+			done('User settings invalid.', false);
+		    } else {
+			done(null, user);
+		    }
+		}
+	    }
+	});
+
+	conn.release();
     });
 }
 
@@ -317,43 +367,51 @@ function extGetUser(id, provider, loginUser, done) {
         + "WHERE `provider` = ? AND `service_id` = ?";
     var sub = [provider, id];
     query = mysql.format(query, sub);
-    console.log(query);
-    conn.query(query, function(err, res) {
-	if (err) {
-	    // The query failed, respond to the error.
-	    console.log(err.code);
-	    done(err, null);
-	} else {
-	    console.log('Using ext auth.');
-	    if (loginUser) {
-		if (res.length >= 1 && loginUser.id === res[0].userid) {
-		    // We know this provider and we already have it linked to this account. Do nothing.
-		    done(0, loginUser);
-		} else if (res.length >= 1) {
-		    // We know this provider/id but it's associated with another account!
-		    console.log('Tried to join already associated external account to a different user!');
-		    var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
-		    done(1, user);
-		} else {
-		    // User is already logged in, join the accounts.
-		    console.log('Associating new provider with existing account.');
-		    extAssocUser(id, provider, loginUser, done);
-		    done(2, loginUser);
-		}
+
+    connPool.getConnection(function(connErr, conn) {
+	if (connErr) {
+	    return done('Database error', null);
+	}
+
+	conn.query(query, function(err, res) {
+	    if (err) {
+		// The query failed, respond to the error.
+		console.log(err.code);
+		done(err, null);
 	    } else {
-		if (res.length === 0) {
-		    // User is not logged in and provider/id combo not recognised.
-		    // TODO: Register
-		    console.log('Not logged in not recognised.');
-		    done(3);
+		console.log('Using ext auth.');
+		if (loginUser) {
+		    if (res.length >= 1 && loginUser.id === res[0].userid) {
+			// We know this provider and we already have it linked to this account. Do nothing.
+			done(0, loginUser);
+		    } else if (res.length >= 1) {
+			// We know this provider/id but it's associated with another account!
+			console.log('Tried to join already associated external account to a different user!');
+			var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
+			done(1, user);
+		    } else {
+			// User is already logged in, join the accounts.
+			console.log('Associating new provider with existing account.');
+			extAssocUser(id, provider, loginUser, done);
+			done(2, loginUser);
+		    }
 		} else {
-		    // User not logged in, but we know these credentials
-		    console.log('Not logged in, known user.');
-		    var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
-		    done(0, user);
+		    if (res.length === 0) {
+			// User is not logged in and provider/id combo not recognised.
+			// TODO: Register
+			console.log('Not logged in not recognised.');
+			done(3);
+		    } else {
+			// User not logged in, but we know these credentials
+			console.log('Not logged in, known user.');
+			var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
+			done(0, user);
+		    }
 		}
-	    }
-        }
+            }
+	});
+
+	conn.release();
     });
 }
 
@@ -362,15 +420,23 @@ function extAssocUser(id, provider, loginUser, done) {
     var query = "INSERT INTO `ext_auth` VALUE (?,?,?)";
     var sub = [loginUser.id, provider, id];
     query = mysql.format(query, sub);
-    console.log(query);
-    conn.query(query, function(err, res) {
-	if (err) {
-	    // The query failed, respond to the error.
-	    console.log(err.code);
-	    done(err, null);
-	} else {
-	    done(null, loginUser);
-        }
+
+    connPool.getConnection(function(connErr, conn) {
+	if (connErr) {
+	    return done('Database error', null);
+	}
+
+	conn.query(query, function(err, res) {
+	    if (err) {
+		// The query failed, respond to the error.
+		console.log(err.code);
+		done(err, null);
+	    } else {
+		done(null, loginUser);
+            }
+	});
+
+	conn.release();
     });
 }
 
@@ -380,53 +446,80 @@ function addNewUser(user, phash, callback) {
     var query = "INSERT INTO `users` VALUE (null,?,?,?)"
     var sub = [user.email, user.name, "user"];
     query = mysql.format(query, sub);
-    conn.query(query, function(err, res) {
-	if (err) {
-	    console.log(err.code);
-	    callback(err, null);
-	} else {
-	    setUserHash(res.insertId, phash);
-	    callback(null, res.insertId);
+
+    connPool.getConnection(function(connErr, conn) {
+	if (connErr) {
+	    return callback('Database error', null);
 	}
+
+	conn.query(query, function(err, res) {
+	    if (err) {
+		console.log(err.code);
+		callback(err, null);
+	    } else {
+		setUserHash(res.insertId, phash);
+		callback(null, res.insertId);
+	    }
+	});
+
+	conn.release();
     });
 }
 
 function setUserHash(id, auth) {
-	var query = "INSERT INTO `local_auth` VALUE (?,?)";
-	var sub = [id, auth];
-	query = mysql.format(query, sub);
+    var query = "INSERT INTO `local_auth` VALUE (?,?)";
+    var sub = [id, auth];
+    query = mysql.format(query, sub);
+
+    connPool.getConnection(function(connErr, conn) {
+	if (connErr) {
+	    return; //done('Database error', null);
+	}
+
 	conn.query(query, function(err, res) {
-		if (err) {
-			// The query failed, respond to the error.
-			console.log(err.code);
-		}
+	    if (err) {
+		// The query failed, respond to the error.
+		console.log(err.code);
+	    }
 	});
+
+	conn.release();
+    });
 }
 
 // Looks up a users bcrypt hash from their registered email, compare pass, and give results to callback.
 // callback(err/null, user/false, info)
 function checkUserHash(email, pass, callback) {
-	var query = "SELECT `users`.`userid`, `name`, `email`, `hash`, `usertype` "
-              + "FROM `local_auth` "
-              + "INNER JOIN `users` USING (`userid`) "
-              + "WHERE `email` = ?";
-	var sub = [email];
-	query = mysql.format(query, sub);
+    var query = "SELECT `users`.`userid`, `name`, `email`, `hash`, `usertype` "
+        + "FROM `local_auth` "
+        + "INNER JOIN `users` USING (`userid`) "
+        + "WHERE `email` = ?";
+    var sub = [email];
+    query = mysql.format(query, sub);
+
+    connPool.getConnection(function(connErr, conn) {
+	if (connErr) {
+	    return callback('Database error', false);
+	}
+
 	conn.query(query, function(err, res) {
-		if (err) {
-			// The query failed, respond to the error.
-			callback(err);
+	    if (err) {
+		// The query failed, respond to the error.
+		callback(err);
+	    } else {
+		if (res.length == 0) {
+		    callback(null, false, { message: "Not registered." });
+		} else if (bcrypt.compareSync(pass, res[0].hash)) {
+                    var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
+                    callback(null, user);
 		} else {
-			if (res.length == 0) {
-				callback(null, false, { message: "Not registered." });
-			} else if (bcrypt.compareSync(pass, res[0].hash)) {
-                var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype));
-                callback(null, user);
-            } else {
-                callback(null, false, { message: "Incorrect password." });
-            }
+                    callback(null, false, { message: "Incorrect password." });
 		}
+	    }
 	});
+
+	conn.release();
+    });
 }
 
 module.exports = {init:init, checkUserHash:checkUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm, addImageMeta:addImageMeta, getMetaBasic:getMetaBasic, getAnnotations:getAnnotations};
