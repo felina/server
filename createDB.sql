@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS `felina`.`users` (
   `email` VARCHAR(80) NOT NULL,
   `name` VARCHAR(30) NOT NULL DEFAULT 'An Anonymous User',
   `usertype` ENUM('user', 'researcher', 'admin') NOT NULL,
-  `gravatar` CHAR(32),
+  `gravatar` CHAR(32) NULL,
   PRIMARY KEY (`userid`),
   UNIQUE INDEX `email_UNIQUE` (`email` ASC))
 ENGINE = InnoDB;
@@ -96,8 +96,7 @@ CREATE TABLE IF NOT EXISTS `felina`.`project_fields` (
   `fieldid` INT NOT NULL AUTO_INCREMENT,
   `projectid` INT NOT NULL,
   `name` VARCHAR(45) NOT NULL,
-  `desc` VARCHAR(45) NOT NULL,
-  `type` VARCHAR(45) NOT NULL DEFAULT 'text',
+  `type` ENUM('anno', 'string', 'number', 'enum') NOT NULL DEFAULT 'anno',
   PRIMARY KEY (`fieldid`),
   INDEX `projectid_idx` (`projectid` ASC),
   CONSTRAINT `project_pfield_rel`
@@ -109,20 +108,20 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `felina`.`image_metadata`
+-- Table `felina`.`image_meta_string`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `felina`.`image_metadata` (
+CREATE TABLE IF NOT EXISTS `felina`.`image_meta_string` (
   `imageid` CHAR(32) NOT NULL,
   `fieldid` INT NOT NULL,
-  `value` VARCHAR(45) NULL,
+  `stringval` VARCHAR(45) NOT NULL,
   PRIMARY KEY (`imageid`, `fieldid`),
   INDEX `fieldid_idx` (`fieldid` ASC),
-  CONSTRAINT `image_meta_rel`
+  CONSTRAINT `image_mstring_rel`
     FOREIGN KEY (`imageid`)
     REFERENCES `felina`.`images` (`imageid`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `pfield_field_rel`
+  CONSTRAINT `pfield_mstring_rel`
     FOREIGN KEY (`fieldid`)
     REFERENCES `felina`.`project_fields` (`fieldid`)
     ON DELETE NO ACTION
@@ -156,15 +155,86 @@ ENGINE = InnoDB;
 -- Table `felina`.`image_annotations`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `felina`.`image_annotations` (
-  `annoid` INT NOT NULL AUTO_INCREMENT,
   `imageid` CHAR(32) NOT NULL,
+  `fieldid` INT NOT NULL,
   `region` GEOMETRY NOT NULL,
-  `tag` VARCHAR(45) NULL,
-  PRIMARY KEY (`annoid`),
+  PRIMARY KEY (`fieldid`, `imageid`),
   INDEX `imageid_idx` (`imageid` ASC),
   CONSTRAINT `imageid`
     FOREIGN KEY (`imageid`)
     REFERENCES `felina`.`images` (`imageid`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fieldid`
+    FOREIGN KEY (`fieldid`)
+    REFERENCES `felina`.`project_fields` (`fieldid`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `felina`.`enum_definitions`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `felina`.`enum_definitions` (
+  `enumval` INT NOT NULL AUTO_INCREMENT,
+  `fieldid` INT NOT NULL,
+  `name` VARCHAR(45) NOT NULL,
+  PRIMARY KEY (`enumval`),
+  INDEX `fieldid_idx` (`fieldid` ASC),
+  CONSTRAINT `fieldid`
+    FOREIGN KEY (`fieldid`)
+    REFERENCES `felina`.`project_fields` (`fieldid`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `felina`.`image_meta_number`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `felina`.`image_meta_number` (
+  `imageid` CHAR(32) NOT NULL,
+  `fieldid` INT NOT NULL,
+  `numberval` DOUBLE NOT NULL,
+  PRIMARY KEY (`imageid`, `fieldid`),
+  INDEX `fieldid_idx` (`fieldid` ASC),
+  CONSTRAINT `image_mnumber_rel`
+    FOREIGN KEY (`imageid`)
+    REFERENCES `felina`.`images` (`imageid`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `pfield_mnumber_rel`
+    FOREIGN KEY (`fieldid`)
+    REFERENCES `felina`.`project_fields` (`fieldid`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `felina`.`image_meta_enum`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `felina`.`image_meta_enum` (
+  `imageid` CHAR(32) NOT NULL,
+  `fieldid` INT NOT NULL,
+  `enumval` INT NOT NULL,
+  PRIMARY KEY (`imageid`, `fieldid`),
+  INDEX `fieldid_idx` (`fieldid` ASC),
+  INDEX `enumd_menum_rel_idx` (`enumval` ASC, `fieldid` ASC),
+  CONSTRAINT `image_menum_rel`
+    FOREIGN KEY (`imageid`)
+    REFERENCES `felina`.`images` (`imageid`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `pfield_menum_rel`
+    FOREIGN KEY (`fieldid`)
+    REFERENCES `felina`.`project_fields` (`fieldid`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `enumd_menum_rel`
+    FOREIGN KEY (`enumval` , `fieldid`)
+    REFERENCES `felina`.`enum_definitions` (`enumval` , `fieldid`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
