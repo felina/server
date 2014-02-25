@@ -160,12 +160,12 @@ CREATE TABLE IF NOT EXISTS `felina`.`image_annotations` (
   `region` GEOMETRY NOT NULL,
   PRIMARY KEY (`fieldid`, `imageid`),
   INDEX `imageid_idx` (`imageid` ASC),
-  CONSTRAINT `imageid`
+  CONSTRAINT `image_manno_rel`
     FOREIGN KEY (`imageid`)
     REFERENCES `felina`.`images` (`imageid`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `fieldid`
+  CONSTRAINT `pfield_manno_rel`
     FOREIGN KEY (`fieldid`)
     REFERENCES `felina`.`project_fields` (`fieldid`)
     ON DELETE NO ACTION
@@ -182,7 +182,7 @@ CREATE TABLE IF NOT EXISTS `felina`.`enum_definitions` (
   `name` VARCHAR(45) NOT NULL,
   PRIMARY KEY (`enumval`),
   INDEX `fieldid_idx` (`fieldid` ASC),
-  CONSTRAINT `fieldid`
+  CONSTRAINT `pfield_edefs_rel`
     FOREIGN KEY (`fieldid`)
     REFERENCES `felina`.`project_fields` (`fieldid`)
     ON DELETE NO ACTION
