@@ -15,6 +15,13 @@ function parseRegion(reg) {
 	    return false;
 	}
     }
+
+    // For polygons (i.e. length > 2), the final point should match the first.
+    // If we want to support more geoms, e.g. linestrings, this must change.
+    if (reg.length > 2 && (reg[reg.length-1].x !== reg[0].x || reg[reg.length-1].y !== reg[0].y)) {
+	reg.push(reg[0]);
+    }
+
     return true;
 }
 
@@ -64,9 +71,9 @@ function parseMetadata(mdArr) {
 
 		// Check if location has been sent 
 		if (!isUnset(mdArr[i].location)) {
-		    if (typeof mdArr[i].location !== 'object' || typeof mdArr[i].location.lat !== 'number' ||
-			typeof mdArr[i].location.lon !== 'number' || mdArr[i].location.lat < -90 ||
-			mdArr[i].location.lat > 90 || mdArr[i].location.lon > -180 || mdArr[i].location.lon > 180) {
+		    if (typeof mdArr[i].location !== 'object' || typeof mdArr[i].location.lat === 'undefined' ||
+			typeof mdArr[i].location.lon === 'undefined' || mdArr[i].location.lat < -90 ||
+			mdArr[i].location.lat > 90 || mdArr[i].location.lon < -180 || mdArr[i].location.lon > 180) {
 			console.log('Invalid location.');
 			// Mark as invalid
 			mdArr[i].location = false;

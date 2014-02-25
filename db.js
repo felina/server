@@ -21,29 +21,45 @@ function init(callback) {
     });
 }
 
-function geomWKTToPoints(WKT) {
-    var parStart = WKT.lastIndexOf('(', 11);
-    var parEnd = WKT.indexOf(')', 6);
-    if (parStart < 0 || parEnd < 0 || parStart + 3 >= parEnd) {
-	console.log('WKT has invalid start or end! ' + WKT);
-	return false;
+function geomWKTToPoints(WKT, location) {
+    if (location) {
+	// Locations should hold points only, and use lat/lon instead of x/y
+	var ptStart = WKT.lastIndexOf('POINT(', 0);
+	var ptEnd = WKT.indexOf(')', 9);
+	if (ptStart !== 0 || ptEnd < 0) {
+	    console.log('WKT location is not a point! ' + WKT);
+	    return false;
+	} else {
+	    var pts = WKT.substring(6, ptEnd).split(' ');
+	    return {'lat': parseFloat(pts[0]), 'lon': parseFloat(pts[1])};
+	}
     } else {
-	var paramGroups = WKT.substring(parStart + 1, parEnd).split(', ');
-	var region = new Array(paramGroups.length);
-	paramGroups.forEach(function(paramGroup, i) {
-	    var params = paramGroup.split(' ');
-	    if (params.length != 2) {
-		console.log('WKT param group is invalid ' + paramGroup);
-	    } else {
-		region[i] = {'x': params[0], 'y': params[1]};
-	    }
-	});
-	return region;
+	var parStart = WKT.lastIndexOf('(', 11);
+	var parEnd = WKT.indexOf(')', 6);
+	if (parStart < 0 || parEnd < 0 || parStart + 3 >= parEnd) {
+	    console.log('WKT has invalid start or end! ' + WKT);
+	    return false;
+	} else {
+	    var paramGroups = WKT.substring(parStart + 1, parEnd).split(',');
+	    var region = new Array(paramGroups.length);
+	    paramGroups.forEach(function(paramGroup, i) {
+		var params = paramGroup.split(' ');
+		if (params.length != 2) {
+		    console.log('WKT param group is invalid ' + paramGroup);
+		} else {
+		    region[i] = {'x': params[0], 'y': params[1]};
+		}
+	    });
+	    return region;
+	}
     }
 }
 
-function pointsToGeomWKT(region) {
-    if (region.length === 1) {
+function pointsToGeomWKT(region, location) {
+    if (location) {
+	// Locations should hold points only, and use lat/lon instead of x/y
+	return "POINT("+region[0].lat+" "+region[0].lon+")";
+    } else if (region.length === 1) {
 	// A single point.
 	return "POINT("+region[0].x+" "+region[0].y+")";
     } else if (region.length === 2) {
@@ -246,7 +262,7 @@ function getMetaBasic(uid, iid, callback) {
 	    } else {
 		if (res.length >= 0) {
 		    if (res[0].location != null) {
-			res[0].location = geomWKTToPoints(res[0].location);
+			res[0].location = geomWKTToPoints(res[0].location, true);
 		    }
 		    callback(null, res[0]);
 		} else {
