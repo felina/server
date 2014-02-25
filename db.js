@@ -1,6 +1,5 @@
 var mysql = require('mysql');
 var dbCFG = require('./db_settings.json');
-var bcrypt = require('bcrypt-nodejs');
 var users = require('./user.js');
 var errors = require('./error.js');
 var connPool = mysql.createPool(dbCFG);
