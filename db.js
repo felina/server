@@ -21,6 +21,50 @@ function init(callback) {
     });
 }
 
+function getProject(id, callback) {
+    connPool.getConnection(function(connErr, conn) {
+	if (connErr) {
+	    return callback(connErr);
+	}
+
+	var query = 'SELECT * FROM `projects` WHERE `projectid` = ?';
+	var sub = [ id ];
+	query = mysql.format(query, sub);
+
+	conn.query(query, function(err, res) {
+	    if (err) {
+		console.log(err);
+		return callback(err);
+	    } else if (res.length < 1) {
+		return callback(null, null);
+	    } else {
+		return callback(null, res);
+	    }
+	});
+    });
+}
+
+function createProject(proj, callback) {
+    connPool.getConnection(function(connErr, conn) {
+	if (connErr) {
+	    return callback(connErr);
+	}
+
+	var query = 'INSERT INTO `projects` (`name`,`desc`,`active`) VALUE (?,?,?)';
+	var sub = [ proj.name, proj.desc, proj.active ];
+	query = mysql.format(query, sub);
+
+	conn.query(query, function(err, res) {
+	    if (err) {
+		console.log(err);
+		return callback(err);
+	    } else {
+		return callback(null, res.insertId);
+	    }
+	});
+    });
+}
+
 function geomWKTToPoints(WKT, location) {
     if (location) {
 	// Locations should hold points only, and use lat/lon instead of x/y
@@ -550,4 +594,4 @@ function getUserHash(email, callback) {
     });
 }
 
-module.exports = {init:init, getUserHash:getUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm, addImageMeta:addImageMeta, getMetaBasic:getMetaBasic, getAnnotations:getAnnotations};
+module.exports = {init:init, getProject:getProject, createProject:createProject, getUserHash:getUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm, addImageMeta:addImageMeta, getMetaBasic:getMetaBasic, getAnnotations:getAnnotations};

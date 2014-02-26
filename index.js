@@ -7,6 +7,7 @@ var images = require('./images.js');
 var jobs = require('./jobs.js');
 var meta = require('./meta.js');
 var aws = require('aws-sdk');
+var projects = require('./projects.js');
 
 // Check db settings
 db.init(function(err) {
@@ -73,6 +74,9 @@ app.post('/', function (req, res) {
 
 // Import various auth routes/endpoints
 auth.authRoutes(app);
+
+// Import project routes
+projects.projectRoutes(app, auth, db);
 
 // Import image routes
 images.imageRoutes(app, auth, db);
