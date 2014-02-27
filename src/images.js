@@ -1,6 +1,4 @@
-var path = require('path');
 var fs = require('fs');
-var _ = require('underscore');
 var md5 = require('MD5');
 var aws = require('aws-sdk');
 
@@ -8,7 +6,6 @@ aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
 
 function fileType(filePath) {
-    filetype = "";
     for (var i = filePath.length; i > 0; i--) {
         if (filePath[i] === '.') {
             return filePath.slice(i + 1, filePath.length);
@@ -52,7 +49,7 @@ function imageRoutes(app, auth, db) {
 
     // Image/s upload endpoint
     // Uses express.multipart - this is deprecated and bad! TODO: Replace me!
-    app.post('/upload/img', auth.enforceLogin, function (req, res, next) {
+    app.post('/upload/img', auth.enforceLogin, function (req, res) {
     var resultObject = {};
     resultObject.status = {};
 
@@ -62,27 +59,27 @@ function imageRoutes(app, auth, db) {
             images.push(idData[imageName]);
     }
     if (images.length > 0) {
-            // resultObject.status.code = 0;
-            resultObject.status.code = 0;
-            resultObject.status.message = images.length.toString().concat(" images uploaded successfully");
-            resultObject.ids = [];
-            for (var i = 0; i < images.length; i++) {
-        var imageFilePath = images[i].path;
-        var fileContents = fs.readFileSync(imageFilePath); // semi sketchy decoding
-        var elementsToHash = "";
-        for (var j = 0; j < fileContents.length; j += fileContents.length / 100) {
-                    elementsToHash += fileContents[Math.floor(j)];
-        }
-        // console.log(elementsToHash);
-        var imageHash = md5(elementsToHash);
-        resultObject.ids.push(imageHash);
-        // if element hash not in database then upload to s3
-        var imageObject = {"imageData" : fileContents, "imageType" : fileType(imageFilePath), "imageHash" : imageHash};
-        uploadImage(req.user, imageObject);
+        // resultObject.status.code = 0;
+        resultObject.status.code = 0;
+        resultObject.status.message = images.length.toString().concat(" images uploaded successfully");
+        resultObject.ids = [];
+        for (var i = 0; i < images.length; i++) {
+            var imageFilePath = images[i].path;
+            var fileContents = fs.readFileSync(imageFilePath); // semi sketchy decoding
+            var elementsToHash = "";
+            for (var j = 0; j < fileContents.length; j += fileContents.length / 100) {
+                elementsToHash += fileContents[Math.floor(j)];
             }
+            // console.log(elementsToHash);
+            var imageHash = md5(elementsToHash);
+            resultObject.ids.push(imageHash);
+            // if element hash not in database then upload to s3
+            var imageObject = {"imageData" : fileContents, "imageType" : fileType(imageFilePath), "imageHash" : imageHash};
+            uploadImage(req.user, imageObject);
+        }
     } else {
-            resultObject.status.code = 1;
-            resultObject.status.message = "No images uploaded";
+        resultObject.status.code = 1;
+        resultObject.status.message = "No images uploaded";
     }
     return res.send(resultObject);
     });
@@ -90,18 +87,20 @@ function imageRoutes(app, auth, db) {
     // app.get('img/:name')
 
     function uploadImage(user, imageObject) {
-    params = {};
-    params.Bucket = 'citizen.science.image.storage';
-    params.Body = imageObject.imageData;
-    params.Key = imageObject.imageHash;
-    s3.putObject(params, function (err, data) {
+        var params = {};
+        params.Bucket = 'citizen.science.image.storage';
+        params.Body = imageObject.imageData;
+        params.Key = imageObject.imageHash;
+
+        s3.putObject(params, function (err, data) {
             if (err) {
-        console.log("uploadImage error: " + err);
-            } else {
-        db.addNewImage(user, {'id':1, 'name':'dummy'}, imageObject);
-        }
+                console.log("uploadImage error: " + err);
+            }
+            else {
+                db.addNewImage(user, {'id':1, 'name':'dummy'}, imageObject);
+            }
             console.log(data);
-    });
+        });
     }
 }
 

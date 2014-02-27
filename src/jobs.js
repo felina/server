@@ -51,8 +51,8 @@ function jobRoutes(app) {
     }
     });
 
-    app.post('/target', function (req, res) {
-    console.log('posted executable to target')
+    app.post('/target', function () {
+        console.log('posted executable to target');
     });
 }
 

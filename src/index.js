@@ -7,13 +7,12 @@ var db = require('./db.js');
 var images = require('./images.js');
 var jobs = require('./jobs.js');
 var meta = require('./meta.js');
-var aws = require('aws-sdk');
 
 // Check db settings
 db.init(function(err) {
     if (err) {
-	console.log(err);
-	throw new Error('Database Unvailable. Your database settings are incorrect, the server is down, or you have not completed installation. Refusing to start!');
+       console.log(err);
+       throw new Error('Database Unvailable. Your database settings are incorrect, the server is down, or you have not completed installation. Refusing to start!');
     }
 });
 
@@ -59,11 +58,15 @@ app.configure(function () {
     app.use(app.router);
 });
 
-var s3 = new aws.S3();
-
 // TEMP Hello world
 app.get('/', function(req, res) {
-    return res.send({'res':false, 'err':{'code':998, 'msg':'FELINA API SERVER\n'}});
+    return res.send({
+        res: false,
+        err: {
+            code: 998,
+            msg: 'FELINA API SERVER\n'
+        }
+    });
 });
 
 // Root callback - show req
@@ -85,7 +88,7 @@ meta.metaRoutes(app, auth, db);
 jobs.jobRoutes(app);
 
 // Start listening
-port = process.env.PORT || 5000;
+var port = process.env.PORT || 5000;
 
 app.listen(port, function() {
     return console.log("Listening on " + port);
