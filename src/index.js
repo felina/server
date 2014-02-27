@@ -11,8 +11,8 @@ var meta = require('./meta.js');
 // Check db settings
 db.init(function(err) {
     if (err) {
-       console.log(err);
-       throw new Error('Database Unvailable. Your database settings are incorrect, the server is down, or you have not completed installation. Refusing to start!');
+        console.log(err);
+        throw new Error('Database Unvailable. Your database settings are incorrect, the server is down, or you have not completed installation. Refusing to start!');
     }
 });
 
@@ -33,13 +33,12 @@ var allowCrossDomain = function(req, res, next) {
     // intercept OPTIONS method
     if ('OPTIONS' === req.method) {
         res.send(200);
-    }
-    else {
+    } else {
         next();
     }
 };
 
-app.configure(function () {
+app.configure(function() {
     app.use(allowCrossDomain);
     app.use(express.static('public'));
     app.use(express.static(__dirname + '/static'));
@@ -52,7 +51,9 @@ app.configure(function () {
     app.use(express.multipart());
     //aws.config.loadFromPath('./aws.json');
     // console.log(aws.config);
-    app.use(express.session({ secret: 'I should be something else' }));
+    app.use(express.session({
+        secret: 'I should be something else'
+    }));
     app.use(passport.initialize());
     app.use(passport.session());
     app.use(app.router);
@@ -70,9 +71,15 @@ app.get('/', function(req, res) {
 });
 
 // Root callback - show req
-app.post('/', function (req, res) {
+app.post('/', function(req, res) {
     console.log(req);
-    return res.send({'res':false, 'err':{'code':999, 'msg':'FELINA API SERVER\n'}});
+    return res.send({
+        'res': false,
+        'err': {
+            'code': 999,
+            'msg': 'FELINA API SERVER\n'
+        }
+    });
 });
 
 // Import various auth routes/endpoints

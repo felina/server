@@ -1,16 +1,25 @@
 var validator = require('email-validator');
 
 var PrivilegeLevel = Object.freeze({
-    USER        : { i:1, dbs:"user" },
-    RESEARCHER  : { i:2, dbs:"researcher" },
-    ADMIN       : { i:3, dbs:"admin" }
+    USER: {
+        i: 1,
+        dbs: "user"
+    },
+    RESEARCHER: {
+        i: 2,
+        dbs: "researcher"
+    },
+    ADMIN: {
+        i: 3,
+        dbs: "admin"
+    }
 });
 
 var PLs = [PrivilegeLevel.USER, PrivilegeLevel.RESEARCHER, PrivilegeLevel.ADMIN];
 
 function privilegeFromString(dbs) {
     var res = false;
-    PLs.forEach(function (lvl) {
+    PLs.forEach(function(lvl) {
         if (dbs === lvl.dbs) {
             res = lvl.i;
         }
@@ -18,26 +27,26 @@ function privilegeFromString(dbs) {
     return res;
 }
 
-function User (id, name, email, privilege, gravatar) {
+function User(id, name, email, privilege, gravatar) {
     if (typeof id !== 'number') {
-	this.id = false;
-	return;
+        this.id = false;
+        return;
     }
     if (typeof privilege !== 'number') {
-	this.id = false;
-	return;
-    }
-    if (privilege < 1 || privilege > 3 ) {
         this.id = false;
-	return;
+        return;
+    }
+    if (privilege < 1 || privilege > 3) {
+        this.id = false;
+        return;
     }
     // May need to change if valid email addresses not being accepted
     if (validator.validate(email) !== true) {
         this.id = false;
-	return;
+        return;
     }
     if (typeof gravatar !== 'string' || gravatar.length !== 32) {
-	this.gravatar = null;
+        this.gravatar = null;
     }
     this.id = id;
     this.name = name;
@@ -60,7 +69,7 @@ User.prototype.isAdmin = function() {
     return false;
 };
 
-function Researcher (name, email, groups) {
+function Researcher(name, email, groups) {
     User.call(this, name, email, 2);
     this.groups = groups;
 }
@@ -70,4 +79,10 @@ function userRoutes(app, db) {
     // For updating fields e.g. email, gravatar, privilege level...
 }
 
-module.exports = {PrivilegeLevel:PrivilegeLevel, User:User, Researcher:Researcher, privilegeFromString:privilegeFromString, userRoutes:userRoutes};
+module.exports = {
+    PrivilegeLevel: PrivilegeLevel,
+    User: User,
+    Researcher: Researcher,
+    privilegeFromString: privilegeFromString,
+    userRoutes: userRoutes
+};
