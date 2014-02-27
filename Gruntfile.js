@@ -90,7 +90,12 @@ module.exports = function(grunt) {
         boss: true,
         eqnull: true,
         browser: false,
-        globals: {}
+        globals: {
+          require: true,
+          console: true,
+          module: true,
+          app: true
+        }
       },
       lib_test: {
         src: ['src/*.js']
