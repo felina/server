@@ -1,6 +1,7 @@
 #! /usr/bin/env node
 
 var fs = require('fs');
+require('colors')
 
 var aws = {
     accessKeyId: 'some_aws_id',
@@ -21,16 +22,24 @@ var db = {
   database: 'felina'
 };
 
+var dir = 'config'
+
+var pretty = function(o){
+    return JSON.stringify(o, null, 2);
+};
+
 var write = function(name, data){
-    fs.writeFileSync('config/' + name + '.json', JSON.stringify(data, null, 2));
+    var path = dir + '/' + name + '.json'
+    console.log('  Creating config file ' + path.yellow)
+    fs.writeFileSync(path, pretty(data));
 };
 
 console.log('Creating configuration files');
-if(!fs.existsSync('config')){
-    fs.mkdirSync('config');
+if(!fs.existsSync(dir)){
+    fs.mkdirSync(dir);
 }
 write('aws', aws);
 write('db_settings', db);
 write('fb', fb);
 
-console.log('Done');
+console.log('Done'.green);
