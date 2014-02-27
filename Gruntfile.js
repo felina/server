@@ -75,6 +75,26 @@ module.exports = function(grunt) {
         },
         src: ['test/*']
       }
+    },
+    jshint: {
+      options: {
+        curly: true,
+        eqeqeq: true,
+        immed: true,
+        latedef: true,
+        newcap: true,
+        noarg: true,
+        sub: true,
+        undef: true,
+        unused: true,
+        boss: true,
+        eqnull: true,
+        browser: false,
+        globals: {}
+      },
+      lib_test: {
+        src: ['src/*.js']
+      }
     }
   });
 
@@ -82,11 +102,10 @@ module.exports = function(grunt) {
   // grunt.loadNpmTasks('grunt-contrib-concat');
   // grunt.loadNpmTasks('grunt-contrib-uglify');
   // grunt.loadNpmTasks('grunt-contrib-nodeunit');
-  // grunt.loadNpmTasks('grunt-contrib-jshint');
+  grunt.loadNpmTasks('grunt-contrib-jshint');
   // grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-mocha-test');
 
   // Default task.
-  grunt.registerTask('default', ['mochaTest']);
-
+  grunt.registerTask('default', ['jshint', 'mochaTest']);
 };
