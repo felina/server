@@ -4,7 +4,7 @@ var _ = require('underscore');
 var md5 = require('MD5');
 var aws = require('aws-sdk');
 
-aws.config.loadFromPath('./aws.json');
+aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
 
 function fileType(filePath) {
