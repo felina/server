@@ -51,14 +51,14 @@ User.prototype.isResearcher = function() {
         return true;
     }
     return false;
-}
+};
 
 User.prototype.isAdmin = function() {
     if (this.privilege === PrivilegeLevel.ADMIN) {
         return true;
     }
     return false;
-}
+};
 
 function Researcher (name, email, groups) {
     User.call(this, name, email, 2);

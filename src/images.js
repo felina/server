@@ -8,7 +8,7 @@ aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
 
 function fileType(filePath) {
-    filetype = ""
+    filetype = "";
     for (var i = filePath.length; i > 0; i--) {
         if (filePath[i] === '.') {
             return filePath.slice(i + 1, filePath.length);
@@ -20,7 +20,7 @@ function fileType(filePath) {
 function proxyImage(id, res) {
     var params = {'Bucket':'citizen.science.image.storage', 'Key':id};
     s3.getObject(params).createReadStream().pipe(res);
-};
+}
 
 function imageRoutes(app, auth, db) {
     // Endpoint to get list of images
@@ -101,8 +101,8 @@ function imageRoutes(app, auth, db) {
         db.addNewImage(user, {'id':1, 'name':'dummy'}, imageObject);
         }
             console.log(data);
-    })
-    };
+    });
+    }
 }
 
 module.exports = {imageRoutes:imageRoutes};

@@ -44,7 +44,7 @@ function geomWKTToPoints(WKT, location) {
         var region = new Array(paramGroups.length);
         paramGroups.forEach(function(paramGroup, i) {
         var params = paramGroup.split(' ');
-        if (params.length != 2) {
+        if (params.length !== 2) {
             console.log('WKT param group is invalid ' + paramGroup);
         } else {
             region[i] = {'x': params[0], 'y': params[1]};
@@ -356,9 +356,9 @@ function addNewImage(user, project, image) {
 // Attempts to deserialize a user, passing it to the done callback.
 // done(err, user)
 function getUser(id, done) {
-    var query = "SELECT `email`, `name`, `usertype`, `gravatar` "
-        + "FROM `users` "
-        + "WHERE `userid` = ?";
+    var query = "SELECT `email`, `name`, `usertype`, `gravatar` " +
+        "FROM `users` " +
+        "WHERE `userid` = ?";
     var sub = [id];
     query = mysql.format(query, sub);
 
@@ -372,7 +372,7 @@ function getUser(id, done) {
         // The query failed, respond to the error.
         done(err, false);
         } else {
-        if (res.length == 0) {
+        if (res.length === 0) {
             done(null, false);
         } else {
                     var user = new users.User(id, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar);
@@ -391,10 +391,10 @@ function getUser(id, done) {
 
 // Attempts to get a user (initialise login) via an external provider
 function extGetUser(id, provider, loginUser, done) {
-    var query = "SELECT `users`.`userid`, `email`, `name`, `usertype`, `gravatar` "
-        + "FROM `users` "
-    + "INNER JOIN `ext_auth` USING (`userid`) "
-        + "WHERE `provider` = ? AND `service_id` = ?";
+    var query = "SELECT `users`.`userid`, `email`, `name`, `usertype`, `gravatar` " +
+        "FROM `users` " +
+        "INNER JOIN `ext_auth` USING (`userid`) " +
+        "WHERE `provider` = ? AND `service_id` = ?";
     var sub = [provider, id];
     query = mysql.format(query, sub);
 

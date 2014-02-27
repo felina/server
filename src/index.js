@@ -3,7 +3,6 @@
 var express = require('express');
 var passport = require('passport');
 var auth = require('./auth/auth.js');
-var _ = require('underscore');
 var db = require('./db.js');
 var images = require('./images.js');
 var jobs = require('./jobs.js');
@@ -33,11 +32,11 @@ var allowCrossDomain = function(req, res, next) {
     res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With, Cache-Control, X-HTTP-Method-Override, Accept');
 
     // intercept OPTIONS method
-    if ('OPTIONS' == req.method) {
-      res.send(200);
+    if ('OPTIONS' === req.method) {
+        res.send(200);
     }
     else {
-      next();
+        next();
     }
 };
 

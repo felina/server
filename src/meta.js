@@ -8,18 +8,18 @@ function isUnset(x) {
 function parseRegion(reg) {
     // We should have already checked the size of this array.
     for (var i = 0; i < reg.length; i++) {
-    if (reg[i] == null || typeof reg[i].x !== 'number' ||
-        typeof reg[i].y !== 'number' || reg[i].x < 0 || reg[i].y < 0) {
-        // If any point is invalid, invalidate the entire region.
-        console.log('Invalid point in region.');
-        return false;
-    }
+        if (reg[i] == null || typeof reg[i].x !== 'number' ||
+            typeof reg[i].y !== 'number' || reg[i].x < 0 || reg[i].y < 0) {
+            // If any point is invalid, invalidate the entire region.
+            console.log('Invalid point in region.');
+            return false;
+        }
     }
 
     // For polygons (i.e. length > 2), the final point should match the first.
     // If we want to support more geoms, e.g. linestrings, this must change.
     if (reg.length > 2 && (reg[reg.length-1].x !== reg[0].x || reg[reg.length-1].y !== reg[0].y)) {
-    reg.push(reg[0]);
+        reg.push(reg[0]);
     }
 
     return true;
@@ -39,7 +39,8 @@ function parseAnnotations(an) {
         } else if (typeof an[i].tag !== 'string' || an[i].tag.length < 1 || an[i].tag.length > 32) {
         an[i].tag = false;
         }
-    } else {
+    }
+    else {
         an[i] = false;
     }
     }
@@ -47,69 +48,76 @@ function parseAnnotations(an) {
 
 function parseMetadata(mdArr) {
     if (!_.isArray(mdArr)) {
-    console.log('Metadata not a list.');
-    return false;
-    } else {
-    // This is very un-node like. array.forEach(...)!
-    for (var i = 0; i < mdArr.length; i++) {
-        if (typeof mdArr[i].id === 'string' && mdArr[i].id != null && mdArr[i].id.length === 32) {
-        // Check if datetime has been sent
-        if (!isUnset(mdArr[i].datetime)) {
-            mdArr[i].datetime = Date.parse(mdArr[i].datetime);
-            if (isNaN(mdArr[i].datetime)) {
-            console.log('Failed to parse datetime field.');
-            // Mark as invalid
-            mdArr[i].datetime = false;
-            } else {
-            // Convert to Date object.
-            mdArr[i].datetime = new Date(mdArr[i].datetime);
-            }
-        } else {
-            // Mark as unset
-            mdArr[i].datetime = null;
-        }
-
-        // Check if location has been sent
-        if (!isUnset(mdArr[i].location)) {
-            if (typeof mdArr[i].location !== 'object' || typeof mdArr[i].location.lat === 'undefined' ||
-            typeof mdArr[i].location.lon === 'undefined' || mdArr[i].location.lat < -90 ||
-            mdArr[i].location.lat > 90 || mdArr[i].location.lon < -180 || mdArr[i].location.lon > 180) {
-            console.log('Invalid location.');
-            // Mark as invalid
-            mdArr[i].location = false;
-            }
-        } else {
-            // Mark as unset
-            mdArr[i].location = null;
-        }
-
-        // Check if priv has been sent
-        if (!isUnset(mdArr[i].priv)) {
-            // Accept any type for priv, convert to a simple boolean.
-            mdArr[i].priv = !!mdArr[i].priv;
-        } else {
-            // Mark as unset
-            mdArr[i].priv = null;
-        }
-
-        // Check if annotations have been sent
-        if (!isUnset(mdArr[i].annotations)) {
-            if (!_.isArray(mdArr[i].annotations)) {
-            console.log('Invalid annotations.');
-            mdArr[i].annotations = false;
-            } else {
-            // Parse annotations list
-            parseAnnotations(mdArr[i].annotations);
-            }
-        } else {
-            // Mark as unset
-            mdArr[i].annotations = [];
-        }
-        } else {
-        console.log('No id specified for metadata.');
-        mdArr[i] = false;
-        }
+        console.log('Metadata not a list.');
+        return false;
     }
+    else {
+        // This is very un-node like. array.forEach(...)!
+        for (var i = 0; i < mdArr.length; i++) {
+            if (typeof mdArr[i].id === 'string' && mdArr[i].id != null && mdArr[i].id.length === 32) {
+            // Check if datetime has been sent
+            if (!isUnset(mdArr[i].datetime)) {
+                mdArr[i].datetime = Date.parse(mdArr[i].datetime);
+                if (isNaN(mdArr[i].datetime)) {
+                    console.log('Failed to parse datetime field.');
+                    // Mark as invalid
+                    mdArr[i].datetime = false;
+                }
+                else {
+                    // Convert to Date object.
+                    mdArr[i].datetime = new Date(mdArr[i].datetime);
+                }
+            } else {
+                // Mark as unset
+                mdArr[i].datetime = null;
+            }
+
+            // Check if location has been sent
+            if (!isUnset(mdArr[i].location)) {
+                if (typeof mdArr[i].location !== 'object' || typeof mdArr[i].location.lat === 'undefined' ||
+                    typeof mdArr[i].location.lon === 'undefined' || mdArr[i].location.lat < -90 ||
+                    mdArr[i].location.lat > 90 || mdArr[i].location.lon < -180 || mdArr[i].location.lon > 180) {
+                        console.log('Invalid location.');
+                        // Mark as invalid
+                        mdArr[i].location = false;
+                    }
+                }
+                else {
+                    // Mark as unset
+                    mdArr[i].location = null;
+                }
+
+            // Check if priv has been sent
+            if (!isUnset(mdArr[i].priv)) {
+                // Accept any type for priv, convert to a simple boolean.
+                mdArr[i].priv = !!mdArr[i].priv;
+            }
+            else {
+                // Mark as unset
+                mdArr[i].priv = null;
+            }
+
+            // Check if annotations have been sent
+            if (!isUnset(mdArr[i].annotations)) {
+                if (!_.isArray(mdArr[i].annotations)) {
+                    console.log('Invalid annotations.');
+                    mdArr[i].annotations = false;
+                }
+                else {
+                    // Parse annotations list
+                    parseAnnotations(mdArr[i].annotations);
+                }
+            }
+            else {
+                // Mark as unset
+                mdArr[i].annotations = [];
+            }
+            }
+            else {
+                console.log('No id specified for metadata.');
+                mdArr[i] = false;
+            }
+        }
     }
     return mdArr;
 }
@@ -158,7 +166,7 @@ function metaRoutes(app, auth, db) {
             if (err) {
                 res.send({'res':false, 'err': new errors.APIError(3, 'Failed to retrieve metadata.')});
             } else {
-                res.send({'res':true, 'meta':meta});;
+                res.send({'res':true, 'meta':meta});
             }
             });
         } else {
@@ -176,7 +184,7 @@ function metaRoutes(app, auth, db) {
         if (err) {
             res.send({'res':false, 'err': new errors.APIError(2, 'Failed to retrieve metadata.')});
         } else {
-            res.send({'res':true, 'anno':anno});;
+            res.send({'res':true, 'anno':anno});
         }
         });
     } else {
