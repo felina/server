@@ -24,7 +24,8 @@
     "MD5": "~1.2.0",
     "aws-sdk": "~2.0.0-rc3",
     "bcrypt-nodejs": "~0.0.3",
-    "email-validator": "~0.1.2"
+    "email-validator": "~0.1.2",
+    "passport-facebook": "~1.0.2"
   },
   "devDependencies": {
     "grunt": "~0.4.2",
