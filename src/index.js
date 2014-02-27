@@ -1,3 +1,5 @@
+#! /usr/bin/env node
+
 var express = require('express');
 var passport = require('passport');
 var auth = require('./auth/auth.js');
@@ -14,7 +16,7 @@ db.init(function(err) {
 	console.log(err);
 	throw new Error('Database Unvailable. Your database settings are incorrect, the server is down, or you have not completed installation. Refusing to start!');
     }
-});       
+});
 
 // Setup passport
 auth.authSetup(passport);
@@ -46,7 +48,7 @@ app.configure(function () {
     app.use(express.logger());
     app.use(express.cookieParser());
     // bodyParser is deprecated, replaced by json and urlencoded
-    //app.use(express.bodyParser()); 
+    //app.use(express.bodyParser());
     app.use(express.json());
     app.use(express.urlencoded());
     app.use(express.multipart());
