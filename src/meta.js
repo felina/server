@@ -219,6 +219,33 @@ function metaRoutes(app, auth, db) {
             ]
         });
     });
+
+    app.get('/features', function(req, res) {
+        res.send({
+            res: true,
+            features: [{
+                name: 'tail',
+                required: false,
+                shape: 'poly'
+            }, {
+                name: 'eyes',
+                required: true,
+                shape: 'rect'
+            }, {
+                name: 'feet',
+                required: true,
+                shape: 'rect'
+            }, {
+                name: 'neck',
+                required: false,
+                shape: 'poly'
+            }, {
+                name: 'nose',
+                required: true,
+                shape: 'any'
+            }]
+        });
+    });
 }
 
 module.exports = {
