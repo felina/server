@@ -210,6 +210,15 @@ function metaRoutes(app, auth, db) {
             });
         }
     });
+
+    app.get('/species', function(req, res) {
+        res.send({
+            res: true,
+            species: [
+                'Elephant', 'Penguin', 'Giraffe'
+            ]
+        });
+    });
 }
 
 module.exports = {
