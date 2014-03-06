@@ -618,9 +618,9 @@ function setUserHash(id, auth) {
 
 // Adds a new user to users/local auth. TODO: Use a user object.
 // callback(err, id)
-function addNewUser(user, phash, callback) {
-    var query = "INSERT INTO `users` VALUE (null,?,?,?,?)";
-    var sub = [user.email, user.name, "user", user.gravatar];
+function addNewUser(user, phash, vhash, callback) {
+    var query = "INSERT INTO `users` (userid, email, name, usertype, gravatar, validation_hash) VALUE (null,?,?,?,?,?)";
+    var sub = [user.email, user.name, "user", user.gravatar, vhash];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
@@ -637,6 +637,29 @@ function addNewUser(user, phash, callback) {
             } else {
                 setUserHash(res.insertId, phash);
                 callback(null, res.insertId);
+            }
+        });
+    });
+}
+ 
+function validateEmail(vhash, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback('Database error', null);
+        }
+        
+        var query = "UPDATE `users` SET `validation_hash`=NULL WHERE `validation_hash`=?";
+        var sub = [vhash];
+        query = mysql.format(query, sub);
+
+        conn.query(query, function(err, res) {
+            conn.release();
+
+            if (err) {
+                console.log(err.code);
+                callback(err, null);
+            } else {
+                callback(null, (res.changedRows === 1) );
             }
         });
     });
@@ -690,5 +713,6 @@ module.exports = {
     checkImagePerm: checkImagePerm,
     addImageMeta: addImageMeta,
     getMetaBasic: getMetaBasic,
-    getAnnotations: getAnnotations
+    getAnnotations: getAnnotations,
+    validateEmail: validateEmail
 };
