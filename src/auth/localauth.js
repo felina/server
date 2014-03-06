@@ -11,25 +11,13 @@ var transport = nodemailer.createTransport("SMTP", smtp_config);
 var host= (process.env.HOST||'nl.ks07.co.uk')+':'+(process.env.PORT || 5000);
 // callback(err, id)
 
-function sendValidation(email, id, callback) {
+function getValidationHash() {
     var str = '';
     var chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
     for (var i=0; i<=10; i++)
         str += chars[Math.round(Math.random() * (chars.length - 1))];
     md5.update(str);
-    var hash = md5.digest('hex');
-    console.log(str);
-    console.log('hash: '+hash);
-    console.log('host: '+host+' email: '+ JSON.stringify(email));
-    var mailOptions = {
-        from: smtp_config.auth.email,
-        to: email,
-        subject: "Validate email for Felina",
-        text: '<a src="'+host+'/validate/'+hash+'>Click Here to Validate.</a>'
-    }
-    transport.sendMail(mailOptions);
-    
-    callback(null, id);
+    return md5.digest('hex');
 }
 
 function register(user, password, callback) {
@@ -39,13 +27,22 @@ function register(user, password, callback) {
 	    console.log(err);
 	    callback(err, null);
 	} else {
-	    db.addNewUser(user, hash, function(err, id){
+            var vhash = getValidationHash();
+	    db.addNewUser(user, hash, vhash, function(err, id){
                 if(err) {
                     console.log('database enter user fail');
                     console.log(err);
                     callback(err, null);
-                } else {
-                    sendValidation(user.email, id,  callback); 
+                } else { 
+                    var mailOptions = {
+                        from: smtp_config.auth.email,
+                        to: user.email,
+                        subject: "Validate email for Felina",
+                        html: '<a src="'+host+'/validate/'+vhash+'>Click Here to Validate.</a>',
+                        text: 'Copy and paste this link in your browser to validate: '+host+'/validate/'+vhash
+                    }
+                    transport.sendMail(mailOptions); 
+                    return callback(null, id);
                 }
             });
 	}
@@ -142,6 +139,8 @@ function authRoutes(app) {
 	    });
 	})(req, res, next);
     });
+
+    //app.post()
 }
 
 module.exports = {LocalStrategy:BcryptLocalStrategy, register:register, compare:compare, authRoutes:authRoutes};

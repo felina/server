@@ -618,9 +618,9 @@ function setUserHash(id, auth) {
 
 // Adds a new user to users/local auth. TODO: Use a user object.
 // callback(err, id)
-function addNewUser(user, phash, callback) {
-    var query = "INSERT INTO `users` VALUE (null,?,?,?,?)";
-    var sub = [user.email, user.name, "user", user.gravatar];
+function addNewUser(user, phash, vhash, callback) {
+    var query = "INSERT INTO `users` (userid, email, name, usertype, gravatar, validation_hash) VALUE (null,?,?,?,?,?)";
+    var sub = [user.email, user.name, "user", user.gravatar, vhash];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
