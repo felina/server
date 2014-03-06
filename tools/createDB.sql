@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS `felina`.`project_fields` (
   `projectid` INT NOT NULL,
   `name` VARCHAR(45) NOT NULL,
   `type` ENUM('anno', 'string', 'number', 'enum') NOT NULL DEFAULT 'anno',
+  `required` TINYINT(1) NOT NULL DEFAULT TRUE,
   PRIMARY KEY (`fieldid`),
   INDEX `project_pfield_rel_idx` (`projectid` ASC),
   CONSTRAINT `project_pfield_rel`
