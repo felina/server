@@ -5,9 +5,33 @@ var db = require('../db.js');
 var users = require('../user.js');
 var nodemailer = require('nodemailer');
 var smtp_config = require('../../config/smtp.json');
+var crypto = require('crypto');
+var md5 = crypto.createHash('md5');
 var transport = nodemailer.createTransport("SMTP", smtp_config);
-
+var host= (process.env.HOST||'nl.ks07.co.uk')+':'+(process.env.PORT || 5000);
 // callback(err, id)
+
+function sendValidation(email, id, callback) {
+    var str = '';
+    var chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (var i=0; i<=10; i++)
+        str += chars[Math.round(Math.random() * (chars.length - 1))];
+    md5.update(str);
+    var hash = md5.digest('hex');
+    console.log(str);
+    console.log('hash: '+hash);
+    console.log('host: '+host+' email: '+ JSON.stringify(email));
+    var mailOptions = {
+        from: smtp_config.auth.email,
+        to: email,
+        subject: "Validate email for Felina",
+        text: '<a src="'+host+'/validate/'+hash+'>Click Here to Validate.</a>'
+    }
+    transport.sendMail(mailOptions);
+    
+    callback(null, id);
+}
+
 function register(user, password, callback) {
     bcrypt.hash(password, null, null, function(err, hash) {
 	if (err) {
@@ -15,7 +39,15 @@ function register(user, password, callback) {
 	    console.log(err);
 	    callback(err, null);
 	} else {
-	    db.addNewUser(user, hash, callback);
+	    db.addNewUser(user, hash, function(err, id){
+                if(err) {
+                    console.log('database enter user fail');
+                    console.log(err);
+                    callback(err, null);
+                } else {
+                    sendValidation(user.email, id,  callback); 
+                }
+            });
 	}
     });
 }
