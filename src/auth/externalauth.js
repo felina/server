@@ -1,6 +1,6 @@
 var passport = require('passport');
 var fbStrat = require('passport-facebook').Strategy;
-var fbConfig = require('../fb.json');
+var fbConfig = require('../../config/fb.json');
 var db = require('../db.js');
 
 // Make sure that passReq is enabled in fbConfig

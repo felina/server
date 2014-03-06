@@ -1,14 +1,11 @@
-var path = require('path');
 var fs = require('fs');
-var _ = require('underscore');
 var md5 = require('MD5');
 var aws = require('aws-sdk');
 
-aws.config.loadFromPath('./aws.json');
+aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
 
 function fileType(filePath) {
-    filetype = ""
     for (var i = filePath.length; i > 0; i--) {
         if (filePath[i] === '.') {
             return filePath.slice(i + 1, filePath.length);
@@ -18,24 +15,35 @@ function fileType(filePath) {
 }
 
 function proxyImage(id, res) {
-    var params = {'Bucket':'citizen.science.image.storage', 'Key':id};
+    var params = {
+        'Bucket': 'citizen.science.image.storage',
+        'Key': id
+    };
     s3.getObject(params).createReadStream().pipe(res);
-};
+}
 
 function imageRoutes(app, auth, db) {
     // Endpoint to get list of images
     app.get('/images', auth.enforceLogin, function(req, res) {
         db.getUserImages(req.user, function(err, result) {
             if (err) {
-                res.send({'res':false, 'err':{'code':2, 'msg':'Could not load image list.'}});
+                res.send({
+                    'res': false,
+                    'err': {
+                        'code': 2,
+                        'msg': 'Could not load image list.'
+                    }
+                });
             } else {
-                res.send({'res':true, 'images':result});
+                res.send({
+                    'res': true,
+                    'images': result
+                });
             }
         });
     });
 
     app.get('/img/:id', function(req, res) {
-        //req.params.id
         // TODO: Allow logged out viewing of public images
         if (req.user) {
             db.checkImagePerm(req.user, req.params.id, function(err, bool) {
@@ -52,7 +60,7 @@ function imageRoutes(app, auth, db) {
 
     // Image/s upload endpoint
     // Uses express.multipart - this is deprecated and bad! TODO: Replace me!
-    app.post('/upload/img', auth.enforceLogin, function (req, res, next) {
+    app.post('/upload/img', auth.enforceLogin, function(req, res) {
         var resultObject = {};
         resultObject.status = {};
 
@@ -77,7 +85,11 @@ function imageRoutes(app, auth, db) {
                 var imageHash = md5(elementsToHash);
                 resultObject.ids.push(imageHash);
                 // if element hash not in database then upload to s3
-                var imageObject = {"imageData" : fileContents, "imageType" : fileType(imageFilePath), "imageHash" : imageHash};
+                var imageObject = {
+                    "imageData": fileContents,
+                    "imageType": fileType(imageFilePath),
+                    "imageHash": imageHash
+                };
                 uploadImage(req.user, imageObject);
             }
         } else {
@@ -87,22 +99,26 @@ function imageRoutes(app, auth, db) {
         return res.send(resultObject);
     });
 
-    // app.get('img/:name')
-
     function uploadImage(user, imageObject) {
-        params = {};
+        var params = {};
         params.Bucket = 'citizen.science.image.storage';
         params.Body = imageObject.imageData;
         params.Key = imageObject.imageHash;
-        s3.putObject(params, function (err, data) {
+
+        s3.putObject(params, function(err, data) {
             if (err) {
                 console.log("uploadImage error: " + err);
             } else {
-                db.addNewImage(user, {'id':1, 'name':'dummy'}, imageObject);
+                db.addNewImage(user, {
+                    'id': 1,
+                    'name': 'dummy'
+                }, imageObject);
             }
             console.log(data);
-        })
-    };
+        });
+    }
 }
 
-module.exports = {imageRoutes:imageRoutes};
+module.exports = {
+    imageRoutes: imageRoutes
+};

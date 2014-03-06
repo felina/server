@@ -1,5 +1,0 @@
-{
-  "clientID"     : "FB_APP_ID",
-  "clientSecret"     : "FB_APP_SECRET",
-  "callbackURL" : "http://www.felina.org/fb/callback"
-}

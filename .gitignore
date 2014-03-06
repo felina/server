@@ -1,7 +1,2 @@
 node_modules
-
-# Private
-db_settings.json
-config.json
-aws.json
-fb.json
+config
