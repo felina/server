@@ -27,10 +27,10 @@ function getFields(project, callback) {
             return callback(connErr);
         }
 
-        var query = "SELECT `pf`.`name`, `type`, GROUP_CONCAT(`ed`.`name` SEPARATOR ',') AS `enumvals` " +
+        var query = "SELECT `pf`.`name`, `type`, `required`, GROUP_CONCAT(`ed`.`name` SEPARATOR ',') AS `enumvals` " +
             "FROM `project_fields` AS `pf`" +
             "LEFT OUTER JOIN `enum_definitions` AS `ed` USING (`fieldid`) " +
-            "WHERE `projectid` = ? GROUP BY `fieldid`";
+            "WHERE `projectid` = ? GROUP BY `fieldid` ORDER BY `type` ASC";
         var sub = [ project ];
         query = mysql.format(query, sub);
         console.log(query);

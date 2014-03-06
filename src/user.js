@@ -62,7 +62,7 @@ User.prototype.profileURL = function() {
     } else {
         return 'http://www.gravatar.com/avatar/' + this.gravatar;
     }
-}
+};
 
 User.prototype.toJSON = function() {   
     return {
@@ -72,7 +72,7 @@ User.prototype.toJSON = function() {
         'privilege': this.privilege,
         'profile_image': this.profileURL()
     };
-}
+};
 
 User.prototype.isResearcher = function() {
     if (this.privilege === PrivilegeLevel.RESEARCHER) {

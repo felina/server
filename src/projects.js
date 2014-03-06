@@ -27,7 +27,8 @@ function Project(id, name, desc, active) {
 }
 
 var FIELD_NAME_LENGTH = 45;
-var FIELD_TYPES = ['anno', 'string', 'number']; // TODO: Support enum
+var FIELD_TYPES = ['apoly', 'arect', 'apoint', 'string', 'number']; // TODO: Support enum
+var ANNO_TYPES = ['apoly', 'arect', 'apoint'];
 
 function parseFields(fieldList) {
     var errIdx = -1;
@@ -67,7 +68,25 @@ function projectRoutes(app, auth, db) {
                 console.log(err);
                 return res.send(new errors.APIErrResp(3, 'Failed to retrieve fields.'));
             } else {
-                return res.send({'res':true, 'fields':fieldList});
+                // Split fields into two categories for easier use by the annotator
+                var meta = [];
+                var anno = fieldList.filter(function(ele) {
+                    // Set required to true/false in all
+                    ele.required = (ele.required !== 0);
+
+                    if (ANNO_TYPES.indexOf(ele.type) < 0) {
+                        meta.push(ele);
+                        return false;
+                    } else {
+                        return true;
+                    }
+                });
+
+                return res.send({
+                    'res': true,
+                    'fields': meta,
+                    'anno': anno
+                });
             }
         });
     });
