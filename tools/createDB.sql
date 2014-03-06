@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS `felina`.`project_fields` (
   `fieldid` INT NOT NULL AUTO_INCREMENT,
   `projectid` INT NOT NULL,
   `name` VARCHAR(45) NOT NULL,
-  `type` ENUM('anno', 'string', 'number', 'enum') NOT NULL DEFAULT 'anno',
+  `type` ENUM('apoly', 'arect', 'apoint', 'string', 'number', 'enum') NOT NULL DEFAULT 'apoly',
   `required` TINYINT(1) NOT NULL DEFAULT TRUE,
   PRIMARY KEY (`fieldid`),
   INDEX `project_pfield_rel_idx` (`projectid` ASC),
