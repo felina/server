@@ -3,6 +3,9 @@ var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var db = require('../db.js');
 var users = require('../user.js');
+var nodemailer = require('nodemailer');
+var smtp_config = require('../../config/smtp.json');
+var transport = nodemailer.createTransport("SMTP", smtp_config);
 
 // callback(err, id)
 function register(user, password, callback) {
