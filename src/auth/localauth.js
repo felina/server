@@ -5,13 +5,13 @@ var db = require('../db.js');
 var users = require('../user.js');
 var nodemailer = require('nodemailer');
 var smtp_config = require('../../config/smtp.json');
-var crypto = require('crypto');
-var md5 = crypto.createHash('md5');
+var crypto = require('crypto'); 
 var transport = nodemailer.createTransport("SMTP", smtp_config);
 var host= (process.env.HOST||'nl.ks07.co.uk')+':'+(process.env.PORT || 5000);
 // callback(err, id)
 
 function getValidationHash() {
+    var md5 = crypto.createHash('md5');
     var str = '';
     var chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
     for (var i=0; i<=10; i++)
@@ -38,7 +38,6 @@ function register(user, password, callback) {
                         from: smtp_config.auth.email,
                         to: user.email,
                         subject: "Validate email for Felina",
-                        html: '<a src="'+host+'/validate/'+vhash+'>Click Here to Validate.</a>',
                         text: 'Copy and paste this link in your browser to validate: '+host+'/validate/'+vhash
                     }
                     transport.sendMail(mailOptions); 
@@ -140,7 +139,24 @@ function authRoutes(app) {
 	})(req, res, next);
     });
 
-    //app.post()
+    app.get('/validate/:hash', function(req, res) {
+        var hash = req.params.hash;
+        if(hash.length === 32) {
+            db.validateEmail(hash, function(err, info){
+                if(err) {
+                    console.log(err);
+                    res.send({'res':false, 'err':{'code':1, 'msg':'validation failed'}});
+                } else if(info) {
+                    res.send({'res':true, 'msg':'Validation successfull'});
+                } else {
+                    return res.send({'res':false, 'err':{'code':1, 'msg':'invalid url'}});
+                }
+            });
+        } else {
+            return res.send({'res':false, 'err':{'code':1, 'msg':'invalid url'}});
+        }
+         
+    });
 }
 
 module.exports = {LocalStrategy:BcryptLocalStrategy, register:register, compare:compare, authRoutes:authRoutes};

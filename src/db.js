@@ -641,6 +641,29 @@ function addNewUser(user, phash, vhash, callback) {
         });
     });
 }
+ 
+function validateEmail(vhash, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback('Database error', null);
+        }
+        
+        var query = "UPDATE `users` SET `validation_hash`=NULL WHERE `validation_hash`=?";
+        var sub = [vhash];
+        query = mysql.format(query, sub);
+
+        conn.query(query, function(err, res) {
+            conn.release();
+
+            if (err) {
+                console.log(err.code);
+                callback(err, null);
+            } else {
+                callback(null, (res.changedRows === 1) );
+            }
+        });
+    });
+}
 
 // Looks up a users bcrypt hash from their registered email, compare pass, and give results to callback.
 // callback(err, hash, user)
@@ -690,5 +713,6 @@ module.exports = {
     checkImagePerm: checkImagePerm,
     addImageMeta: addImageMeta,
     getMetaBasic: getMetaBasic,
-    getAnnotations: getAnnotations
+    getAnnotations: getAnnotations,
+    validateEmail: validateEmail
 };
