@@ -14,8 +14,10 @@ CREATE TABLE IF NOT EXISTS `felina`.`users` (
   `name` VARCHAR(30) NOT NULL DEFAULT 'An Anonymous User',
   `usertype` ENUM('user', 'researcher', 'admin') NOT NULL,
   `gravatar` CHAR(32) NULL,
+  `validation_hash` CHAR(32) NULL,
   PRIMARY KEY (`userid`),
-  UNIQUE INDEX `email_UNIQUE` (`email` ASC))
+  UNIQUE INDEX `email_UNIQUE` (`email` ASC),
+  UNIQUE INDEX `validation_hash_UNIQUE` (`validation_hash` ASC))
 ENGINE = InnoDB;
 
 
