@@ -55,6 +55,25 @@ function User(id, name, email, privilege, gravatar) {
     this.gravatar = gravatar;
 }
 
+User.prototype.profileURL = function() {
+    if (this.gravatar === null) {
+        // TODO:
+        return 'http://nl.ks07.co.uk:5000/user.png';
+    } else {
+        return 'http://www.gravatar.com/avatar/' + this.gravatar;
+    }
+}
+
+User.prototype.toJSON = function() {   
+    return {
+        'id': this.id,
+        'name': this.name,
+        'email': this.email,
+        'privilege': this.privilege,
+        'profile_image': this.profileURL()
+    };
+}
+
 User.prototype.isResearcher = function() {
     if (this.privilege === PrivilegeLevel.RESEARCHER) {
         return true;
