@@ -21,13 +21,47 @@ function init(callback) {
     });
 }
 
+function setFields(project, fieldList, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback(connErr);
+        }
+
+        var query = "INSERT INTO `project_fields` (`projectid`,`name`,`type`) VALUES "
+	var sub = new Array(fieldList.length * 3);
+	var i;
+	for (i = 0; i < fieldList.length - 1; i++) {
+	    query = query + "(?,?,?),";
+	    sub[i * 3] = project;
+	    sub[(i * 3) + 1] = fieldList[i].name;
+	    sub[(i * 3) + 2] = fieldList[i].type;
+	}
+	// Add the final record
+	query = query + "(?,?,?)";
+	sub[i * 3] = project;
+	sub[(i * 3) + 1] = fieldList[i].name;
+	sub[(i * 3) + 2] = fieldList[i].type;
+
+        query = mysql.format(query, sub);
+        console.log(query);
+        return conn.query(query, function(err, res) {
+            if (err) {
+                console.log(err);
+                return callback(err);
+            } else {
+                return callback();
+            }
+        });
+    });
+}
+
 function getProject(id, callback) {
     connPool.getConnection(function(connErr, conn) {
 	if (connErr) {
 	    return callback(connErr);
 	}
 
-	var query = 'SELECT * FROM `projects` WHERE `projectid` = ?';
+	var query = "SELECT * FROM `projects` WHERE `projectid` = ?";
 	var sub = [ id ];
 	query = mysql.format(query, sub);
 
@@ -594,4 +628,4 @@ function getUserHash(email, callback) {
     });
 }
 
-module.exports = {init:init, getProject:getProject, createProject:createProject, getUserHash:getUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm, addImageMeta:addImageMeta, getMetaBasic:getMetaBasic, getAnnotations:getAnnotations};
+module.exports = {init:init, setFields:setFields, getProject:getProject, createProject:createProject, getUserHash:getUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm, addImageMeta:addImageMeta, getMetaBasic:getMetaBasic, getAnnotations:getAnnotations};

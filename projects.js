@@ -71,7 +71,7 @@ function projectRoutes(app, auth, db) {
             }
         }
 
-        db.setFields(fieldList, function(err) {
+        db.setFields(id, fieldList, function(err) {
             if (err) {
                 console.log(err);
                 return res.send(new errors.APIErrResp(4, 'Failed to update project.'));
