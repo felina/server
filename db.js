@@ -21,6 +21,43 @@ function init(callback) {
     });
 }
 
+function getFields(project, callback) {
+    console.log(project);
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback(connErr);
+        }
+
+        var query = "SELECT `pf`.`name`, `type`, GROUP_CONCAT(`ed`.`name` SEPARATOR ',') AS `enumvals` " +
+            "FROM `project_fields` AS `pf`" +
+            "LEFT OUTER JOIN `enum_definitions` AS `ed` USING (`fieldid`) " +
+            "WHERE `projectid` = ? GROUP BY `fieldid`";
+        var sub = [ project ];
+        query = mysql.format(query, sub);
+        console.log(query);
+        return conn.query(query, function(err, res) {
+            if (err) {
+                console.log(err);
+                return callback(err);
+            } else {
+                res.forEach(function(ele) {
+                    if (ele.type === 'enum') {
+                        if (ele.enumvals === null) {
+                            console.log('No enum values defined for an enum type!');
+                            ele.enumvals = [];
+                        } else {
+                            ele.enumvals = ele.enumvals.split(',');
+                        }
+                    } else {
+                        delete ele.enumvals;
+                    }
+                });
+                return callback(null, res);
+            }
+        });
+    });
+}
+
 function setFields(project, fieldList, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -628,4 +665,4 @@ function getUserHash(email, callback) {
     });
 }
 
-module.exports = {init:init, setFields:setFields, getProject:getProject, createProject:createProject, getUserHash:getUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm, addImageMeta:addImageMeta, getMetaBasic:getMetaBasic, getAnnotations:getAnnotations};
+module.exports = {init:init, getFields:getFields, setFields:setFields, getProject:getProject, createProject:createProject, getUserHash:getUserHash, addNewUser:addNewUser, getUser:getUser, extGetUser:extGetUser, addNewImage:addNewImage, getUserImages:getUserImages, checkImagePerm:checkImagePerm, addImageMeta:addImageMeta, getMetaBasic:getMetaBasic, getAnnotations:getAnnotations};

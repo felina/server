@@ -56,6 +56,22 @@ function parseFields(fieldList) {
 
 function projectRoutes(app, auth, db) {
 
+    app.get('/project/fields', function(req, res) {
+        var id = parseInt(req.query.project);
+        if (_.isNaN(id) || id < 0)  {
+            return res.send(new errors.APIErrResp(2, 'Invalid project id.'));
+        }
+
+        db.getFields(id, function(err, fieldList) {
+            if (err || !_.isArray(fieldList)) {
+                console.log(err);
+                return res.send(new errors.APIErrResp(3, 'Failed to retrieve fields.'));
+            } else {
+                return res.send({'res':true, 'fields':fieldList});
+            }
+        });
+    });
+
     app.post('/project/fields', auth.enforceLogin, function(req, res) {
         var id = parseInt(req.body.id);
         if (_.isNaN(id)) {
