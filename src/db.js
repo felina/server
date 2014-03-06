@@ -63,7 +63,7 @@ function setFields(project, fieldList, callback) {
             return callback(connErr);
         }
 
-        var query = "INSERT INTO `project_fields` (`projectid`,`name`,`type`) VALUES "
+        var query = "INSERT INTO `project_fields` (`projectid`,`name`,`type`) VALUES ";
         var sub = new Array(fieldList.length * 3);
         var i;
         for (i = 0; i < fieldList.length - 1; i++) {
