@@ -152,11 +152,18 @@ function metaRoutes(app, auth, db) {
         }
     });
 
+    // Deprecated
     app.get('/img/:id/meta', function(req, res) {
+        return res.redirect('/meta?id=' + req.params.id);
+    });
+
+    app.get('/meta', function(req, res) {
         var uid = req.user ? req.user.id : -1;
-        db.checkImagePerm(uid, req.params.id, function(err, bool) {
+        var iid = req.query.id;
+
+        db.checkImagePerm(uid, iid, function(err, bool) {
             if (bool) {
-                db.getMetaBasic(uid, req.params.id, function(err, meta) {
+                db.getMetaBasic(uid, iid, function(err, meta) {
                     if (err) {
                         res.send(new errors.APIErrResp(3, 'Failed to retrieve metadata.'));
                     } else {
@@ -172,11 +179,18 @@ function metaRoutes(app, auth, db) {
         });
     });
 
+    // Deprecated
     app.get('/img/:id/anno', function(req, res) {
+        return res.redirect('/anno?id=' + req.params.id);
+    });
+
+    app.get('/anno', function(req, res) {
         var uid = req.user ? req.user.id : -1;
-        db.checkImagePerm(uid, req.params.id, function(err, bool) {
+        var iid = req.query.id;
+
+        db.checkImagePerm(uid, iid, function(err, bool) {
             if (bool) {
-                db.getAnnotations(req.params.id, function(err, anno) {
+                db.getAnnotations(iid, function(err, anno) {
                     if (err) {
                         res.send(new errors.APIErrResp(2, 'Failed to retrieve metadata.'));
                     } else {
