@@ -57,6 +57,20 @@ function parseFields(fieldList) {
 
 function projectRoutes(app, auth, db) {
 
+    // Gets a list of active projects (i.e. species)
+    app.get('/projects', function(req, res) {
+        db.getProjects(function(err, list) {
+            if (err) {
+                return res.send(new errors.APIErrResp(2, 'Failed to fetch project list.'));
+            } else {
+                return res.send({
+                    'res': true,
+                    'projects': list
+                });
+            }
+        });
+    });
+
     app.get('/project/fields', function(req, res) {
         var id = parseInt(req.query.project);
         if (_.isNaN(id) || id < 0)  {

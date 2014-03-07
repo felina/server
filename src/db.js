@@ -20,8 +20,29 @@ function init(callback) {
     });
 }
 
+function getProjects(callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback(connErr);
+        }
+
+        var query = "SELECT `name` FROM `projects`";
+        return conn.query(query, function(err, res) {
+            if (err) {
+                console.log(err);
+                return callback(err);
+            } else {
+                var names = new Array(res.length);
+                res.forEach(function(ele, i) {
+                    names[i] = ele.name;
+                });
+                return callback(null, names);
+            }
+        });
+    });
+}
+
 function getFields(project, callback) {
-    console.log(project);
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             return callback(connErr);
@@ -701,6 +722,7 @@ function getUserHash(email, callback) {
 
 module.exports = {
     init: init,
+    getProjects:getProjects,
     getFields:getFields,
     setFields:setFields,
     getProject:getProject,
