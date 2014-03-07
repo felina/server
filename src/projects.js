@@ -153,26 +153,36 @@ function projectRoutes(app, auth, db) {
         });
     });
 
-    app.get('/project/info', auth.enforceLogin, function(req, res) {
+    app.get('/project/info', function(req, res) {
         var id = parseInt(req.query.id);
+        var pname = req.query.name;
 
         if (_.isNaN(id)) {
-            return res.send({'res': false, 'err': new errors.APIError(2, 'Invalid id.')});
+            if (typeof pname === 'undefined') { 
+                return res.send(new errors.APIErrResp(2, 'Invalid id.'));
+            } else if (typeof pname === 'string' && pname.length > 0) {
+                id = pname;
+            } else {
+                return res.send(new errors.APIErrResp(2, 'Invalid name.'));
+            }
         }
         db.getProject(id, function(err, pR) {
             if (err) {
                 console.log(err);
-                return res.send({'res': false, 'err': new errors.APIError(3, 'Failed to retrieve project.')});
+                return res.send(new errors.APIErrResp(3, 'Failed to retrieve project.'));
             } else {
                 if (pR === null) {
-                    return res.send({'res': false, 'err': new errors.APIError(4, 'Project id does not exist.')});
+                    return res.send(new errors.APIErrResp(4, 'Project id does not exist.'));
                 }
-                var proj = new Project(id, pR[0].name, pR[0].desc, pR[0].active);
+                var proj = new Project(pR[0].projectid, pR[0].name, pR[0].desc, pR[0].active);
                 if (proj.id === false) {
                     console.log('Failed to make project from db result.');
-                    return res.send({'res': false, 'err': new errors.APIError(3, 'Failed to retrieve project.')});
+                    return res.send(new errors.APIErrResp(3, 'Failed to retrieve project.'));
                 }
-                return res.send({'res': true, 'project': proj});
+                return res.send({
+                    'res': true,
+                    'project': proj
+                });
             }
         });
     });

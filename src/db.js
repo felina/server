@@ -118,10 +118,16 @@ function getProject(id, callback) {
             return callback(connErr);
         }
 
-        var query = "SELECT * FROM `projects` WHERE `projectid` = ?";
+        var query;
+        if (typeof id === 'number') {
+            query = "SELECT * FROM `projects` WHERE `projectid` = ?";
+        } else {
+            query = "SELECT * FROM `projects` WHERE `name` = ?";
+        }
+
         var sub = [ id ];
         query = mysql.format(query, sub);
-
+        console.log(query);
         conn.query(query, function(err, res) {
             if (err) {
                 console.log(err);
