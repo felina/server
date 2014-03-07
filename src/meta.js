@@ -161,20 +161,16 @@ function metaRoutes(app, auth, db) {
         var uid = req.user ? req.user.id : -1;
         var iid = req.query.id;
 
-        db.checkImagePerm(uid, iid, function(err, bool) {
-            if (bool) {
-                db.getMetaBasic(uid, iid, function(err, meta) {
-                    if (err) {
-                        res.send(new errors.APIErrResp(3, 'Failed to retrieve metadata.'));
-                    } else {
-                        res.send({
-                            'res': true,
-                            'meta': meta
-                        });
-                    }
-                });
-            } else {
+        db.getMetaBasic(uid, iid, function(err, meta) {
+            if (err) {
+                res.send(new errors.APIErrResp(3, 'Failed to retrieve metadata.'));
+            } else if (meta === false) {
                 res.send(new errors.APIErrResp(1, 'You do not have permission to access this image.'));
+            } else {
+                res.send({
+                    'res': true,
+                    'meta': meta
+                });
             }
         });
     });

@@ -411,8 +411,8 @@ function getMetaBasic(uid, iid, callback) {
                 console.log(err.code);
                 callback(err, null);
             } else {
-                if (res.length >= 0) {
-                    if (res[0].location != null) {
+                if (res.length > 0) {
+                    if (res[0].location !== null) {
                         res[0].location = geomWKTToPoints(res[0].location, true);
                     }
                     callback(null, res[0]);
