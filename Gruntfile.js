@@ -69,11 +69,12 @@ module.exports = function(grunt) {
           require: true,
           console: true,
           module: true,
-          app: true
+          app: true,
+          process: true
         }
       },
       lib_test: {
-        src: ['src/*.js']
+        src: ['src/*.js', 'src/**/*.js', 'tools/*.js']
       }
     }
   });

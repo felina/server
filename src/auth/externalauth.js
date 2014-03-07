@@ -7,28 +7,23 @@ var db = require('../db.js');
 fbConfig.passReqToCallback = true;
 var FacebookStrategy = new fbStrat(fbConfig, function(req, accessToken, refreshToken, profile, done) {
     db.extGetUser(profile.id, profile.provider, req.user, function(outcome, user) {
-	switch (outcome) {
-	case 0:
-	    // Login succeeded or we were already done.
-	    return done(null, user);
-	    break;
-	case 1:
-	    // This FB account has been seen before with another user! Invalidate session.
-	    return done(JSON.stringify);
-	    break;
-	case 2:
-	    // This account is new, it has been linked to the current user.
-	    return done(null, user);
-	    break;
-	case 3:
-	    // New user, UNSUPPORTED
-	    return done(JSON.stringify({'code':2, 'msg':'Unsupported new user'}), null);
-	    break;
-	default:
-	    // ???
-	    return done('Facebook login failed');
-	    break;
-	}
+        switch (outcome) {
+        case 0:
+            // Login succeeded or we were already done.
+            return done(null, user);
+        case 1:
+            // This FB account has been seen before with another user! Invalidate session.
+            return done(JSON.stringify);
+        case 2:
+            // This account is new, it has been linked to the current user.
+            return done(null, user);
+        case 3:
+            // New user, UNSUPPORTED
+            return done(JSON.stringify({'code':2, 'msg':'Unsupported new user'}), null);
+        default:
+            // ???
+            return done('Facebook login failed');
+        }
     });
 });
 
@@ -39,4 +34,7 @@ function fbRoutes(app) {
     // End Facebook auth
 }
 
-module.exports = {fbStrategy:FacebookStrategy, fbRoutes:fbRoutes};
+module.exports = {
+    fbStrategy:FacebookStrategy,
+    fbRoutes:fbRoutes
+};

@@ -323,7 +323,7 @@ function updateMetaR(mdArr, callback, rSet) {
                 } else {
                     rSet.push(true);
                 }
-                
+
                 return updateMetaR(mdArr, callback, rSet);
             });
         });
@@ -641,13 +641,13 @@ function addNewUser(user, phash, vhash, callback) {
         });
     });
 }
- 
+
 function validateEmail(vhash, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             return callback('Database error', null);
         }
-        
+
         var query = "UPDATE `users` SET `validation_hash`=NULL WHERE `validation_hash`=?";
         var sub = [vhash];
         query = mysql.format(query, sub);

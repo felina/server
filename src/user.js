@@ -64,7 +64,7 @@ User.prototype.profileURL = function() {
     }
 };
 
-User.prototype.toJSON = function() {   
+User.prototype.toJSON = function() {
     return {
         'id': this.id,
         'name': this.name,
