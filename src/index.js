@@ -21,7 +21,7 @@ db.init(function(err) {
 auth.authSetup(passport);
 
 // Init express application
-app = express();
+var app = express();
 
 // Forgotten headers?
 var allowCrossDomain = function(req, res, next) {
