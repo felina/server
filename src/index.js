@@ -1,5 +1,7 @@
 #! /usr/bin/env node
 
+var API_VERSION = '0.1.0';
+
 var express = require('express');
 var passport = require('passport');
 var auth = require('./auth/auth.js');
@@ -59,26 +61,11 @@ app.configure(function() {
     app.use(app.router);
 });
 
-// TEMP Hello world
+// Give API version on root.
 app.get('/', function(req, res) {
     return res.send({
-        res: false,
-        err: {
-            code: 998,
-            msg: 'FELINA API SERVER\n'
-        }
-    });
-});
-
-// Root callback - show req
-app.post('/', function(req, res) {
-    console.log(req);
-    return res.send({
-        'res': false,
-        'err': {
-            'code': 999,
-            'msg': 'FELINA API SERVER\n'
-        }
+        res: true,
+        version: API_VERSION
     });
 });
 
