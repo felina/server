@@ -395,20 +395,23 @@ function getMetaBasic(uid, iid, callback) {
     });
 }
 
-function getAnnotations(uid, iid, callback) {
-    var query = "SELECT `annoid` AS 'id', AsText(`region`) AS 'region', `tag` " +
-        "FROM `image_annotations` " +
-        "INNER JOIN `images` USING (`imageid`) " +
-        "WHERE `imageid`=? AND (`images`.`ownerid`=? OR NOT `images`.`private`)";
-    var sub = [iid, uid];
+function getAnnotations(iid, callback) {
+    var query = "SELECT `project_fields`.`name`, AsText(`region`) AS 'region' " +
+        "FROM `image_meta_annotations` " +
+        "INNER JOIN `project_fields` USING (`fieldid`) " +
+        "WHERE `imageid`=?";
+    var sub = [iid];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
-            return callback('Database error', false);
+            console.log(connErr);
+            return callback(connErr, false);
         }
 
         conn.query(query, function(err, res) {
+            conn.release();
+
             if (err) {
                 console.log(err.code);
                 callback(err, null);
@@ -419,8 +422,6 @@ function getAnnotations(uid, iid, callback) {
                 callback(null, res);
             }
         });
-
-        conn.release();
     });
 }
 

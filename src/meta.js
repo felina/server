@@ -136,10 +136,7 @@ function metaRoutes(app, auth, db) {
     app.post('/upload/metadata', auth.enforceLogin, function(req, res) {
         // Check that we've been sent an array
         if (parseMetadata(req.body) === false) {
-            res.send({
-                'res': false,
-                'err': new errors.APIError(1, 'Invalid request.')
-            });
+            res.send(new errors.APIErrResp(2, 'Invalid request.'));
         } else {
             var asParsed = req.body.slice(); // Use slice() to shallow copy the array, so we don't lose it's contents.
             db.addImageMeta(req.body, function(sqlRes) {
@@ -156,59 +153,43 @@ function metaRoutes(app, auth, db) {
     });
 
     app.get('/img/:id/meta', function(req, res) {
-        // TODO: Allow logged out viewing
-        if (req.user) {
-            db.checkImagePerm(req.user, req.params.id, function(err, bool) {
-                if (bool) {
-                    db.getMetaBasic(req.user.id, req.params.id, function(err, meta) {
-                        if (err) {
-                            res.send({
-                                'res': false,
-                                'err': new errors.APIError(3, 'Failed to retrieve metadata.')
-                            });
-                        } else {
-                            res.send({
-                                'res': true,
-                                'meta': meta
-                            });
-                        }
-                    });
-                } else {
-                    res.send({
-                        'res': false,
-                        'err': new errors.APIError(2, 'You do not have permission to access this image.')
-                    });
-                }
-            });
-        } else {
-            res.send({
-                'res': false,
-                'err': new errors.APIError(1, 'You are not logged in.')
-            });
-        }
+        var uid = req.user ? req.user.id : -1;
+        db.checkImagePerm(uid, req.params.id, function(err, bool) {
+            if (bool) {
+                db.getMetaBasic(uid, req.params.id, function(err, meta) {
+                    if (err) {
+                        res.send(new errors.APIErrResp(3, 'Failed to retrieve metadata.'));
+                    } else {
+                        res.send({
+                            'res': true,
+                            'meta': meta
+                        });
+                    }
+                });
+            } else {
+                res.send(new errors.APIErrResp(1, 'You do not have permission to access this image.'));
+            }
+        });
     });
 
     app.get('/img/:id/anno', function(req, res) {
-        if (req.user) {
-            db.getAnnotations(req.user.id, req.params.id, function(err, anno) {
-                if (err) {
-                    res.send({
-                        'res': false,
-                        'err': new errors.APIError(2, 'Failed to retrieve metadata.')
-                    });
-                } else {
-                    res.send({
-                        'res': true,
-                        'anno': anno
-                    });
-                }
-            });
-        } else {
-            res.send({
-                'res': false,
-                'err': new errors.APIError(1, 'You are not logged in.')
-            });
-        }
+        var uid = req.user ? req.user.id : -1;
+        db.checkImagePerm(uid, req.params.id, function(err, bool) {
+            if (bool) {
+                db.getAnnotations(req.params.id, function(err, anno) {
+                    if (err) {
+                        res.send(new errors.APIErrResp(2, 'Failed to retrieve metadata.'));
+                    } else {
+                        res.send({
+                            'res': true,
+                            'anno': anno
+                        });
+                    }
+                });
+            } else {
+                res.send(new errors.APIErrResp(1, 'You do not have permission to access this image.'));
+            }
+        });
     });
 
     app.get('/species', function(req, res) {
@@ -220,6 +201,7 @@ function metaRoutes(app, auth, db) {
         });
     });
 
+    // To be replaced by /project/fields
     app.get('/features', function(req, res) {
         res.send({
             res: true,
