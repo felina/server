@@ -20,13 +20,17 @@ function init(callback) {
     });
 }
 
-function getProjects(callback) {
+function getProjects(showAll, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             return callback(connErr);
         }
 
         var query = "SELECT `name` FROM `projects`";
+        if (!showAll) {
+            query = query + " WHERE active";
+        }
+
         return conn.query(query, function(err, res) {
             if (err) {
                 console.log(err);
