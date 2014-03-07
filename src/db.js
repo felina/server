@@ -340,9 +340,9 @@ function addImageMeta(mdArr, callback) {
 }
 
 // Checks eligibility to load an image.
-function checkImagePerm(user, id, callback) {
+function checkImagePerm(uid, id, callback) {
     var query = "SELECT (`ownerid`=? OR NOT `private`) AS 'open' FROM `images` WHERE `imageid`=?";
-    var sub = [user.id, id];
+    var sub = [uid, id];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {

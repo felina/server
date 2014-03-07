@@ -1,6 +1,7 @@
 var fs = require('fs');
 var md5 = require('MD5');
 var aws = require('aws-sdk');
+var errors = require('./error.js');
 
 aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
@@ -27,13 +28,7 @@ function imageRoutes(app, auth, db) {
     app.get('/images', auth.enforceLogin, function(req, res) {
         db.getUserImages(req.user, function(err, result) {
             if (err) {
-                res.send({
-                    'res': false,
-                    'err': {
-                        'code': 2,
-                        'msg': 'Could not load image list.'
-                    }
-                });
+                res.send(new errors.APIErrResp(2, 'Could not load image list.'));
             } else {
                 res.send({
                     'res': true,
@@ -43,19 +38,20 @@ function imageRoutes(app, auth, db) {
         });
     });
 
+    // Deprecated
     app.get('/img/:id', function(req, res) {
-        // TODO: Allow logged out viewing of public images
-        if (req.user) {
-            db.checkImagePerm(req.user, req.params.id, function(err, bool) {
-                if (bool) {
-                    proxyImage(req.params.id, res);
-                } else {
-                    res.redirect('/Padlock.png');
-                }
-            });
-        } else {
-            res.redirect('/Padlock.png');
-        }
+        res.redirect('/img?id=' + req.params.id);
+    });
+
+    app.get('/img', function(req, res) {
+        var uid = req.user ? req.user.id : -1;
+        db.checkImagePerm(uid, req.query.id, function(err, bool) {
+            if (bool) {
+                proxyImage(req.query.id, res);
+            } else {
+                res.redirect('/Padlock.png');
+            }
+        });
     });
 
     // Image/s upload endpoint
