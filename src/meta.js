@@ -202,6 +202,28 @@ function metaRoutes(app, auth, db) {
         });
     });
 
+    app.get('/fields', function(req, res) {
+        var uid = req.user ? req.user.id : -1;
+        var iid = req.query.id;
+
+        db.checkImagePerm(uid, iid, function(err, bool) {
+            if (bool) {
+                db.getImageFields(iid, function(err, anno) {
+                    if (err) {
+                        res.send(new errors.APIErrResp(2, 'Failed to retrieve metadata.'));
+                    } else {
+                        res.send({
+                            'res': true,
+                            'fields': anno
+                        });
+                    }
+                });
+            } else {
+                res.send(new errors.APIErrResp(1, 'You do not have permission to access this image.'));
+            }
+        });
+    });
+
     app.get('/species', function(req, res) {
         res.send({
             res: true,

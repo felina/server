@@ -426,6 +426,51 @@ function getMetaBasic(uid, iid, callback) {
     });
 }
 
+function getImageFields(iid, callback) {
+    var query = "SELECT `pf`.`name`, `pf`.`type`, `stringval` AS 'val' " +
+        "FROM `project_fields` AS `pf` " +
+        "INNER JOIN `images` USING (`projectid`) " +
+        "INNER JOIN `image_meta_string` AS `ims` " +
+        "ON `images`.`imageid` = `ims`.imageid AND `pf`.`fieldid` = `ims`.`fieldid` AND `type`='string' " +
+        "WHERE `images`.`imageid` = ? " +
+        "UNION " +
+        "SELECT `pf`.`name`, `pf`.`type`, `numberval` " +
+        "FROM `project_fields` AS `pf` " +
+        "INNER JOIN `images` USING (`projectid`) " +
+        "INNER JOIN `image_meta_number` AS `imn` " +
+        "ON `images`.`imageid` = `imn`.imageid AND pf.fieldid = imn.fieldid AND type='number' " +
+        "WHERE `images`.`imageid` = ? " +
+        "UNION " +
+        "SELECT `pf`.`name`, `pf`.`type`, `ed`.`name` " +
+        "FROM `project_fields` AS `pf` " +
+        "INNER JOIN `images` USING (`projectid`) " +
+        "INNER JOIN `image_meta_enum` AS `ime` " +
+        "ON `images`.`imageid` = `ime`.imageid AND pf.fieldid = ime.fieldid AND type='enum' " +
+        "INNER JOIN `enum_definitions` AS `ed` " +
+        "ON `ed`.`enumval`=`ime`.`enumval` AND `ed`.`fieldid`=`pf`.`fieldid` " +
+        "WHERE `images`.`imageid` = ?";
+    var sub = [ iid, iid, iid ];
+    query = mysql.format(query, sub);
+
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            console.log(connErr);
+            return callback(connErr, false);
+        }
+
+        conn.query(query, function(err, res) {
+            conn.release();
+
+            if (err) {
+                console.log(err.code);
+                callback(err, null);
+            } else {
+                callback(null, res);
+            }
+        });
+    });
+}
+
 function getAnnotations(iid, callback) {
     var query = "SELECT `project_fields`.`name`, AsText(`region`) AS 'region' " +
         "FROM `image_meta_annotations` " +
@@ -732,6 +777,7 @@ function getUserHash(email, callback) {
 
 module.exports = {
     init: init,
+    getImageFields:getImageFields,
     getProjects:getProjects,
     getFields:getFields,
     setFields:setFields,
