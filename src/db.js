@@ -20,6 +20,37 @@ function init(callback) {
     });
 }
 
+function getJobImageCount(jobid, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback(connErr);
+        }
+
+        var query = "SELECT * FROM " +
+            "( SELECT COUNT(*) AS `processed` " +
+            "  FROM `job_images` " +
+            "  WHERE `jobid` = ? " +
+            ") AS `a`" +
+            "," +
+            "( SELECT (COUNT(*) * (COUNT(*) - 1))/2 AS `total` " +
+            "  FROM `jobs` " +
+            "  INNER JOIN `images` USING (`projectid`) " +
+            "  WHERE `jobid` = ? " +
+            ") AS `b`";
+        var sub = [ jobid, jobid ];
+        query = mysql.format(query, sub);
+
+        return conn.query(query, function(err, res) {
+            if (err) {
+                console.log(err);
+                return callback(err);
+            } else {
+                return callback(null, res);
+            }
+        });
+    });
+}
+
 function getProjects(showAll, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -230,11 +261,18 @@ function pointsToGeomWKT(region, location) {
 
 function condenseAnnotations(annotations) {
     // To make query generation simpler, we will create a condensed array of only valid regions.
+    console.log(annotations);
     var cond = [];
-    for (var i = 0; i < annotations.length; i++) {
-        if (annotations[i] !== false) {
-            // This must contain a valid region, keep it.
-            cond.push(annotations[i]);
+    for (var key in annotations) {
+        if (annotations.hasOwnProperty(key)) {
+            if (annotations[key] !== false) {
+                // TODO: Support multiple annotations per field.
+                // This must contain a valid region, keep. Set the key as an attribute.
+                annotations[key][0].title = key;
+                cond.push(annotations[key][0]);
+            } else {
+                console.log("Condensing anno");
+            }
         }
     }
     return cond;
@@ -244,37 +282,59 @@ function condenseAnnotations(annotations) {
 function addImageAnno(iid, annotations, callback) {
     var anno = condenseAnnotations(annotations);
 
+    // Count annotations length
+    var annotationsLength = 0;
+    for (var k in annotations) {
+        if (annotations.hasOwnProperty(k)) {
+            ++annotationsLength;
+        }
+    }
+
     if (anno.length <= 0) {
         console.log('Tried to insert empty annotations list!');
         return callback('No valid annotations provided', false);
     } else {
-        var query = "INSERT INTO `image_annotations` (imageid, region, tag) VALUES ";
+        var query = "INSERT INTO `image_meta_annotations` ";
         var sub = new Array(anno.length * 3);
         var i;
         for (i = 0; i < anno.length - 1; i++) {
-            query = query + "(?,GeomFromText(?),?),";
-            sub[i * 3] = iid;
-            sub[(i * 3) + 1] = pointsToGeomWKT(anno[i].region);
-            sub[(i * 3) + 2] = (anno[i].tag === false) ? null : anno[i].tag;
+            // We can't do a nice insert here as we have to lookup a fieldid from a field name.
+            query = query + "SELECT `images`.`imageid`, `fieldid`, GeomFromText(?) AS `region` " +
+                "FROM `project_fields` " +
+                "INNER JOIN `images` USING (`projectid`) " +
+                "WHERE `images`.`imageid` = ? AND `project_fields`.`name` = ? " +
+                "UNION ";
+            sub[i * 3] = pointsToGeomWKT(anno[i].points);
+            sub[(i * 3) + 1] = iid;
+            sub[(i * 3) + 2] = anno[i].title;
         }
         // Add the final record
-        query = query + "(?,GeomFromText(?),?)";
-        sub[i * 3] = iid;
-        sub[(i * 3) + 1] = pointsToGeomWKT(anno[i].region);
-        sub[(i * 3) + 2] = (anno[i].tag === false) ? null : anno[i].tag;
+        query = query + "SELECT `images`.`imageid`, `fieldid`, GeomFromText(?) AS `region` " +
+            "FROM `project_fields` " +
+            "INNER JOIN `images` USING (`projectid`) " +
+            "WHERE `images`.`imageid` = ? AND `project_fields`.`name` = ? ";
+        sub[i * 3] = pointsToGeomWKT(anno[i].points);
+        sub[(i * 3) + 1] = iid;
+        sub[(i * 3) + 2] = anno[i].title;
+
+        // Allow updating of already set values.
+        query = query + 
+            "ON DUPLICATE KEY UPDATE " +
+            "`region` = VALUES(`region`)";
 
         query = mysql.format(query, sub);
-
         connPool.getConnection(function(connErr, conn) {
             if (connErr) {
                 return callback('Database error', false);
             }
             conn.query(query, function(err, res) {
                 if (err) {
-                    console.log(err.code);
+                    console.log(err);
+                    console.log(query);
                     callback(err, null);
                 } else {
-                    console.log('Inserted ' + anno.length + '/' + annotations.length + ' annotations into db.');
+                    // affectedRows is incremented twice if an UPDATE is performed!
+                    console.log('Alteration count ' + res.affectedRows + ' out of a filtered ' + anno.length + ' of total ' + annotationsLength + ' annotations into db.');
                     callback(null, res);
                 }
             });
@@ -295,29 +355,32 @@ function updateMetaR(mdArr, callback, rSet) {
     var query = "UPDATE `images` SET";
     var sub = [];
 
-    if (md.datetime) {
+    if (md.metadata.title) {
+        // Add me
+    }
+    if (md.metadata.datetime) {
         if (!first) {
             query += ",";
         }
         query += " `datetime`=?";
-        sub.push(md.datetime);
+        sub.push(md.metadata.datetime);
         first = false;
     }
-    if (md.location) {
+    if (md.metadata.location) {
         if (!first) {
             query += ",";
         }
         query += " `location`=PointFromText(?)";
-        var point = "POINT(" + md.location.lat + " " + md.location.lon + ")";
+        var point = "POINT(" + md.metadata.location.coords.lat + " " + md.metadata.location.coords.lng + ")";
         sub.push(point);
         first = false;
     }
-    if (typeof md.priv !== 'undefined' && md.priv !== null) {
+    if (typeof md.metadata.priv !== 'undefined' && md.metadata.priv !== null) {
         if (!first) {
             query += ",";
         }
         query += " `private`=?";
-        sub.push(md.priv);
+        sub.push(md.metadata.priv);
         first = false;
     }
 
@@ -340,7 +403,7 @@ function updateMetaR(mdArr, callback, rSet) {
                     console.log(e);
                     // false if any errors occured in either query.
                     rSet.push(false);
-                } else if (md.annotations !== null && md.annotations.length > 0) {
+                } else if (md.annotations !== null) {
                     return addImageAnno(md.id, md.annotations, function(e2, r2) {
                         if (e2) {
                             console.log(e2);
@@ -365,7 +428,7 @@ function updateMetaR(mdArr, callback, rSet) {
     }
 }
 
-// Updates image metadata TODO: Check privileges! TODO: Lists!!!
+// Updates image metadata TODO: Check privileges!
 function addImageMeta(mdArr, callback) {
     return updateMetaR(mdArr, callback, []);
 }
@@ -777,6 +840,7 @@ function getUserHash(email, callback) {
 
 module.exports = {
     init: init,
+    getJobImageCount:getJobImageCount,
     getImageFields:getImageFields,
     getProjects:getProjects,
     getFields:getFields,

@@ -5,10 +5,15 @@ function isUnset(x) {
     return _.isUndefined(x) || _.isNull(x);
 }
 
+// Takes a position, length, width and converts to standard poly representation.
+//function convertRectangle(rect) {
+//    return rect;
+//}
+
 function parseRegion(reg) {
     // We should have already checked the size of this array.
     for (var i = 0; i < reg.length; i++) {
-        if (reg[i] == null || typeof reg[i].x !== 'number' ||
+        if (reg[i] === null || typeof reg[i].x !== 'number' ||
             typeof reg[i].y !== 'number' || reg[i].x < 0 || reg[i].y < 0) {
             // If any point is invalid, invalidate the entire region.
             console.log('Invalid point in region.');
@@ -25,22 +30,50 @@ function parseRegion(reg) {
     return true;
 }
 
-function parseAnnotations(an) {
-    // An empty array is valid, so we just return.
-    for (var i = 0; i < an.length; i++) {
-        // Region must be set and must be an array of size > 0
-        if (_.isArray(an[i].region) && an[i].region.length > 0) {
-            var valid = parseRegion(an[i].region);
-
-            if (!valid) {
-                an[i] = false;
-            } else if (isUnset(an[i].tag)) {
-                an[i].tag = null;
-            } else if (typeof an[i].tag !== 'string' || an[i].tag.length < 1 || an[i].tag.length > 32) {
-                an[i].tag = false;
+// Assuming simplified format from image-annotator/#1
+function parseAnno(an) {
+    if (!_.isArray(an.points)) {
+        // Points must be set.
+        return false;
+    } else {
+        // Type must be valid and must match the points list.
+        switch (an.type) {
+        case 'rect':
+            if (an.points.length === 4) {
+                return parseRegion(an.points);
             }
-        } else {
-            an[i] = false;
+            return false;
+        case 'poly':
+            if (an.points.length >= 2) {
+                return parseRegion(an.points);
+            }
+            return false;
+        default:
+            console.log('Unrecognised annotation shape: ' + an.type);
+            return false;
+        }
+    }
+}
+
+function parseAnnotations(an) {
+    var val;
+    // An empty array is valid, so we just return.
+    for (var key in an) {
+        // Discard any inherited properties
+        if (an.hasOwnProperty(key)) {
+            val = an[key];
+
+            // Anno must be am object
+            if (_.isObject(val)) {
+                // TODO: Support multiple regions per key.
+                var valid = parseAnno(val[0]);
+
+                if (!valid) {
+                    an[key] = false;
+                }
+            } else {
+                an[key] = false;
+            }
         }
     }
 }
@@ -50,56 +83,65 @@ function parseMetadata(mdArr) {
         console.log('Metadata not a list.');
         return false;
     } else {
-        // This is very un-node like. array.forEach(...)!
         for (var i = 0; i < mdArr.length; i++) {
             if (typeof mdArr[i].id === 'string' && mdArr[i].id != null && mdArr[i].id.length === 32) {
+                // Check if title has been sent
+                if (isUnset(mdArr[i].metadata.title)) {
+                    // Mark as unset
+                    mdArr[i].metadata.title = null;
+                } else if (typeof mdArr[i].metadata.title !== 'string') {
+                    mdArr[i].metadata.title = false;
+                }
+
                 // Check if datetime has been sent
-                if (!isUnset(mdArr[i].datetime)) {
-                    mdArr[i].datetime = Date.parse(mdArr[i].datetime);
-                    if (isNaN(mdArr[i].datetime)) {
+                if (!isUnset(mdArr[i].metadata.datetime)) {
+                    mdArr[i].metadata.datetime = Date.parse(mdArr[i].metadata.datetime);
+                    if (isNaN(mdArr[i].metadata.datetime)) {
                         console.log('Failed to parse datetime field.');
                         // Mark as invalid
-                        mdArr[i].datetime = false;
+                        mdArr[i].metadata.datetime = false;
                     } else {
                         // Convert to Date object.
-                        mdArr[i].datetime = new Date(mdArr[i].datetime);
+                        mdArr[i].metadata.datetime = new Date(mdArr[i].metadata.datetime);
                     }
                 } else {
                     // Mark as unset
-                    mdArr[i].datetime = null;
+                    mdArr[i].metadata.datetime = null;
                 }
 
                 // Check if location has been sent
-                if (!isUnset(mdArr[i].location)) {
-                    if (typeof mdArr[i].location !== 'object' || typeof mdArr[i].location.lat === 'undefined' ||
-                        typeof mdArr[i].location.lon === 'undefined' || mdArr[i].location.lat < -90 ||
-                        mdArr[i].location.lat > 90 || mdArr[i].location.lon < -180 || mdArr[i].location.lon > 180) {
+                if (!isUnset(mdArr[i].metadata.location)) {
+                    if (typeof mdArr[i].metadata.location !== 'object' || typeof mdArr[i].metadata.location.coords !== 'object' ||
+                        typeof mdArr[i].metadata.location.coords.lat === 'undefined' ||
+                        typeof mdArr[i].metadata.location.coords.lng === 'undefined' ||
+                        mdArr[i].metadata.location.coords.lat < -90 || mdArr[i].metadata.location.coords.lat > 90 ||
+                        mdArr[i].metadata.location.coords.lng < -180 || mdArr[i].metadata.location.coords.lng > 180) {
                         console.log('Invalid location.');
                         // Mark as invalid
-                        mdArr[i].location = false;
+                        mdArr[i].metadata.location = false;
                     }
                 } else {
                     // Mark as unset
-                    mdArr[i].location = null;
+                    mdArr[i].metadata.location = null;
                 }
 
                 // Check if priv has been sent
-                if (!isUnset(mdArr[i].priv)) {
+                if (!isUnset(mdArr[i].metadata.priv)) {
                     // Accept any type for priv, convert to a simple boolean.
-                    mdArr[i].priv = !! mdArr[i].priv;
+                    mdArr[i].metadata.priv = !! mdArr[i].metadata.priv;
                 } else {
                     // Mark as unset
-                    mdArr[i].priv = null;
+                    mdArr[i].metadata.priv = null;
                 }
 
                 // Check if annotations have been sent
                 if (!isUnset(mdArr[i].annotations)) {
-                    if (!_.isArray(mdArr[i].annotations)) {
-                        console.log('Invalid annotations.');
-                        mdArr[i].annotations = false;
-                    } else {
+                    if (_.isObject(mdArr[i].annotations)) {
                         // Parse annotations list
                         parseAnnotations(mdArr[i].annotations);
+                    } else {
+                        console.log('Invalid annotations.');
+                        mdArr[i].annotations = false;
                     }
                 } else {
                     // Mark as unset
@@ -124,13 +166,14 @@ function metaRoutes(app, auth, db) {
 
     // Takes an array of metadata objects (JSON). A metadata object must contain a 32 character id string,
     // and any combination of the following:
+    //   - title    : A string name of the image for display only.
     //   - datetime : A string representing the date an image was captured. Create using (new Date).toJSON()
-    //   - location : An object containing two numbers, lat and lon. Must be within +-90 and +-180 respectively.
+    //   - location : An object containing coords of lat and lon, and a name. Must be within +-90 and +-180 respectively.
     //   - private  : A boolean value determining whether other users may view this image.
-    //   - annotations : A list containing annotation objects.
+    //   - annotations : An object containing name:annotation key value pairs.
     // An annotation object is comprised of two properties:
-    //   - tag    : (OPTIONAL) A string that describes the annotation. Will be replaced with an id in future.
-    //   - region : A list containing at least one point object, where a point simply wraps two numbers, x and y.
+    //   - type   : A string giving the shape the points should form.
+    //   - points : A list containing at least one point object, where a point simply wraps two numbers, x and y.
     // The four properties of a metadata object are all optional. If you do not wish to set one of these properties,
     // the property should be left undefined or set to null.
     app.post('/upload/metadata', auth.enforceLogin, function(req, res) {
