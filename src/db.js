@@ -20,6 +20,37 @@ function init(callback) {
     });
 }
 
+function getJobImageCount(jobid, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback(connErr);
+        }
+
+        var query = "SELECT * FROM " +
+            "( SELECT COUNT(*) AS `processed` " +
+            "  FROM `job_images` " +
+            "  WHERE `jobid` = ? " +
+            ") AS `a`" +
+            "," +
+            "( SELECT (COUNT(*) * (COUNT(*) - 1))/2 AS `total` " +
+            "  FROM `jobs` " +
+            "  INNER JOIN `images` USING (`projectid`) " +
+            "  WHERE `jobid` = ? " +
+            ") AS `b`";
+        var sub = [ jobid, jobid ];
+        query = mysql.format(query, sub);
+
+        return conn.query(query, function(err, res) {
+            if (err) {
+                console.log(err);
+                return callback(err);
+            } else {
+                return callback(null, res);
+            }
+        });
+    });
+}
+
 function getProjects(showAll, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -777,6 +808,7 @@ function getUserHash(email, callback) {
 
 module.exports = {
     init: init,
+    getJobImageCount:getJobImageCount,
     getImageFields:getImageFields,
     getProjects:getProjects,
     getFields:getFields,

@@ -82,7 +82,7 @@ images.imageRoutes(app, auth, db);
 meta.metaRoutes(app, auth, db);
 
 // Import job related routes, mostly dummy endpoints for now
-jobs.jobRoutes(app);
+jobs.jobRoutes(app, db);
 
 // Start listening
 var port = process.env.PORT || 5000;
