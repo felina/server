@@ -243,6 +243,58 @@ CREATE TABLE IF NOT EXISTS `felina`.`image_meta_enum` (
 ENGINE = InnoDB;
 
 
+-- -----------------------------------------------------
+-- Table `felina`.`jobs`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `felina`.`jobs` (
+  `jobid` INT NOT NULL AUTO_INCREMENT,
+  `projectid` INT NOT NULL,
+  `name` VARCHAR(45) NOT NULL,
+  `ownerid` INT NOT NULL,
+  `exe_pack` VARCHAR(45) NULL,
+  PRIMARY KEY (`jobid`),
+  INDEX `project_jobs_rel_idx` (`projectid` ASC),
+  INDEX `users_jobs_rel_idx` (`ownerid` ASC),
+  CONSTRAINT `project_jobs_rel`
+    FOREIGN KEY (`projectid`)
+    REFERENCES `felina`.`projects` (`projectid`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `users_jobs_rel`
+    FOREIGN KEY (`ownerid`)
+    REFERENCES `felina`.`users` (`userid`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `felina`.`job_images`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `felina`.`job_images` (
+  `imagea` CHAR(32) NOT NULL,
+  `imageb` CHAR(32) NOT NULL,
+  `jobid` INT NOT NULL,
+  PRIMARY KEY (`imagea`, `imageb`, `jobid`),
+  INDEX `images_jimages_relb_idx` (`imageb` ASC),
+  CONSTRAINT `jobs_jimages_rel`
+    FOREIGN KEY (`jobid`)
+    REFERENCES `felina`.`jobs` (`jobid`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `images_jimages_rela`
+    FOREIGN KEY (`imagea`)
+    REFERENCES `felina`.`images` (`imageid`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `images_jimages_relb`
+    FOREIGN KEY (`imageb`)
+    REFERENCES `felina`.`images` (`imageid`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
