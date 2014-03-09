@@ -18,7 +18,7 @@ while True:
             pass
         else:
             if len(result) > 0:
-                # Do the server restart stuff
+                ## Do the server restart stuff
                 print 'new commits'
                 pass
     timeStore = strftime("%Y-%m-%dT%H:%M:%S")
