@@ -272,10 +272,10 @@ ENGINE = InnoDB;
 -- Table `felina`.`job_images`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `felina`.`job_images` (
+  `jobid` INT NOT NULL,
   `imagea` CHAR(32) NOT NULL,
   `imageb` CHAR(32) NOT NULL,
-  `jobid` INT NOT NULL,
-  PRIMARY KEY (`imagea`, `imageb`, `jobid`),
+  PRIMARY KEY (`jobid`, `imagea`, `imageb`),
   INDEX `images_jimages_relb_idx` (`imageb` ASC),
   CONSTRAINT `jobs_jimages_rel`
     FOREIGN KEY (`jobid`)
