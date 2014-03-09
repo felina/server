@@ -6,11 +6,13 @@ timeStore = strftime("%Y-%m-%dT%H:%M:%S")
 
 while True:
     try:
+        print "Checking for commits since " + timeStore
         urlContents = urllib2.urlopen('https://api.github.com/repos/felina/server/commits?since=' + timeStore)
     except Exception, e:
         pass
     else:
         try:
+            print "Loading URL contents"
             result = json.load(urlContents)
         except Exception, e:
             pass
