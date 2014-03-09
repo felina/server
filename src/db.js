@@ -1,5 +1,5 @@
 var mysql = require('mysql');
-var dbCFG = require('../config/db_settings.json');
+var dbCFG = require('../db_settings.json');
 var users = require('./user.js');
 var connPool = mysql.createPool(dbCFG);
 
