@@ -69,6 +69,27 @@ function jobRoutes(app, db) {
         }
     });
 
+    // Get all the jobs started by the researcher with the given id
+    // TODO: actually get ID, read from database, etc.
+    app.get('/jobs', function(req, res) {
+        res.send([
+            {
+                name: 'Process some penguins',
+                eta: '37m',
+                current: 10,
+                total: 37,
+                image: '/img/elephant.jpg'
+            },
+            {
+                name: 'Analyse some elephants',
+                eta: '2h 15m',
+                current: 82,
+                total: 96,
+                image: '/img/elephant.jpg'
+            }
+        ]);
+    });
+
     app.post('/target', function() {
         console.log('posted executable to target');
     });
