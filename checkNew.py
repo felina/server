@@ -5,7 +5,7 @@ import os
 #
 #timeStore = strftime("%Y-%m-%dT%H:%M:%S")
 ###
-while True:
+#while True:
     try:
         a = os.popen('git stash && git pull').read()
         #print a
@@ -37,5 +37,5 @@ while True:
     #             pass
                 
 #timeStore = strftime("%Y-%m-%dT%H:%M:%S")
-    sleep(60)
+#    sleep(60)
 
