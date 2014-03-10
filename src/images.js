@@ -2,7 +2,7 @@ var fs = require('fs');
 var md5 = require('MD5');
 var aws = require('aws-sdk');
 var errors = require('./error.js');
-
+//
 aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
 
