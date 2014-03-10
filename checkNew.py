@@ -22,7 +22,10 @@ while True:
             currHash = os.popen('git rev-parse HEAD').read()[:-1]
             if currHash is not result[0]['sha']:
                 # new pull stuff
+                print 'New commits! ' + result[0]['sha'] + ' vs curr ' + currHash
+                os.system('git stash && git pull')
                 pass
-    #timeStore = strftime("%Y-%m-%dT%H:%M:%S")
+                
+#timeStore = strftime("%Y-%m-%dT%H:%M:%S")
     sleep(60)
 
