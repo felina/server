@@ -2,7 +2,7 @@ var mysql = require('mysql');
 var dbCFG = require('../config/db_settings.json');
 var users = require('./user.js');
 var connPool = mysql.createPool(dbCFG);
-
+//
 function init(callback) {
     // Test connection parameters.
     connPool.getConnection(function(connErr, conn) {
