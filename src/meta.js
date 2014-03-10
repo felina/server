@@ -5,10 +5,36 @@ function isUnset(x) {
     return _.isUndefined(x) || _.isNull(x);
 }
 
+function Point(x, y) {
+    this.x = x;
+    this.y = y;
+}
+
 // Takes a position, length, width and converts to standard poly representation.
-//function convertRectangle(rect) {
-//    return rect;
-//}
+function parseRectangle(rect) {
+    if (_.isObject(rect.pos) && _.isObject(rect.size)) {
+        var x = parseInt(rect.pos.x);
+        var y = parseInt(rect.pos.y);
+        var w = parseInt(rect.size.width);
+        var h = parseInt(rect.size.height);
+
+        if (_.isNaN(x + y + w + h) || x < 0 || y < 0 || w < 1 || h < 1) {
+            console.log('Invalid rectangle params.');
+            return false;
+        } else {
+            var origin = new Point(x,y);
+            return [
+                origin,
+                new Point(x+w,y),
+                new Point(x+w,y+h),
+                new Point(x,y+h),
+                origin
+            ];
+        }
+    } else {
+        return false;
+    }
+}
 
 function parseRegion(reg) {
     // We should have already checked the size of this array.
@@ -32,26 +58,24 @@ function parseRegion(reg) {
 
 // Assuming simplified format from image-annotator/#1
 function parseAnno(an) {
-    if (!_.isArray(an.points)) {
-        // Points must be set.
-        return false;
-    } else {
-        // Type must be valid and must match the points list.
-        switch (an.type) {
-        case 'rect':
-            if (an.points.length === 4) {
-                return parseRegion(an.points);
-            }
+    // Type must be valid and must match the points list.
+    switch (an.type) {
+    case 'rect':
+        var rect = parseRectangle(an);
+        if (rect === false) {
             return false;
-        case 'poly':
-            if (an.points.length >= 2) {
-                return parseRegion(an.points);
-            }
-            return false;
-        default:
-            console.log('Unrecognised annotation shape: ' + an.type);
-            return false;
+        } else {
+            an.points = rect;
+            return true;
         }
+    case 'poly':
+        if (an.points.length >= 2) {
+            return parseRegion(an.points);
+        }
+        return false;
+    default:
+        console.log('Unrecognised annotation shape: ' + an.type);
+        return false;
     }
 }
 
@@ -63,12 +87,12 @@ function parseAnnotations(an) {
         if (an.hasOwnProperty(key)) {
             val = an[key];
 
-            // Anno must be am object
-            if (_.isObject(val)) {
+            // Anno must be an object with an array 'shapes'
+            if (_.isObject(val) && _.isArray(val.shapes)) {
                 // TODO: Support multiple regions per key.
-                var valid = parseAnno(val[0]);
+                var valid = parseAnno(val.shapes[0]);
 
-                if (!valid) {
+                if (valid === false) {
                     an[key] = false;
                 }
             } else {

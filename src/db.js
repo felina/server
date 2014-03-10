@@ -261,15 +261,14 @@ function pointsToGeomWKT(region, location) {
 
 function condenseAnnotations(annotations) {
     // To make query generation simpler, we will create a condensed array of only valid regions.
-    console.log(annotations);
     var cond = [];
     for (var key in annotations) {
         if (annotations.hasOwnProperty(key)) {
             if (annotations[key] !== false) {
                 // TODO: Support multiple annotations per field.
                 // This must contain a valid region, keep. Set the key as an attribute.
-                annotations[key][0].title = key;
-                cond.push(annotations[key][0]);
+                annotations[key].shapes[0].title = key;
+                cond.push(annotations[key].shapes[0]);
             } else {
                 console.log("Condensing anno");
             }
