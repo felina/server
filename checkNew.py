@@ -4,7 +4,7 @@ import json
 import os
 #
 #timeStore = strftime("%Y-%m-%dT%H:%M:%S")
-#
+##
 while True:
     try:
         a = os.popen('git stash && git pull').read()
