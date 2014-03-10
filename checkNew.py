@@ -1,13 +1,15 @@
 from time import strftime, sleep
 import urllib2
 import json
- #
-timeStore = strftime("%Y-%m-%dT%H:%M:%S")
+import os
+#
+#timeStore = strftime("%Y-%m-%dT%H:%M:%S")
 
 while True:
     try:
-        print "Checking for commits since " + timeStore
-        urlContents = urllib2.urlopen('https://api.github.com/repos/felina/server/commits?since=' + timeStore)
+        print "Checking for commits at " + strftime("%Y-%m-%dT%H:%M:%S")
+        #urlContents = urllib2.urlopen('https://api.github.com/repos/felina/server/commits?since=' + timeStore)
+        urlContents = urllib2.urlopen('https://api.github.com/repos/felina/server/commits')
     except Exception, e:
         pass
     else:
@@ -17,10 +19,10 @@ while True:
         except Exception, e:
             pass
         else:
-            if len(result) > 0:
-                ## Do the server restart stuff
-                print 'new commits'
+            currHash = os.popen('git rev-parse HEAD').read()[:-1]
+            if currHash is not result[0]['sha']:
+                # new pull stuff
                 pass
-    timeStore = strftime("%Y-%m-%dT%H:%M:%S")
+    #timeStore = strftime("%Y-%m-%dT%H:%M:%S")
     sleep(60)
 
