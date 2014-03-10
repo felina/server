@@ -6,15 +6,16 @@ import os
 #timeStore = strftime("%Y-%m-%dT%H:%M:%S")
 ###
 #while True:
-    try:
-        a = os.popen('git stash && git pull').read()
-        #print a
-        if 'Already up-to-date.' not in a:
-            print 'New stuff!'
-    except Exception, e:
-        raise e
-    else:
-        pass
+try:
+    a = os.popen('git stash && git pull').read()
+    #print a
+    if 'Already up-to-date.' not in a:
+        print 'New stuff!'
+        os.system('sed \'/var port = process.env.PORT || 5000;/c \var port = process.env.PORT || 8080;\' src/index.js')
+except Exception, e:
+    raise e
+else:
+    pass
     # try:
     #     print "Checking for commits at " + strftime("%Y-%m-%dT%H:%M:%S")
     #     #urlContents = urllib2.urlopen('https://api.github.com/repos/felina/server/commits?since=' + timeStore)
