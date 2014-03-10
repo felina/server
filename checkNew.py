@@ -4,7 +4,7 @@ import json
 import os
 #
 #timeStore = strftime("%Y-%m-%dT%H:%M:%S")
-
+#
 while True:
     try:
         print "Checking for commits at " + strftime("%Y-%m-%dT%H:%M:%S")
