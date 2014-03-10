@@ -1,5 +1,5 @@
 var validator = require('email-validator');
-//
+////
 var PrivilegeLevel = Object.freeze({
     USER: {
         i: 1,
