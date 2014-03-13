@@ -68,6 +68,7 @@ function parseAnno(an) {
             an.points = rect;
             return true;
         }
+        break;
     case 'poly':
         if (an.points.length >= 2) {
             return parseRegion(an.points);

@@ -25,7 +25,7 @@ function updateUser(name, email, usertype, profile_image, callback) {
     var sub = [];
     
     if(!email) {
-        // raise all hell
+        callback('Invalid email', false);
     }
 
     if(name) {

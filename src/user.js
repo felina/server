@@ -1,4 +1,5 @@
 var validator = require('email-validator');
+var errors = require('./error.js');
 ////
 var PrivilegeLevel = Object.freeze({
     USER: {
@@ -22,6 +23,16 @@ function privilegeFromString(dbs) {
     PLs.forEach(function(lvl) {
         if (dbs === lvl.dbs) {
             res = lvl.i;
+        }
+    });
+    return res;
+}
+
+function privilegeFromInt(i) {
+    var res = false;
+    PLs.forEach(function(lvl) {
+        if (i === lvl.i) {
+            res = lvl.dbs;
         }
     });
     return res;
@@ -97,17 +108,47 @@ function userRoutes(app, auth, db) {
     // For updating fields e.g. email, gravatar, privilege level...
     app.patch('/user', auth.enforceLogin, function(req, res) {
         console.log(JSON.stringify(req.body));
-        db.updateUser(hash, function(err, info){
-            if(err) {
-                console.log(err);
-                res.send({'res':false, 'err':{'code':1, 'msg':'update failed'}});
-            } else if(info) {
-                res.send({'res':true, 'msg':'Update successful'});
+        console.log(JSON.stringify(req.user));
+        if(req.body.email) {
+            var email = req.body.email;
+            if(req.body.email===req.user.email) {
+                var name = req.body.name;
+                if(typeof name !== "string" && name.length < 1) {
+                    name = false;
+                }
+                db.updateUser(name,email,null,null, function(err, info){
+                    if(err) {
+                        console.log(err);
+                        res.send({'res':false, 'err':{'code':1, 'msg':'update failed'}});
+                    } else if(info) {
+                        res.send({'res':true, 'msg':'Update successful'});
+                    } else {
+                        return res.send({'res':false, 'err':{'code':1, 'msg':'invalid email'}});
+                    }
+                });
+            } else if(req.user.privilege === PrivilegeLevel.RESEARCHER.i) {
+                var level = req.body.privilege;
+                if(typeof level === "number" && (level === 1 || level === 2)) {
+                    var privilege = privilegeFromInt(req.body.privilege);
+                    db.updateUser(null,email, privilege, null, function(err, info){
+                        if(err) {
+                            console.log(err);
+                            res.send({'res':false, 'err':{'code':1, 'msg':'update failed'}});
+                        } else if(info) {
+                            res.send({'res':true, 'msg':'Update successful'});
+                        } else {
+                            return res.send({'res':false, 'err':{'code':1, 'msg':'invalid email'}});
+                        }
+                    });
+                } else {
+                    res.send(new errors.APIErrResp(2, 'Invalid privilege'));
+                }
             } else {
-                return res.send({'res':false, 'err':{'code':1, 'msg':'invalid email'}});
+                res.send(new errors.APIErrResp(2, 'Insufficient Privilege'));
             }
-        });
-        return res.send('yolo');
+        } else {
+            res.send(new errors.APIErrResp(2, 'Invalid email'));
+        }
     }); 
 }
 
