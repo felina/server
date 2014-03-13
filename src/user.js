@@ -1,5 +1,6 @@
 var validator = require('email-validator');
 var errors = require('./error.js');
+var _ = require('underscore');
 ////
 var PrivilegeLevel = Object.freeze({
     USER: {
@@ -113,8 +114,8 @@ function userRoutes(app, auth, db) {
             var email = req.body.email;
             if(req.body.email===req.user.email) {
                 var name = req.body.name;
-                if(typeof name !== "string" && name.length < 1) {
-                    name = false;
+                if(typeof name !== "string" || name.length <= 1) {
+                    return res.send(new errors.APIErrResp(2, 'invalid name'));
                 }
                 db.updateUser(name,email,null,null, function(err, info){
                     if(err) {
@@ -123,13 +124,15 @@ function userRoutes(app, auth, db) {
                     } else if(info) {
                         res.send({'res':true, 'msg':'Update successful'});
                     } else {
-                        return res.send({'res':false, 'err':{'code':1, 'msg':'invalid email'}});
+                        return res.send({'res':false, 'err':{'code':1, 'msg':'nothing to update'}});
                     }
                 });
             } else if(req.user.privilege === PrivilegeLevel.RESEARCHER.i) {
-                var level = req.body.privilege;
-                if(typeof level === "number" && (level === 1 || level === 2)) {
-                    var privilege = privilegeFromInt(req.body.privilege);
+                var level = parseInt(req.body.privilege);
+                console.log("level: "+ level);
+                if(!_.isNaN(level) && (level === 1 || level === 2)) {
+                    var privilege = privilegeFromInt(level);
+                    console.log('priv: '+privilege);
                     db.updateUser(null,email, privilege, null, function(err, info){
                         if(err) {
                             console.log(err);

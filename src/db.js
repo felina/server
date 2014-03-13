@@ -23,7 +23,7 @@ function init(callback) {
 function updateUser(name, email, usertype, profile_image, callback) {
     var query = "UPDATE `users` SET";
     var sub = [];
-    
+    var first = true;
     if(!email) {
         callback('Invalid email', false);
     }
@@ -31,6 +31,7 @@ function updateUser(name, email, usertype, profile_image, callback) {
     if(name) {
         query += " `name`=?";
         sub.push(name);
+        first = false;
     }
 
     if(profile_image) {
@@ -40,8 +41,13 @@ function updateUser(name, email, usertype, profile_image, callback) {
     if(usertype) {
         query += " `usertype`=?";
         sub.push(usertype);
+        first = false;
     }
 
+    if(first) {
+        return callback('Invalid parameters', false);
+    }
+    
     query += " WHERE `email`=?";
     sub.push(email);
 
@@ -51,7 +57,7 @@ function updateUser(name, email, usertype, profile_image, callback) {
         }
 
         query = mysql.format(query, sub);
-        
+        console.log(query);
         return conn.query(query, function(err, res){
             conn.release();
 
@@ -903,5 +909,6 @@ module.exports = {
     addImageMeta: addImageMeta,
     getMetaBasic: getMetaBasic,
     getAnnotations: getAnnotations,
-    validateEmail: validateEmail
+    validateEmail: validateEmail,
+    updateUser: updateUser
 };
