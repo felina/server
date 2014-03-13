@@ -20,6 +20,59 @@ function init(callback) {
     });
 }
 
+function updateUser(name, email, usertype, profile_image, callback) {
+    var query = "UPDATE `users` SET";
+    var sub = [];
+    var first = true;
+    if(!email) {
+        callback('Invalid email', false);
+    }
+
+    if(name) {
+        query += " `name`=?";
+        sub.push(name);
+        first = false;
+    }
+
+    if(profile_image) {
+        // Add me
+    }
+
+    if(usertype) {
+        query += " `usertype`=?";
+        sub.push(usertype);
+        first = false;
+    }
+
+    if(first) {
+        return callback('Invalid parameters', false);
+    }
+    
+    query += " WHERE `email`=?";
+    sub.push(email);
+
+    connPool.getConnection(function(connErr, conn){
+        if (connErr) {
+            return callback('Database error', false);
+        }
+
+        query = mysql.format(query, sub);
+        console.log(query);
+        return conn.query(query, function(err, res){
+            conn.release();
+
+            if (err) {
+                console.log(err);
+                callback(err, false);
+            } else {
+                callback(null, (res.changedRows === 1) );
+            }
+        });
+
+    });
+
+}
+
 function getJobImageCount(jobid, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -856,5 +909,6 @@ module.exports = {
     addImageMeta: addImageMeta,
     getMetaBasic: getMetaBasic,
     getAnnotations: getAnnotations,
-    validateEmail: validateEmail
+    validateEmail: validateEmail,
+    updateUser: updateUser
 };
