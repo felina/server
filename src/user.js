@@ -93,9 +93,22 @@ function Researcher(name, email, groups) {
     this.groups = groups;
 }
 
-function userRoutes(app, db) {
-    // app.put('/user')
+function userRoutes(app, auth, db) {
     // For updating fields e.g. email, gravatar, privilege level...
+    app.patch('/user', auth.enforceLogin, function(req, res) {
+        console.log(JSON.stringify(req.body));
+        db.updateUser(hash, function(err, info){
+            if(err) {
+                console.log(err);
+                res.send({'res':false, 'err':{'code':1, 'msg':'update failed'}});
+            } else if(info) {
+                res.send({'res':true, 'msg':'Update successful'});
+            } else {
+                return res.send({'res':false, 'err':{'code':1, 'msg':'invalid email'}});
+            }
+        });
+        return res.send('yolo');
+    }); 
 }
 
 module.exports = {
