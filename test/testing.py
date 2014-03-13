@@ -22,7 +22,7 @@ with open('config/db_settings.json', 'r') as db_settings_file:
 def exit_handler():
     swapConfigs()
 
-def swapConfigs():
+def swap_configs():
     os.system('mv config/db_settings.json test/db_settings.json')
     os.system('mv test/db_settingsTest.json config/db_settings.json')
     os.system('mv test/db_settings.json test/db_settingsTest.json')
@@ -84,7 +84,7 @@ def start_server():
             print '\nServer initialized'
             return process
 
-def serverUp():
+def server_up():
     print 'Test 1: Server up'
     r = requests.get(url=path)
     expected_status_code = 200
@@ -97,20 +97,22 @@ def serverUp():
         print 'Result object is malformed: ' + json.dumps(result_object)
         os.exit(1)
 
-def nonExistingUser():
+def non_existing_user():
     print 'Test 2: Non existing user'
     r1 = requests.post(url=path + login_path, params={'email' : 'fakeEmail@gmail.com', 'pass' : 'fakepass'})
     if r1.text != 'Unregistered user.':
         print 'Fake user apparently exists: ' + r1.text
 
 def main():
-    swapConfigs()
+    swap_configs()
     clear_database()
     server_process = start_server()
 
     print 'Testing server at path ' + path
-    serverUp()
-    nonExistingUser()
+    server_up()
+    non_existing_user()
+    register_user()
+
     server_process.kill()
 
 if __name__ == '__main__':

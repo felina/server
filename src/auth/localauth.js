@@ -8,6 +8,8 @@ var smtp_config = require('../../config/smtp.json');
 var crypto = require('crypto');
 var transport = nodemailer.createTransport("SMTP", smtp_config);
 var host= (process.env.HOST||'nl.ks07.co.uk')+':'+(process.env.PORT || 5000);
+var dbCFG = require('../config/db_settings.json'); 
+
 
 function getValidationHash() {
     var md5 = crypto.createHash('md5');
@@ -34,13 +36,14 @@ function register(user, password, callback) {
                     console.log(err);
                     callback(err, null);
                 } else {
-                    var mailOptions = {
-                        from: smtp_config.auth.email,
-                        to: user.email,
-                        subject: "Validate email for Felina",
-                        text: 'Copy and paste this link in your browser to validate: '+host+'/validate/'+vhash
-                    };
-                    transport.sendMail(mailOptions);
+                        var mailOptions = {
+                            from: smtp_config.auth.email,
+                            to: user.email,
+                            subject: "Validate email for Felina",
+                            text: 'Copy and paste this link in your browser to validate: '+host+'/validate/'+vhash
+                        };
+                        transport.sendMail(mailOptions);
+                    }
                     return callback(null, id);
                 }
             });
