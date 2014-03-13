@@ -12,12 +12,20 @@ CREATE TABLE IF NOT EXISTS `felina`.`users` (
   `userid` INT NOT NULL AUTO_INCREMENT,
   `email` VARCHAR(80) NOT NULL,
   `name` VARCHAR(30) NOT NULL DEFAULT 'An Anonymous User',
-  `usertype` ENUM('user', 'researcher', 'admin') NOT NULL,
+  `usertype` ENUM('subuser', 'user', 'researcher', 'admin') NOT NULL,
   `gravatar` CHAR(32) NULL,
   `validation_hash` CHAR(32) NULL,
+  `supervisor` INT NULL,
+  `token_expiry` DATETIME NULL,
   PRIMARY KEY (`userid`),
   UNIQUE INDEX `email_UNIQUE` (`email` ASC),
-  UNIQUE INDEX `validation_hash_UNIQUE` (`validation_hash` ASC))
+  UNIQUE INDEX `validation_hash_UNIQUE` (`validation_hash` ASC),
+  INDEX `users_users_rel_idx` (`supervisor` ASC),
+  CONSTRAINT `users_users_rel`
+    FOREIGN KEY (`supervisor`)
+    REFERENCES `felina`.`users` (`userid`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
