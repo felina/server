@@ -52,7 +52,7 @@ function User(id, name, email, privilege, gravatar) {
         this.id = false;
         return;
     }
-    if (privilege < 1 || privilege > 3) {
+    if (privilege < 0 || privilege > 3) {
         this.id = false;
         return;
     }

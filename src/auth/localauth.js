@@ -55,7 +55,7 @@ function registerSub(user, password, supervisor, callback) {
             console.log(err);
             callback(err, null);
         } else {
-            db.addNewSub(user, hash, null, function(err, id){
+            db.addNewSub(user, hash, supervisor, function(err, id){
                 if(err) {
                     console.log('database enter user fail');
                     console.log(err);
@@ -145,7 +145,7 @@ function authRoutes(app) {
         if(!req.user) {
             return res.send({'res':false, 'err':{'code':1, 'msg':'You must be logged in to access this feature.'}});
         }
-        if (req.user.privilege < 2) {
+        if (req.user.privilege > 1) {
             var mail = req.body.email;
             var name = req.body.name;
             var pass = getValidationHash();
