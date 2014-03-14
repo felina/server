@@ -2,6 +2,7 @@ var fs = require('fs');
 var md5 = require('MD5');
 var aws = require('aws-sdk');
 var async = require('async');
+var _ = require('underscore');
 var errors = require('./error.js');
 
 aws.config.loadFromPath('./config/aws.json');
@@ -89,7 +90,7 @@ function setAccess(id, priv, callback) {
     });
 }
 
-function uploadImage(user, iInfo, db, callback) {
+function uploadImage(user, iInfo, pid, db, callback) {
     console.log('Trying to upload: ' + iInfo.felinaHash);
     var params = {
         'Bucket': PRIVATE_BUCKET,
@@ -103,13 +104,7 @@ function uploadImage(user, iInfo, db, callback) {
             console.log(err);
             return callback(err);
         } else {
-            // TODO: Get a project in the request somehow.
-            var pInfo = {
-                'id': 1,
-                'name': 'dummy'
-            };
-
-            return db.addNewImage(user, pInfo, iInfo.felinaHash, function(dbErr) {
+            return db.addNewImage(user, pid, iInfo.felinaHash, function(dbErr) {
                 if (dbErr) {
                     console.log(dbErr);
                     return callback(dbErr);
@@ -170,6 +165,12 @@ function imageRoutes(app, auth, db) {
                    function(fKey, done) {
                        var iInfo = req.files[fKey];
 
+                       // The body must contain a corresponding value that gives the project id.
+                       var project = parseInt(req.body[fKey + '_project']);
+                       if (_.isNaN(project)) {
+                           return done('Must supply a valid project id for each image.');
+                       }
+
                        // Attempt to hash the file. If any file has an unwanted type, abort the request.
                        if (VALID_MIME_TYPES.indexOf(iInfo.type) < 0) {
                            // Invalid mime type, reject request.
@@ -188,7 +189,7 @@ function imageRoutes(app, auth, db) {
                        return db.imageExists(iInfo.felinaHash, function(iErr, exists) {
                            if (exists === 0) {
                                // New image, upload!
-                               return uploadImage(req.user, iInfo, db, done); // Will call done() for us
+                               return uploadImage(req.user, iInfo, project, db, done); // Will call done() for us
                            } else {
                                // Existing image, reject the request.
                                return done('Image already exists: ' + iInfo.name);
@@ -198,9 +199,14 @@ function imageRoutes(app, auth, db) {
                    function(err) {
                        // If anything errored, abort.
                        if (err) {
-                           console.log(err);
                            // TODO: be more clear if any images were uploaded or not.
-                           return res.send(new errors.APIErrResp(2, err));
+                           if (err.code === 'ER_NO_REFERENCED_ROW_') {
+                               // We haven't met an FK constraint, this should be down to a bad project id.
+                               return res.send(new errors.APIErrResp(3, 'Invalid project.'));
+                           } else {
+                               console.log(err);
+                               return res.send(new errors.APIErrResp(2, err));
+                           }
                        } else {
                            // All images should have uploaded succesfully.
                            return res.send({

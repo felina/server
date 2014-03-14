@@ -673,7 +673,7 @@ function getUserImages(user, callback) {
 // Adds a new image to the database.
 function addNewImage(user, project, imageHash, callback) {
     var query = "INSERT INTO `images` (imageid, ownerid, projectid) VALUE (?,?,?)";
-    var sub = [imageHash, user.id, project.id];
+    var sub = [imageHash, user.id, project];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
