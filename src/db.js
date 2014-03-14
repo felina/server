@@ -398,11 +398,19 @@ function updateMetaR(mdArr, callback, rSet) {
             return conn.query(query, function(e, r) {
                 conn.release();
 
+                // Count annotations length
+                var annotationsLength = 0;
+                for (var k in md.annotations) {
+                    if (md.annotations.hasOwnProperty(k)) {
+                        ++annotationsLength;
+                    }
+                }
+
                 if (e) {
                     console.log(e);
                     // false if any errors occured in either query.
                     rSet.push(false);
-                } else if (md.annotations !== null) {
+                } else if (md.annotations !== null && annotationsLength > 0) {
                     return addImageAnno(md.id, md.annotations, function(e2, r2) {
                         if (e2) {
                             console.log(e2);

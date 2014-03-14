@@ -6,6 +6,9 @@ var errors = require('./error.js');
 aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
 
+var PRIVATE_BUCKET = 'citizen.science.image.storage';
+var PUBLIC_BUCKET  = 'citizen.science.image.storage.public';
+
 function fileType(filePath) {
     for (var i = filePath.length; i > 0; i--) {
         if (filePath[i] === '.') {
@@ -21,6 +24,55 @@ function proxyImage(id, res) {
         'Key': id
     };
     s3.getObject(params).createReadStream().pipe(res);
+}
+
+function setAccess(id, priv, callback) {
+    var params, dparams;
+    if (priv) {
+        // Currently public, make private.
+        params = {
+            'Bucket': PRIVATE_BUCKET,
+            'CopySource': PUBLIC_BUCKET + '/' + id,
+            'Key': id
+        };
+        dparams = {
+            'Bucket': PUBLIC_BUCKET,
+            'Key': id
+        };
+    } else {
+        params = {
+            'Bucket': PUBLIC_BUCKET,
+            'CopySource': PRIVATE_BUCKET + '/' + id,
+            'Key': id
+        };
+        dparams = {
+            'Bucket': PRIVATE_BUCKET,
+            'Key': id
+        };
+    }
+
+    s3.copyObject(params, function(err, data) {
+        if (err) {
+            if (err.code === 'NoSuchKey') {
+                // The item must already be at the given bucket, unless our db is out of sync!
+                console.log('Ignoring NoSuchKey on setAccess.');
+                return callback(null);
+            } else {
+                console.log(err);
+                return callback(err);
+            }
+        } else {
+            // The copy succeeded, we must delete the original.
+            s3.deleteObject(dparams, function(dErr, dData) {
+                if (dErr) {
+                    console.log(dErr);
+                    return callback(dErr);
+                } else {
+                    return callback(null);
+                }
+            });
+        }
+    });
 }
 
 function imageRoutes(app, auth, db) {
@@ -116,5 +168,6 @@ function imageRoutes(app, auth, db) {
 }
 
 module.exports = {
+    setAccess: setAccess,
     imageRoutes: imageRoutes
 };

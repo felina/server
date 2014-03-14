@@ -1,5 +1,7 @@
 var _ = require('underscore');
 var errors = require('./error.js');
+var images = require('./images.js');
+var async = require('async');
 //
 function isUnset(x) {
     return _.isUndefined(x) || _.isNull(x);
@@ -68,6 +70,7 @@ function parseAnno(an) {
             an.points = rect;
             return true;
         }
+        break;
     case 'poly':
         if (an.points.length >= 2) {
             return parseRegion(an.points);
@@ -180,10 +183,25 @@ function parseMetadata(mdArr) {
     return mdArr;
 }
 
-function parseQueryCombine(parsed, qRes) {
-    return _.map(qRes, function(val, i) {
+function parseQueryCombine(parsed, qRes, onSuccess, callback) {
+    var ret = _.map(qRes, function(val, i) {
         return (val === false) ? false : parsed[i];
     });
+
+    async.each(ret,
+               function(ele, acallback) {
+                   if (ele && ele.metadata.priv !== null) {
+                       // Success in setting metadata. Call on success to move the image to the other bucket.
+                       onSuccess(ele.id, ele.metadata.priv, acallback);
+                   }
+               },
+               function(err) {
+                   if (err) {
+                       console.log(err);
+                       return callback(err);
+                   }
+                   return callback(ret);
+               });
 }
 
 function metaRoutes(app, auth, db) {
@@ -211,9 +229,11 @@ function metaRoutes(app, auth, db) {
                 // asParsed = resultant parsed request
                 var errPresent = _.every(sqlRes); // TODO: Check for adjustments made in parser.
                 // TODO: res behaviour is inconsistent
-                res.send({
-                    'res': errPresent,
-                    'detail': parseQueryCombine(asParsed, sqlRes)
+                parseQueryCombine(asParsed, sqlRes, images.setAccess, function(combined) {
+                    res.send({
+                        'res': errPresent,
+                        'detail': combined
+                    });
                 });
             });
         }
