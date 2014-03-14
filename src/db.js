@@ -451,11 +451,19 @@ function updateMetaR(mdArr, callback, rSet) {
             return conn.query(query, function(e, r) {
                 conn.release();
 
+                // Count annotations length
+                var annotationsLength = 0;
+                for (var k in md.annotations) {
+                    if (md.annotations.hasOwnProperty(k)) {
+                        ++annotationsLength;
+                    }
+                }
+
                 if (e) {
                     console.log(e);
                     // false if any errors occured in either query.
                     rSet.push(false);
-                } else if (md.annotations !== null) {
+                } else if (md.annotations !== null && annotationsLength > 0) {
                     return addImageAnno(md.id, md.annotations, function(e2, r2) {
                         if (e2) {
                             console.log(e2);
@@ -487,23 +495,24 @@ function addImageMeta(mdArr, callback) {
 
 // Checks eligibility to load an image.
 function checkImagePerm(uid, id, callback) {
-    var query = "SELECT (`ownerid`=? OR NOT `private`) AS 'open' FROM `images` WHERE `imageid`=?";
+    var query = "SELECT (`ownerid`=? OR NOT `private`) AS 'open', `private` FROM `images` WHERE `imageid`=?";
     var sub = [uid, id];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
-            return callback('Database error', false);
+            return callback('Database error', null);
         }
 
         conn.query(query, function(err, res) {
             if (err) {
                 console.log(err.code);
-                callback(err, false);
-            } else if (res.length === 0) {
-                callback(null, false);
+                callback(err, null);
+            } else if (res.length === 0 || !res[0].open) {
+                // Image id doesn't exist
+                callback(null, null);
             } else {
-                callback(null, res[0].open);
+                callback(null, res[0].private);
             }
         });
 

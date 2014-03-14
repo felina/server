@@ -6,6 +6,12 @@ var errors = require('./error.js');
 aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
 
+var PRIVATE_BUCKET = 'citizen.science.image.storage';
+var PUBLIC_BUCKET  = 'citizen.science.image.storage.public';
+//var S3_URL = 'https://' + PUBLIC_BUCKET + '.s3.amazonaws.com/'; // Raw bucket URL
+var S3_URL = 'http://' + PUBLIC_BUCKET + '.s3-website-eu-west-1.amazonaws.com/'; // S3 web server URL (preferred)
+var PRIVATE_EXPIRY = 120; // Number of seconds to keep a private image URL valid for
+
 function fileType(filePath) {
     for (var i = filePath.length; i > 0; i--) {
         if (filePath[i] === '.') {
@@ -21,6 +27,55 @@ function proxyImage(id, res) {
         'Key': id
     };
     s3.getObject(params).createReadStream().pipe(res);
+}
+
+function setAccess(id, priv, callback) {
+    var params, dparams;
+    if (priv) {
+        // Currently public, make private.
+        params = {
+            'Bucket': PRIVATE_BUCKET,
+            'CopySource': PUBLIC_BUCKET + '/' + id,
+            'Key': id
+        };
+        dparams = {
+            'Bucket': PUBLIC_BUCKET,
+            'Key': id
+        };
+    } else {
+        params = {
+            'Bucket': PUBLIC_BUCKET,
+            'CopySource': PRIVATE_BUCKET + '/' + id,
+            'Key': id
+        };
+        dparams = {
+            'Bucket': PRIVATE_BUCKET,
+            'Key': id
+        };
+    }
+
+    s3.copyObject(params, function(err, data) {
+        if (err) {
+            if (err.code === 'NoSuchKey') {
+                // The item must already be at the given bucket, unless our db is out of sync!
+                console.log('Ignoring NoSuchKey on setAccess.');
+                return callback(null);
+            } else {
+                console.log(err);
+                return callback(err);
+            }
+        } else {
+            // The copy succeeded, we must delete the original.
+            s3.deleteObject(dparams, function(dErr, dData) {
+                if (dErr) {
+                    console.log(dErr);
+                    return callback(dErr);
+                } else {
+                    return callback(null);
+                }
+            });
+        }
+    });
 }
 
 function imageRoutes(app, auth, db) {
@@ -45,11 +100,22 @@ function imageRoutes(app, auth, db) {
 
     app.get('/img', function(req, res) {
         var uid = req.user ? req.user.id : -1;
-        db.checkImagePerm(uid, req.query.id, function(err, bool) {
-            if (bool) {
-                proxyImage(req.query.id, res);
+        db.checkImagePerm(uid, req.query.id, function(err, priv) {
+            if (priv === 1 || priv === true) {
+                // proxyImage(req.query.id, res); // Proxy image via the API server. (Much) slower but more secure.
+                var params = {
+                    'Bucket': PRIVATE_BUCKET,
+                    'Key': req.query.id,
+                    'Expires': PRIVATE_EXPIRY
+                };
+                // Use a signed URL to serve directly from S3. Note that anyone with the URL can access the image until it expires!
+                res.redirect(s3.getSignedUrl('getObject', params));
+            } else if (priv === 0 || priv === false) {
+                // Image is public, redirect to the public URL.
+                res.redirect(S3_URL + req.query.id);
             } else {
-                res.redirect('/Padlock.png');
+                // res.redirect('/Padlock.png'); // Local copy of access denied image
+                res.redirect(S3_URL + 'padlock.png'); // S3 copy of image
             }
         });
     });
@@ -116,5 +182,6 @@ function imageRoutes(app, auth, db) {
 }
 
 module.exports = {
+    setAccess: setAccess,
     imageRoutes: imageRoutes
 };
