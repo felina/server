@@ -8,7 +8,7 @@ var smtp_config = require('../../config/smtp.json');
 var crypto = require('crypto');
 var transport = nodemailer.createTransport("SMTP", smtp_config);
 var host= (process.env.HOST||'nl.ks07.co.uk')+':'+(process.env.PORT || 5000);
-var dbCFG = require('../config/db_settings.json'); 
+var dbCFG = require('../../config/db_settings.json'); 
 
 
 function getValidationHash() {
@@ -36,6 +36,7 @@ function register(user, password, callback) {
                     console.log(err);
                     callback(err, null);
                 } else {
+                    // if (dbCFG.database !== 'felinaTest') {
                         var mailOptions = {
                             from: smtp_config.auth.email,
                             to: user.email,
@@ -43,7 +44,7 @@ function register(user, password, callback) {
                             text: 'Copy and paste this link in your browser to validate: '+host+'/validate/'+vhash
                         };
                         transport.sendMail(mailOptions);
-                    }
+                    // }
                     return callback(null, id);
                 }
             });

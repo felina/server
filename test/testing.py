@@ -7,21 +7,26 @@ import re
 import atexit
 import subprocess
 import time
-
+import fcntl
 
 port = 5000
 path = 'http://localhost:' + str(port)
 login_path = '/login'
-user_login_data = {
-    'email': 'sam.bodanis@gmail.com',
-    'pass': 'assword'
+register_path = '/register'
+register_details = {
+    'email' : 'test@gmail.com',
+    'name' : 'testtest',
+    'pass' : 'secrettest'
 }
 with open('config/db_settings.json', 'r') as db_settings_file:
     db_settings = json.loads(db_settings_file.read())
+server_process = None
+
 
 def exit_handler():
-    swapConfigs()
+    swap_configs()
 
+# 
 def swap_configs():
     os.system('mv config/db_settings.json test/db_settings.json')
     os.system('mv test/db_settingsTest.json config/db_settings.json')
@@ -46,6 +51,9 @@ def exec_sql_file(cursor, sql_file):
 
             statement = ""
 
+
+# Remove old database if it exists and then load the
+# test database. 
 def clear_database():
     try:
         # os
@@ -70,6 +78,29 @@ def clear_database():
         if con:    
             con.close()
 
+def nonBlockReadline(output):
+    fd = output.fileno()
+    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+    try:
+        return output.readline()
+    except:
+        return ''
+
+# def server_print(func):
+#     def inner(*args, **kwargs):
+#         r = func(*args, **kwargs)
+#         while True:
+#             line = ''
+#             for c in iter(lambda: server_process.stdout.read(1), ''):
+#                 line += c
+#                 if c == '\n':
+#                     print line
+#                     break
+#         return r
+#     return inner
+
+
 def start_server():
     start = time.time()
     process = subprocess.Popen('node src/index.js', stdout=subprocess.PIPE, shell=True)
@@ -82,6 +113,7 @@ def start_server():
         output += c
         if 'Listening on ' + str(port) in output:
             print '\nServer initialized'
+            # break
             return process
 
 def server_up():
@@ -99,20 +131,49 @@ def server_up():
 
 def non_existing_user():
     print 'Test 2: Non existing user'
-    r1 = requests.post(url=path + login_path, params={'email' : 'fakeEmail@gmail.com', 'pass' : 'fakepass'})
-    if r1.text != 'Unregistered user.':
-        print 'Fake user apparently exists: ' + r1.text
+    fake_params = {'email' : 'fakeEmail@gmail.com', 'pass' : 'fakepass'}
+    r = requests.post(url=path + login_path, params=fake_params)
+    if r.text != 'Unregistered user.':
+        print 'Fake user apparently exists: ' + r.text
+
+# @server_print
+def register_user():
+    print 'Test 3: Register user'
+    # register_details = {
+    #     'email' : 'test@gmail.com',
+    #     'name' : 'testtest',
+    #     'pass' : 'secrettest'
+    # }
+    r = requests.post(url=path + register_path, data=register_details)
+    try:
+        res = json.loads(r.text)['res']
+    except Exception, e:
+        print 'User registration failed with response: ' + r.text
+        raise e
+        
 
 def main():
     swap_configs()
     clear_database()
     server_process = start_server()
+    # start_server()
 
     print 'Testing server at path ' + path
     server_up()
     non_existing_user()
     register_user()
 
+    # start = time.time()
+    # while True:
+
+        # if time.time() - start > 1:
+            # break
+        # line = server_process.stdout.readline()
+        # line, err = server_process.communicate()
+        # line = nonBlockReadline(server_process.stdout)
+        # print line,
+    # for c in iter(lambda: server_process.stdout.read(1), 'apples'):
+    #     sys.stdout.write(c)
     server_process.kill()
 
 if __name__ == '__main__':
