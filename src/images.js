@@ -89,6 +89,37 @@ function setAccess(id, priv, callback) {
     });
 }
 
+function uploadImage(user, iInfo, db, callback) {
+    console.log('Trying to upload: ' + iInfo.felinaHash);
+    var params = {
+        'Bucket': PRIVATE_BUCKET,
+        'Key': iInfo.felinaHash,
+        'ContentType': iInfo.type,
+        'Body': iInfo.fileContents
+    };
+
+    return s3.putObject(params, function(err, data) {
+        if (err) {
+            console.log(err);
+            return callback(err);
+        } else {
+            // TODO: Get a project in the request somehow.
+            var pInfo = {
+                'id': 1,
+                'name': 'dummy'
+            };
+
+            return db.addNewImage(user, pInfo, iInfo.felinaHash, function(dbErr) {
+                if (dbErr) {
+                    console.log(dbErr);
+                    return callback(dbErr);
+                } else {
+                    return callback(null);
+                }
+            });
+        }
+    });
+}
 
 function imageRoutes(app, auth, db) {
     // Endpoint to get list of images
@@ -132,41 +163,9 @@ function imageRoutes(app, auth, db) {
         });
     });
 
-    function uploadImage(user, iInfo, callback) {
-        console.log('Trying to upload: ' + iInfo.felinaHash);
-        var params = {
-            'Bucket': PRIVATE_BUCKET,
-            'Key': iInfo.felinaHash,
-            'ContentType': iInfo.type,
-            'Body': iInfo.fileContents
-        };
-
-        return s3.putObject(params, function(err, data) {
-            if (err) {
-                console.log(err);
-                return callback(err);
-            } else {
-                // TODO: Get a project in the request somehow.
-                var pInfo = {
-                    'id': 1,
-                    'name': 'dummy'
-                };
-
-                return db.addNewImage(user, pInfo, iInfo.felinaHash, function(dbErr) {
-                    if (dbErr) {
-                        console.log(dbErr);
-                        return callback(dbErr);
-                    } else {
-                        return callback(null);
-                    }
-                });
-            }
-        });
-    }
-
     // Image/s upload endpoint
     // Uses express.multipart - this is deprecated and bad! TODO: Replace me!
-    app.post('/upload/img', auth.enforceLogin, function(req, res) {
+    app.post('/img', auth.enforceLogin, function(req, res) {
         async.each(Object.keys(req.files),
                    function(fKey, done) {
                        var iInfo = req.files[fKey];
@@ -189,7 +188,7 @@ function imageRoutes(app, auth, db) {
                        return db.imageExists(iInfo.felinaHash, function(iErr, exists) {
                            if (exists === 0) {
                                // New image, upload!
-                               return uploadImage(req.user, iInfo, done); // Will call done() for us
+                               return uploadImage(req.user, iInfo, db, done); // Will call done() for us
                            } else {
                                // Existing image, reject the request.
                                return done('Image already exists: ' + iInfo.name);
