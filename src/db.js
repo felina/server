@@ -442,23 +442,24 @@ function addImageMeta(mdArr, callback) {
 
 // Checks eligibility to load an image.
 function checkImagePerm(uid, id, callback) {
-    var query = "SELECT (`ownerid`=? OR NOT `private`) AS 'open' FROM `images` WHERE `imageid`=?";
+    var query = "SELECT (`ownerid`=? OR NOT `private`) AS 'open', `private` FROM `images` WHERE `imageid`=?";
     var sub = [uid, id];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
-            return callback('Database error', false);
+            return callback('Database error', null);
         }
 
         conn.query(query, function(err, res) {
             if (err) {
                 console.log(err.code);
-                callback(err, false);
-            } else if (res.length === 0) {
-                callback(null, false);
+                callback(err, null);
+            } else if (res.length === 0 || !res[0].open) {
+                // Image id doesn't exist
+                callback(null, null);
             } else {
-                callback(null, res[0].open);
+                callback(null, res[0].private);
             }
         });
 

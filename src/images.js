@@ -8,6 +8,9 @@ var s3 = new aws.S3();
 
 var PRIVATE_BUCKET = 'citizen.science.image.storage';
 var PUBLIC_BUCKET  = 'citizen.science.image.storage.public';
+//var S3_URL = 'https://' + PUBLIC_BUCKET + '.s3.amazonaws.com/'; // Raw bucket URL
+var S3_URL = 'http://' + PUBLIC_BUCKET + '.s3-website-eu-west-1.amazonaws.com/'; // S3 web server URL (preferred)
+var PRIVATE_EXPIRY = 120; // Number of seconds to keep a private image URL valid for
 
 function fileType(filePath) {
     for (var i = filePath.length; i > 0; i--) {
@@ -97,11 +100,22 @@ function imageRoutes(app, auth, db) {
 
     app.get('/img', function(req, res) {
         var uid = req.user ? req.user.id : -1;
-        db.checkImagePerm(uid, req.query.id, function(err, bool) {
-            if (bool) {
-                proxyImage(req.query.id, res);
+        db.checkImagePerm(uid, req.query.id, function(err, priv) {
+            if (priv === 1 || priv === true) {
+                // proxyImage(req.query.id, res); // Proxy image via the API server. (Much) slower but more secure.
+                var params = {
+                    'Bucket': PRIVATE_BUCKET,
+                    'Key': req.query.id,
+                    'Expires': PRIVATE_EXPIRY
+                };
+                // Use a signed URL to serve directly from S3. Note that anyone with the URL can access the image until it expires!
+                res.redirect(s3.getSignedUrl('getObject', params));
+            } else if (priv === 0 || priv === false) {
+                // Image is public, redirect to the public URL.
+                res.redirect(S3_URL + req.query.id);
             } else {
-                res.redirect('/Padlock.png');
+                // res.redirect('/Padlock.png'); // Local copy of access denied image
+                res.redirect(S3_URL + 'padlock.png'); // S3 copy of image
             }
         });
     });
