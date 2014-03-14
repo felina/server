@@ -21,9 +21,9 @@ function fileType(filePath) {
     return null;
 }
 
-function proxyImage(id, res) {
+function proxyImage(id, priv, res) {
     var params = {
-        'Bucket': 'citizen.science.image.storage',
+        'Bucket': (priv) ? PRIVATE_BUCKET : PUBLIC_BUCKET,
         'Key': id
     };
     s3.getObject(params).createReadStream().pipe(res);
@@ -102,7 +102,7 @@ function imageRoutes(app, auth, db) {
         var uid = req.user ? req.user.id : -1;
         db.checkImagePerm(uid, req.query.id, function(err, priv) {
             if (priv === 1 || priv === true) {
-                // proxyImage(req.query.id, res); // Proxy image via the API server. (Much) slower but more secure.
+                // proxyImage(req.query.id, priv, res); // Proxy image via the API server. (Much) slower but more secure.
                 var params = {
                     'Bucket': PRIVATE_BUCKET,
                     'Key': req.query.id,
