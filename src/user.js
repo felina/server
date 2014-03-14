@@ -3,6 +3,10 @@ var errors = require('./error.js');
 var _ = require('underscore');
 ////
 var PrivilegeLevel = Object.freeze({
+    SUBUSER: {
+        i: 0,
+        dbs: "subuser"
+    },
     USER: {
         i: 1,
         dbs: "user"

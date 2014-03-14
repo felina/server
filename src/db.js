@@ -834,6 +834,32 @@ function addNewUser(user, phash, vhash, callback) {
     });
 }
 
+function addNewSub(user, phash, supervisor, callback) {
+    var query = "INSERT INTO `users` (userid, email, name, usertype, supervisor, token_expiry) VALUE (null,?,?,?,?,?)";
+    var date = new Date();
+    date.setHours(date.getHours() + 1);
+    var sub = [user.email, user.name, "subuser", supervisor, date.toJSON()];
+    query = mysql.format(query, sub);
+
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback('Database error', null);
+        }
+
+        conn.query(query, function(err, res) {
+            conn.release();
+
+            if (err) {
+                console.log(err.code);
+                callback(err, null);
+            } else {
+                setUserHash(res.insertId, phash);
+                callback(null, res.insertId);
+            }
+        });
+    });
+}
+
 function validateEmail(vhash, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -901,6 +927,7 @@ module.exports = {
     createProject:createProject,
     getUserHash: getUserHash,
     addNewUser: addNewUser,
+    addNewSub: addNewSub,
     getUser: getUser,
     extGetUser: extGetUser,
     addNewImage: addNewImage,
