@@ -1,4 +1,3 @@
-import jsonResponses as jsr
 import MySQLdb as mdb
 import sys
 import requests
@@ -9,6 +8,7 @@ import atexit
 import subprocess
 import time
 import fcntl
+import jsonResponses
 
 port = 5000
 path = 'http://localhost:' + str(port)
@@ -34,6 +34,8 @@ test_number = 1
 
 test_image1 = 'flack.png'
 test_image2 = 'LondonDusk.png'
+
+jsr = jsonResponses.JsonResponses()
 
 class bcolors:
     HEADER = '\033[95m'
@@ -170,6 +172,7 @@ def server_up():
         pfail()
         print 'Result object is malformed: ' + json.dumps(result_object)
         sys.exit(1)
+    response_object_check(r, jsr.server())
     ppass()
 
 def print_test(ttext):
@@ -199,11 +202,16 @@ def response_handle(r, message2, res_should_be_true):
             print message2 + r.text
             sys.exit(1)
 
+def response_object_check(res, correct):
+    if json.loads(res.text) != correct:
+        'Results unequal expected ' + correct + ' got ' + json.loads(res.text) 
+
 def non_existing_user():
     print_test('Non existing user')
     fake_params = {'email' : 'fakeEmail@gmail.com', 'pass' : 'fakepass'}
     r = requests.post(url=path + login_path, data=fake_params)
     response_handle(r, 'Fake user apparently exists: ', False)
+    response_object_check(r, jsr.non_existing_user())
     ppass()
 
 # @server_print
@@ -213,12 +221,14 @@ def register_user():
     response_handle(r, 'User registration failed with message: ', True)
     global cookie
     cookie = {'connect.sid': r.cookies['connect.sid']}
+    response_object_check(r, jsr.register_user(register_details))
     ppass()
 
 def login_check():
     print_test('Login check')
     r = requests.get(url=path + login_check_path, cookies=cookie)
     response_handle(r, 'User cookie did not persist after register', True)
+    response_object_check(r, jsr.login_check(register_details))
     ppass()
 
 def logout():
@@ -227,6 +237,7 @@ def logout():
     response_handle(r, 'User did not logout: ', True)
     r = requests.get(url=path + login_check_path, cookies=cookie)
     response_handle(r, 'User logout did not revoke cookie: ', False)
+    response_object_check(r, jsr.logout_login())
     ppass()
 
 def login():
@@ -235,12 +246,14 @@ def login():
     response_handle(r, 'Login failed: ', True)
     global cookie
     cookie = {'connect.sid': r.cookies['connect.sid']}
+    response_object_check(r, jsr.login(register_details))
     ppass()
 
 def register_existing():
     print_test('Register existing user')
     r = requests.post(url=path + register_path, data=register_details)
     response_handle(r, 'Existing user registration failed with message: ', False)
+    response_object_check(r, jsr.existing_register())
     ppass()
 
 def upload_image():
@@ -251,6 +264,13 @@ def upload_image():
     if len(json.loads(r.text)['images']) != 0:
         pfail()
         print 'User should have zero images but has: ' + len(json.loads(r.text)['images'])
+    f1 = {'file':open(test_image1, 'rb')}
+    r = requests.post(url=path + upload_image_path, files=f1, cookies=cookie)
+    print r.text
+    r = requests.get(url=path + images_path, cookies=cookie)
+
+    print r.text
+
 
     ppass()
 

@@ -3,49 +3,49 @@
 class JsonResponses:
 
     @staticmethod
-    def server(self):
+    def server():
         return {
-            "res": true,
+            "res": True,
             "version": "0.1.0"
             }
 
     @staticmethod
-    def non_existing_user(self):
+    def non_existing_user():
         return {
-            "res": false,
+            "res": False,
             "err": "No user"
             }
 
     @staticmethod
-    def register_user(self):
+    def register_user(data):
         return {
-            "res": true,
+            "res": True,
             "user": {
                 "id": 1,
-                "name": "testtest",
-                "email": "test@gmail.com",
+                "name": data['name'],
+                "email": data['email'],
                 "privilege": 1,
                 "profile_image": "http://www.gravatar.com/avatar/undefined"
                 }
             }
 
     @staticmethod
-    def login_check(self):
+    def login_check(data):
         return {
-            "res": true,
+            "res": True,
             "user": {
                 "id": 1,
-                "name": "testtest",
-                "email": "test@gmail.com",
+                "name": data['name'],
+                "email": data['email'],
                 "privilege": 1,
                 "profile_image": "http://nl.ks07.co.uk:5000/user.png"
                 }
             }
 
     @staticmethod
-    def logout_login(self):
+    def logout_login():
         return {
-            "res": false,
+            "res": False,
             "err": {
                 "code": 1,
                 "msg": "You must be logged in to access this feature."
@@ -53,22 +53,22 @@ class JsonResponses:
             }
 
     @staticmethod
-    def login(self):
+    def login(data):
         return {
-            "res": true,
+            "res": True,
             "user": {
                 "id": 1,
-                "name": "testtest",
-                "email": "test@gmail.com",
+                "name": data['name'],
+                "email": data['email'],
                 "privilege": 1,
                 "profile_image": "http://nl.ks07.co.uk:5000/user.png"
                 }
             }
     
     @staticmethod
-    def existing_register(self):
+    def existing_register():
         return {
-            "res": false,
+            "res": False,
             "err": {
                 "code": 2,
                 "msg": "Registration failed."
@@ -76,9 +76,9 @@ class JsonResponses:
             }
 
     @staticmethod
-    def upload_image(self):
+    def images():
         return {
-            "res": true,
+            "res": True,
             "images": []
             }
 
