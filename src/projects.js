@@ -55,6 +55,18 @@ function parseFields(fieldList) {
     return errIdx;
 }
 
+function typeToShape(type) {
+    switch(type) {
+    case 'arect':
+        return 'rect';
+    case 'apoint':
+        return 'point';
+    default:
+        // apoly, or any erroneous input should be the most generic poly.
+        return 'poly';
+    }
+}
+
 function projectRoutes(app, auth, db) {
 
     // Gets a list of active projects (i.e. species)
@@ -94,6 +106,9 @@ function projectRoutes(app, auth, db) {
                         meta.push(ele);
                         return false;
                     } else {
+                        // We need to rename type and it's value for the image-annotator
+                        ele.shape = typeToShape(ele.type);
+                        delete ele.type;
                         return true;
                     }
                 });
