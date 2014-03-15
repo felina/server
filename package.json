@@ -27,7 +27,8 @@
     "email-validator": "~0.1.2",
     "passport-facebook": "~1.0.2",
     "colors": "~0.6.2",
-    "nodemailer": "~0.6.1"
+    "nodemailer": "~0.6.1",
+    "async": "~0.2.10"
   },
   "devDependencies": {
     "grunt": "~0.4.2",

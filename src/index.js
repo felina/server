@@ -10,6 +10,7 @@ var images = require('./images.js');
 var jobs = require('./jobs.js');
 var meta = require('./meta.js');
 var projects = require('./projects.js');
+var user = require('./user.js');
 
 // Check db settings
 db.init(function(err) {
@@ -83,6 +84,9 @@ meta.metaRoutes(app, auth, db);
 
 // Import job related routes, mostly dummy endpoints for now
 jobs.jobRoutes(app, db);
+
+// Import user routes
+user.userRoutes(app, auth, db);
 
 // Start listening
 var port = process.env.PORT || 5000;

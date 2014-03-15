@@ -2,7 +2,7 @@ var mysql = require('mysql');
 var dbCFG = require('../config/db_settings.json');
 var users = require('./user.js');
 var connPool = mysql.createPool(dbCFG);
-//
+
 function init(callback) {
     // Test connection parameters.
     connPool.getConnection(function(connErr, conn) {
@@ -11,6 +11,7 @@ function init(callback) {
         }
 
         conn.query('SELECT `userid`, `email`, `name`, `usertype` FROM `users` LIMIT 0', function(err, res) {
+            conn.release();
             if (err) {
                 return callback(err);
             } else {
@@ -18,6 +19,81 @@ function init(callback) {
             }
         });
     });
+}
+
+function imageExists(hash, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback(connErr);
+        }
+
+        var query = "SELECT * FROM `images` WHERE `imageid` = ?";
+        var sub = [ hash ];
+        query = mysql.format(query, sub);
+
+        conn.query(query, function(err, res) {
+            conn.release();
+            if (err) {
+                return callback(err, null);
+            } else {
+                // If res.length > 0, an image with this hash exists already
+                return callback(null, res.length);
+            }
+        });
+    });
+}
+
+function updateUser(name, email, usertype, profile_image, callback) {
+    var query = "UPDATE `users` SET";
+    var sub = [];
+    var first = true;
+    if(!email) {
+        callback('Invalid email', false);
+    }
+
+    if(name) {
+        query += " `name`=?";
+        sub.push(name);
+        first = false;
+    }
+
+    if(profile_image) {
+        // Add me
+    }
+
+    if(usertype) {
+        query += " `usertype`=?";
+        sub.push(usertype);
+        first = false;
+    }
+
+    if(first) {
+        return callback('Invalid parameters', false);
+    }
+    
+    query += " WHERE `email`=?";
+    sub.push(email);
+
+    connPool.getConnection(function(connErr, conn){
+        if (connErr) {
+            return callback('Database error', false);
+        }
+
+        query = mysql.format(query, sub);
+        console.log(query);
+        return conn.query(query, function(err, res){
+            conn.release();
+
+            if (err) {
+                console.log(err);
+                callback(err, false);
+            } else {
+                callback(null, (res.changedRows === 1) );
+            }
+        });
+
+    });
+
 }
 
 function getJobImageCount(jobid, callback) {
@@ -41,6 +117,7 @@ function getJobImageCount(jobid, callback) {
         query = mysql.format(query, sub);
 
         return conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -63,6 +140,7 @@ function getProjects(showAll, callback) {
         }
 
         return conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -84,15 +162,16 @@ function getFields(project, callback) {
         }
 
         var query = "SELECT `pf`.`name`, `type`, `required`, GROUP_CONCAT(`ed`.`name` SEPARATOR ',') AS `enumvals` " +
-            "FROM `project_fields` AS `pf`" +
+            "FROM `project_fields` AS `pf` " +
             "LEFT OUTER JOIN `enum_definitions` AS `ed` USING (`fieldid`) " +
             "WHERE `projectid` = ? GROUP BY `fieldid` ORDER BY `type` ASC";
         var sub = [ project ];
         query = mysql.format(query, sub);
-        console.log(query);
         return conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
+                console.log(query);
                 return callback(err);
             } else {
                 res.forEach(function(ele) {
@@ -137,6 +216,7 @@ function setFields(project, fieldList, callback) {
         query = mysql.format(query, sub);
         console.log(query);
         return conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -164,6 +244,7 @@ function getProject(id, callback) {
         query = mysql.format(query, sub);
         console.log(query);
         conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -187,6 +268,7 @@ function createProject(proj, callback) {
         query = mysql.format(query, sub);
 
         conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -290,7 +372,7 @@ function addImageAnno(iid, annotations, callback) {
     }
 
     if (anno.length <= 0) {
-        console.log('Tried to insert empty annotations list!');
+        console.log('Tried to insert empty annotations list, or none were valid!');
         return callback('No valid annotations provided', false);
     } else {
         var query = "INSERT INTO `image_meta_annotations` ";
@@ -398,11 +480,19 @@ function updateMetaR(mdArr, callback, rSet) {
             return conn.query(query, function(e, r) {
                 conn.release();
 
+                // Count annotations length
+                var annotationsLength = 0;
+                for (var k in md.annotations) {
+                    if (md.annotations.hasOwnProperty(k)) {
+                        ++annotationsLength;
+                    }
+                }
+
                 if (e) {
                     console.log(e);
                     // false if any errors occured in either query.
                     rSet.push(false);
-                } else if (md.annotations !== null) {
+                } else if (md.annotations !== null && annotationsLength > 0) {
                     return addImageAnno(md.id, md.annotations, function(e2, r2) {
                         if (e2) {
                             console.log(e2);
@@ -434,23 +524,24 @@ function addImageMeta(mdArr, callback) {
 
 // Checks eligibility to load an image.
 function checkImagePerm(uid, id, callback) {
-    var query = "SELECT (`ownerid`=? OR NOT `private`) AS 'open' FROM `images` WHERE `imageid`=?";
+    var query = "SELECT (`ownerid`=? OR NOT `private`) AS 'open', `private` FROM `images` WHERE `imageid`=?";
     var sub = [uid, id];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
-            return callback('Database error', false);
+            return callback('Database error', null);
         }
 
         conn.query(query, function(err, res) {
             if (err) {
                 console.log(err.code);
-                callback(err, false);
-            } else if (res.length === 0) {
-                callback(null, false);
+                callback(err, null);
+            } else if (res.length === 0 || !res[0].open) {
+                // Image id doesn't exist
+                callback(null, null);
             } else {
-                callback(null, res[0].open);
+                callback(null, res[0].private);
             }
         });
 
@@ -588,23 +679,23 @@ function getUserImages(user, callback) {
 }
 
 // Adds a new image to the database.
-function addNewImage(user, project, image) {
+function addNewImage(user, project, imageHash, callback) {
     var query = "INSERT INTO `images` (imageid, ownerid, projectid) VALUE (?,?,?)";
-    var sub = [image.imageHash, user.id, project.id];
+    var sub = [imageHash, user.id, project];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
-            return; //callback('Database error', false);
+            return callback('Database error');
         }
 
         conn.query(query, function(err, res) {
             if (err) {
                 console.log(err.code);
-                //callback(err, null);
+                callback(err);
             } else {
                 console.log('Inserted image into db.');
-                //callback(null, res.insertId);
+                callback(null, imageHash);
             }
         });
 
@@ -839,6 +930,7 @@ function getUserHash(email, callback) {
 
 module.exports = {
     init: init,
+    imageExists:imageExists,
     getJobImageCount:getJobImageCount,
     getImageFields:getImageFields,
     getProjects:getProjects,
@@ -856,5 +948,6 @@ module.exports = {
     addImageMeta: addImageMeta,
     getMetaBasic: getMetaBasic,
     getAnnotations: getAnnotations,
-    validateEmail: validateEmail
+    validateEmail: validateEmail,
+    updateUser: updateUser
 };
