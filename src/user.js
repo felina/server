@@ -3,6 +3,10 @@ var errors = require('./error.js');
 var _ = require('underscore');
 ////
 var PrivilegeLevel = Object.freeze({
+    SUBUSER: {
+        i: 0,
+        dbs: "subuser"
+    },
     USER: {
         i: 1,
         dbs: "user"
@@ -48,7 +52,7 @@ function User(id, name, email, privilege, gravatar) {
         this.id = false;
         return;
     }
-    if (privilege < 1 || privilege > 3) {
+    if (privilege < 0 || privilege > 3) {
         this.id = false;
         return;
     }

@@ -48,6 +48,26 @@ function register(user, password, callback) {
     });
 }
 
+function registerSub(user, password, supervisor, callback) {
+    bcrypt.hash(password, null, null, function(err, hash) {
+        if (err) {
+            console.log('Failed to hash password.');
+            console.log(err);
+            callback(err, null);
+        } else {
+            db.addNewSub(user, hash, supervisor, function(err, id){
+                if(err) {
+                    console.log('database enter user fail');
+                    console.log(err);
+                    callback(err, null);
+                } else {
+                    return callback(null, id);
+                }
+            });
+        }
+    });
+}
+
 function compare(pass, hash) {
         return bcrypt.compareSync(pass, hash);
 }
@@ -120,7 +140,49 @@ function authRoutes(app) {
             res.send({'res':false, 'err':{'code':3, 'msg':'Invalid request.'}});
         }
     });
-    
+
+    app.post('/subuser', function(req, res) {
+        if(!req.user) {
+            return res.send({'res':false, 'err':{'code':1, 'msg':'You must be logged in to access this feature.'}});
+        }
+        if (req.user.privilege > 1) {
+            var mail = req.body.email;
+            var name = req.body.name;
+            var pass = getValidationHash();
+            var priv = users.PrivilegeLevel.SUBUSER.i;
+            var grav = req.body.gravatar;
+            var user = new users.User(-1, name, mail, priv, grav);
+            if (user.id === false) {
+                // Details of user are invalid.
+                res.send({'res':false, 'err':{'code':1, 'msg':'User details are invalid!'}});
+            } else {
+                registerSub(user, pass, req.user.id, function(err, id) {
+                    if (err) {
+                        // Registration failed, notify api.
+                        console.log('Registration failed:');
+                        console.log(err);
+                        res.send({'res':false, 'err':{'code':2, 'msg':'Registration failed.'}});
+                    } else {
+                        // Update id from DB insertion.
+                        user.id = id;
+                        console.log(['Registered user:',id,mail,pass,name,priv,grav].join(" "));
+                        res.send({'res':true, 'user':user});
+                        // Login the newly registered user.
+                        req.login(user, function(err) {
+                            if (err) {
+                                // Login failed for some reason.
+                                console.log('Post registration login failed:');
+                                console.log(err);
+                            }
+                        });
+                    }
+                });
+            }
+        } else {
+            res.send({'res':false, 'err':{'code':2, 'msg':'Insufficient Privilege.'}});
+        }
+    });
+
     // Login callback - user auth
     app.post('/login', function(req, res, next) {
         passport.authenticate('local', function(err, user, info) {
