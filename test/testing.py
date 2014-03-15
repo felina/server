@@ -1,3 +1,4 @@
+import jsonResponses as jsr
 import MySQLdb as mdb
 import sys
 import requests
@@ -17,6 +18,8 @@ register_path = '/register'
 login_check_path = '/logincheck'
 logout_path = '/logout'
 login_path = '/login'
+images_path = '/images'
+upload_image_path = '/upload/img'
 
 register_details = {
     'email' : 'test@gmail.com',
@@ -28,6 +31,9 @@ with open('config/db_settings.json', 'r') as db_settings_file:
     db_settings = json.loads(db_settings_file.read())
 server_process = None
 test_number = 1
+
+test_image1 = 'flack.png'
+test_image2 = 'LondonDusk.png'
 
 class bcolors:
     HEADER = '\033[95m'
@@ -237,6 +243,17 @@ def register_existing():
     response_handle(r, 'Existing user registration failed with message: ', False)
     ppass()
 
+def upload_image():
+    print_test('Upload image')
+    # Images = 0, upload 1, images = 1, upload 2, images = 3
+    r = requests.get(url=path + images_path, cookies=cookie)
+    response_handle(r, 'Image list fetch failed with message: ', True)
+    if len(json.loads(r.text)['images']) != 0:
+        pfail()
+        print 'User should have zero images but has: ' + len(json.loads(r.text)['images'])
+
+    ppass()
+
 def main():
     swap_configs()
     clear_database()
@@ -251,7 +268,7 @@ def main():
     login()
     login_check()
     register_existing()
-
+    upload_image()
 
 if __name__ == '__main__':
     atexit.register(exit_handler)
