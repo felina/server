@@ -58,6 +58,7 @@ function jobRoutes(app, db) {
             console.log('Job results req: jobID ' + jobID);
             // TODO: Query job server
             return res.send({
+                'res': true,
                 'data': [{
                     'some': 'data'
                 }, {
@@ -65,29 +66,32 @@ function jobRoutes(app, db) {
                 }]
             });
         } else {
-            return res.send('No jobID provided');
+            return res.send(new errors.APIErrResp(2, 'No jobID provided'));
         }
     });
 
     // Get all the jobs started by the researcher with the given id
     // TODO: actually get ID, read from database, etc.
     app.get('/jobs', function(req, res) {
-        res.send([
-            {
-                name: 'Process some penguins',
-                eta: '37m',
-                current: 10,
-                total: 37,
-                image: '/img/elephant.jpg'
-            },
-            {
-                name: 'Analyse some elephants',
-                eta: '2h 15m',
-                current: 82,
-                total: 96,
-                image: '/img/elephant.jpg'
-            }
-        ]);
+        res.send({
+            'res': true,
+            'jobs': [
+                {
+                    name: 'Process some penguins',
+                    eta: '37m',
+                    current: 10,
+                    total: 37,
+                    image: '/img/elephant.jpg'
+                },
+                {
+                    name: 'Analyse some elephants',
+                    eta: '2h 15m',
+                    current: 82,
+                    total: 96,
+                    image: '/img/elephant.jpg'
+                }
+            ]
+        });
     });
 
     app.post('/target', function() {
