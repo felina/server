@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS `felina`.`users` (
   CONSTRAINT `users_users_rel`
     FOREIGN KEY (`supervisor`)
     REFERENCES `felina`.`users` (`userid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS `felina`.`local_auth` (
   CONSTRAINT `user_local_rel`
     FOREIGN KEY (`userid`)
     REFERENCES `felina`.`users` (`userid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
@@ -55,8 +55,8 @@ CREATE TABLE IF NOT EXISTS `felina`.`ext_auth` (
   CONSTRAINT `user_ext_rel`
     FOREIGN KEY (`userid`)
     REFERENCES `felina`.`users` (`userid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
@@ -89,13 +89,13 @@ CREATE TABLE IF NOT EXISTS `felina`.`images` (
   CONSTRAINT `user_image_rel`
     FOREIGN KEY (`ownerid`)
     REFERENCES `felina`.`users` (`userid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
   CONSTRAINT `project_image_rel`
     FOREIGN KEY (`projectid`)
     REFERENCES `felina`.`projects` (`projectid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
@@ -113,8 +113,8 @@ CREATE TABLE IF NOT EXISTS `felina`.`project_fields` (
   CONSTRAINT `project_pfield_rel`
     FOREIGN KEY (`projectid`)
     REFERENCES `felina`.`projects` (`projectid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
@@ -130,13 +130,13 @@ CREATE TABLE IF NOT EXISTS `felina`.`image_meta_string` (
   CONSTRAINT `image_mstring_rel`
     FOREIGN KEY (`imageid`)
     REFERENCES `felina`.`images` (`imageid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
   CONSTRAINT `pfield_mstring_rel`
     FOREIGN KEY (`fieldid`)
     REFERENCES `felina`.`project_fields` (`fieldid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
@@ -152,13 +152,13 @@ CREATE TABLE IF NOT EXISTS `felina`.`project_rights` (
   CONSTRAINT `project_rights_rel`
     FOREIGN KEY (`projectid`)
     REFERENCES `felina`.`projects` (`projectid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
   CONSTRAINT `user_rights_rel`
     FOREIGN KEY (`userid`)
     REFERENCES `felina`.`users` (`userid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
@@ -174,13 +174,13 @@ CREATE TABLE IF NOT EXISTS `felina`.`image_meta_annotations` (
   CONSTRAINT `image_manno_rel`
     FOREIGN KEY (`imageid`)
     REFERENCES `felina`.`images` (`imageid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
   CONSTRAINT `pfield_manno_rel`
     FOREIGN KEY (`fieldid`)
     REFERENCES `felina`.`project_fields` (`fieldid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
@@ -196,8 +196,8 @@ CREATE TABLE IF NOT EXISTS `felina`.`enum_definitions` (
   CONSTRAINT `pfield_edefs_rel`
     FOREIGN KEY (`fieldid`)
     REFERENCES `felina`.`project_fields` (`fieldid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
@@ -213,13 +213,13 @@ CREATE TABLE IF NOT EXISTS `felina`.`image_meta_number` (
   CONSTRAINT `image_mnumber_rel`
     FOREIGN KEY (`imageid`)
     REFERENCES `felina`.`images` (`imageid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
   CONSTRAINT `pfield_mnumber_rel`
     FOREIGN KEY (`fieldid`)
     REFERENCES `felina`.`project_fields` (`fieldid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
@@ -236,18 +236,18 @@ CREATE TABLE IF NOT EXISTS `felina`.`image_meta_enum` (
   CONSTRAINT `image_menum_rel`
     FOREIGN KEY (`imageid`)
     REFERENCES `felina`.`images` (`imageid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
   CONSTRAINT `pfield_menum_rel`
     FOREIGN KEY (`fieldid`)
     REFERENCES `felina`.`project_fields` (`fieldid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
   CONSTRAINT `enumd_menum_rel`
     FOREIGN KEY (`enumval`)
     REFERENCES `felina`.`enum_definitions` (`enumval`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
@@ -258,7 +258,7 @@ CREATE TABLE IF NOT EXISTS `felina`.`jobs` (
   `jobid` INT NOT NULL AUTO_INCREMENT,
   `projectid` INT NOT NULL,
   `name` VARCHAR(45) NOT NULL,
-  `ownerid` INT NOT NULL,
+  `ownerid` INT NULL,
   `exe_pack` VARCHAR(45) NULL,
   PRIMARY KEY (`jobid`),
   INDEX `project_jobs_rel_idx` (`projectid` ASC),
@@ -266,13 +266,13 @@ CREATE TABLE IF NOT EXISTS `felina`.`jobs` (
   CONSTRAINT `project_jobs_rel`
     FOREIGN KEY (`projectid`)
     REFERENCES `felina`.`projects` (`projectid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
   CONSTRAINT `users_jobs_rel`
     FOREIGN KEY (`ownerid`)
     REFERENCES `felina`.`users` (`userid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
@@ -288,18 +288,18 @@ CREATE TABLE IF NOT EXISTS `felina`.`job_images` (
   CONSTRAINT `jobs_jimages_rel`
     FOREIGN KEY (`jobid`)
     REFERENCES `felina`.`jobs` (`jobid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
   CONSTRAINT `images_jimages_rela`
     FOREIGN KEY (`imagea`)
     REFERENCES `felina`.`images` (`imageid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
   CONSTRAINT `images_jimages_relb`
     FOREIGN KEY (`imageb`)
     REFERENCES `felina`.`images` (`imageid`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
