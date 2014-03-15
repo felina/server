@@ -128,29 +128,32 @@ def server_up():
     if not result_object['res']:
         print 'Result object is malformed: ' + json.dumps(result_object)
         os.exit(1)
-
+ 
 def non_existing_user():
     print 'Test 2: Non existing user'
     fake_params = {'email' : 'fakeEmail@gmail.com', 'pass' : 'fakepass'}
-    r = requests.post(url=path + login_path, params=fake_params)
-    if r.text != 'Unregistered user.':
-        print 'Fake user apparently exists: ' + r.text
+    r = requests.post(url=path + login_path, data=fake_params)
+    try:
+        json_r = json.loads(r.text)
+    except Exception, e:
+        print 'Malformed response'
+        raise e
+    else:
+        if json_r['res']:
+            print 'Fake user apparently exists: ' + json_r
 
 # @server_print
 def register_user():
     print 'Test 3: Register user'
-    # register_details = {
-    #     'email' : 'test@gmail.com',
-    #     'name' : 'testtest',
-    #     'pass' : 'secrettest'
-    # }
     r = requests.post(url=path + register_path, data=register_details)
     try:
         res = json.loads(r.text)['res']
     except Exception, e:
-        print 'User registration failed with response: ' + r.text
+        print 'User registration failed with status: ' + r.status_code
         raise e
-        
+    else:                                                                      
+        if not res:
+            print 'User registration failed with message: ' + r.text
 
 def main():
     swap_configs()
