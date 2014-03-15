@@ -687,7 +687,7 @@ function addNewImage(user, project, imageHash, callback) {
                 callback(err);
             } else {
                 console.log('Inserted image into db.');
-                callback();
+                callback(null, imageHash);
             }
         });
 
