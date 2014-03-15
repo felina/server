@@ -120,7 +120,7 @@ function authRoutes(app) {
             res.send({'res':false, 'err':{'code':3, 'msg':'Invalid request.'}});
         }
     });
-
+    
     // Login callback - user auth
     app.post('/login', function(req, res, next) {
         passport.authenticate('local', function(err, user, info) {
@@ -139,6 +139,20 @@ function authRoutes(app) {
         })(req, res, next);
     });
 
+    // Give the subuser a token 
+    app.get('/token:email', function(req, res) {
+        var email = req.params.email;
+        if (email) {
+            db.tokenExpiry(email, function(r, err) {
+                if (err) {
+                    console.log(err);
+                    return res.send(new errorAPIe
+                }
+            }); 
+        }
+    });
+
+    // validation callback for email validation
     app.get('/validate/:hash', function(req, res) {
         var hash = req.params.hash;
         if(hash.length === 32) {

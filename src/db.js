@@ -20,6 +20,28 @@ function init(callback) {
     });
 }
 
+function tokenExpiry(email, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback(connErr);
+        }
+
+        var query = "SELECT `token_expiry` FROM `users` WHERE `email` = ?";
+        var sub = [ email ];
+        query = mysql.format(query, sub);
+
+        conn.query(query, function(err, res) {
+            if (err) {
+                return callback(err, null);
+            } else {
+                // If res.length > 0, an image with this hash exists already
+                console.log(JSON.stringify(res));
+                return callback(null, res.length);
+            }
+        });
+    });
+}
+
 function imageExists(hash, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
