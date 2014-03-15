@@ -1,5 +1,12 @@
-<form enctype="multipart/form-data" action="http://nl.ks07.co.uk:5000/upload/img" method="POST">
+<!DOCTYPE html>
+<head>
+<title>Image Upload Test</title>
+</head>
+<body>
+<form enctype="multipart/form-data" action="http://nl.ks07.co.uk:5000/img" method="POST">
 <input type="hidden" name="MAX_FILE_SIZE" value="100000" />
-Choose a file to upload: <input name="uploadedfile" type="file" /><br />
+Choose a file to upload: <input name="fone" type="file" /><br />
+<input type="number" name="fone_project" min="1" step="1" value="1" />
 <input type="submit" value="Upload File" />
 </form>
+</body>
