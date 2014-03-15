@@ -23,6 +23,30 @@ with open('config/db_settings.json', 'r') as db_settings_file:
 server_process = None
 
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+
+    def disable(self):
+        self.HEADER = ''
+        self.OKBLUE = ''
+        self.OKGREEN = ''
+        self.WARNING = ''
+        self.FAIL = ''
+        self.ENDC = ''
+
+def color_str(s, c):
+    h = ''
+    if c == 'red':
+        h = bcolors.FAIL
+    elif c == 'blue':
+        h = bcolors.HEADER
+    return h + s + bcolors.ENDC
+
 def exit_handler():
     swap_configs()
 
@@ -117,43 +141,54 @@ def start_server():
             return process
 
 def server_up():
-    print 'Test 1: Server up'
+    print 'Test 1: Server up -',
     r = requests.get(url=path)
     expected_status_code = 200
     if r.status_code != expected_status_code:
+        print color_str('Fail', 'red')
         print 'The server does not appear to be up'
         print 'Expected ' + expected_status_code + ' but got ' + r.status_code
         os.exit(1)
     result_object = json.loads(r.text)
     if not result_object['res']:
+        print color_str('Fail', 'red')
         print 'Result object is malformed: ' + json.dumps(result_object)
         os.exit(1)
+    # print bcolors.HEADER + 'Pass' + bcolors.ENDC
+    print color_str('Pass', 'blue')
  
 def non_existing_user():
-    print 'Test 2: Non existing user'
+    print 'Test 2: Non existing user -',
     fake_params = {'email' : 'fakeEmail@gmail.com', 'pass' : 'fakepass'}
     r = requests.post(url=path + login_path, data=fake_params)
     try:
         json_r = json.loads(r.text)
     except Exception, e:
+        print color_str('Fail', 'red')
         print 'Malformed response'
         raise e
     else:
         if json_r['res']:
+            print color_str('Fail', 'red')
             print 'Fake user apparently exists: ' + json_r
+            os.exit(1)
+    print color_str('Pass', 'blue')
 
 # @server_print
 def register_user():
-    print 'Test 3: Register user'
+    print 'Test 3: Register user -',
     r = requests.post(url=path + register_path, data=register_details)
     try:
         res = json.loads(r.text)['res']
     except Exception, e:
+        print color_str('Fail', 'red')
         print 'User registration failed with status: ' + r.status_code
         raise e
     else:                                                                      
         if not res:
+            print color_str('Fail', 'red')
             print 'User registration failed with message: ' + r.text
+    print color_str('Pass', 'blue')
 
 def main():
     swap_configs()
@@ -165,18 +200,8 @@ def main():
     server_up()
     non_existing_user()
     register_user()
+    
 
-    # start = time.time()
-    # while True:
-
-        # if time.time() - start > 1:
-            # break
-        # line = server_process.stdout.readline()
-        # line, err = server_process.communicate()
-        # line = nonBlockReadline(server_process.stdout)
-        # print line,
-    # for c in iter(lambda: server_process.stdout.read(1), 'apples'):
-    #     sys.stdout.write(c)
     server_process.kill()
 
 if __name__ == '__main__':
