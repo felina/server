@@ -21,6 +21,56 @@ function init(callback) {
     });
 }
 
+function getImageOwner(id, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            console.log(connErr);
+            return callback(connErr);
+        }
+
+        var query = "SELECT `ownerid`, `private` FROM `images` WHERE `imageid` = ?";
+        var sub = [ id ];
+        query = mysql.format(query, sub);
+
+        conn.query(query, function(err, res) {
+            conn.release();
+            if (err) {
+                console.log(err);
+                console.log(query);
+                return callback(err);
+            } else if (res.length !== 1) {
+                return callback('Unknown image id.');
+            } else {
+                return callback(null, res[0]);
+            }
+        });
+    });
+}
+
+function deleteImage(id, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            console.log(connErr);
+            return callback(connErr);
+        }
+
+        var query = "DELETE FROM `images` WHERE `imageid` = ?";
+        var sub = [ id ];
+        query = mysql.format(query, sub);
+
+        conn.query(query, function(err, res) {
+            conn.release();
+            if (err) {
+                console.log(err);
+                console.log(query);
+                return callback(err);
+            } else {
+                return callback();
+            }
+        });
+    });
+}
+
 function imageExists(hash, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -930,6 +980,8 @@ function getUserHash(email, callback) {
 
 module.exports = {
     init: init,
+    getImageOwner:getImageOwner,
+    deleteImage:deleteImage,
     imageExists:imageExists,
     getJobImageCount:getJobImageCount,
     getImageFields:getImageFields,

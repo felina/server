@@ -4,6 +4,7 @@ var aws = require('aws-sdk');
 var async = require('async');
 var _ = require('underscore');
 var errors = require('./error.js');
+var users = require('./user.js');
 
 aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
@@ -20,8 +21,8 @@ var PRIVATE_EXPIRY = 120; // Number of seconds to keep a private image URL valid
 var VALID_MIME_TYPES = [
     'image/jpeg',
     'image/png',
-    'image/bmp',
-    'image/tiff'
+    'image/bmp'
+    // 'image/tiff' // TIFF is not universally supported by major browsers
 ];
 
 function fileType(filePath) {
@@ -127,6 +128,44 @@ function imageRoutes(app, auth, db) {
                     'res': true,
                     'images': result
                 });
+            }
+        });
+    });
+
+    app.del('/img', function(req, res) {
+        var id = req.query.id;
+        
+        if (typeof id !== 'string' || id.length !== 32) {
+            return res.send(new errors.APIErrResp(2, 'Invalid image id.'));
+        }
+
+        // Need to get the containing bucket and owner id
+        return db.getImageOwner(id, function(err, info) {
+            if (err) {
+                return res.send(new errors.APIErrResp(3, 'Image not found.'));
+            } else if (req.user.isAdmin || info.ownerid === req.user.id) {
+                return db.deleteImage(id, function(err2) {
+                    if (err2) {
+                        return res.send(new errors.APIErrResp(4, 'Failed to delete image.'));
+                    } else {
+                        var params = {
+                            'Bucket': (info.private ? PRIVATE_BUCKET : PUBLIC_BUCKET),
+                            'Key': id
+                        };
+
+                        return s3.deleteObject(params, function(aErr, data) {
+                            if (aErr) {
+                                console.log(aErr);
+                                return res.send(new errors.APIErrResp(5, 'Failed to delete image.'));
+                            }
+                            return res.send({
+                                'res': true
+                            });
+                        });
+                    }
+                });
+            } else {
+                return res.send(new errors.APIErrResp(1, 'Insufficient permissions.'));
             }
         });
     });
