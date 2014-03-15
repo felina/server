@@ -11,6 +11,7 @@ function init(callback) {
         }
 
         conn.query('SELECT `userid`, `email`, `name`, `usertype` FROM `users` LIMIT 0', function(err, res) {
+            conn.release();
             if (err) {
                 return callback(err);
             } else {
@@ -31,6 +32,7 @@ function imageExists(hash, callback) {
         query = mysql.format(query, sub);
 
         conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 return callback(err, null);
             } else {
@@ -115,6 +117,7 @@ function getJobImageCount(jobid, callback) {
         query = mysql.format(query, sub);
 
         return conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -137,6 +140,7 @@ function getProjects(showAll, callback) {
         }
 
         return conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -164,6 +168,7 @@ function getFields(project, callback) {
         var sub = [ project ];
         query = mysql.format(query, sub);
         return conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 console.log(query);
@@ -211,6 +216,7 @@ function setFields(project, fieldList, callback) {
         query = mysql.format(query, sub);
         console.log(query);
         return conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -238,6 +244,7 @@ function getProject(id, callback) {
         query = mysql.format(query, sub);
         console.log(query);
         conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -261,6 +268,7 @@ function createProject(proj, callback) {
         query = mysql.format(query, sub);
 
         conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -364,7 +372,7 @@ function addImageAnno(iid, annotations, callback) {
     }
 
     if (anno.length <= 0) {
-        console.log('Tried to insert empty annotations list!');
+        console.log('Tried to insert empty annotations list, or none were valid!');
         return callback('No valid annotations provided', false);
     } else {
         var query = "INSERT INTO `image_meta_annotations` ";
