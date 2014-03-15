@@ -63,7 +63,8 @@ function localVerify(username, password, done) {
             console.log(err);
             return done(err, null);
         } else if (user === null || hash === null) {
-            return done('Unregistered user.', null);
+            return done(null, false);//, JSON.stringify({res:false, err:{code:1, msg: 'Unregistered user.'}}));
+            // return done(JSON.stringify({res:false, err:{code:1, msg: 'Unregistered user.'}}), false);//, JSON.stringify({res:false, err:{code:1, msg: 'Unregistered user.'}}));
         } else {
             bcrypt.compare(password, hash, function(hErr, correct) {
                 if (hErr) {
@@ -128,10 +129,9 @@ function authRoutes(app) {
     // Login callback - user auth
     app.post('/login', function(req, res, next) {
         passport.authenticate('local', function(err, user, info) {
-            if (err) {
-                return next(err);
-            } else if (!user) {
-                return res.send({'res':false, 'err':'No user'});
+            if (err || !user) {
+                // return next(err);
+                return res.send({'res':false, 'err':'No user'})
             }
             req.logIn(user, function(err) {
                 if (err) {
