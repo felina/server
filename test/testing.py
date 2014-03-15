@@ -11,17 +11,23 @@ import fcntl
 
 port = 5000
 path = 'http://localhost:' + str(port)
+
 login_path = '/login'
 register_path = '/register'
+login_check_path = '/logincheck'
+logout_path = '/logout'
+login_path = '/login'
+
 register_details = {
     'email' : 'test@gmail.com',
     'name' : 'testtest',
     'pass' : 'secrettest'
 }
+cookie = None
 with open('config/db_settings.json', 'r') as db_settings_file:
     db_settings = json.loads(db_settings_file.read())
 server_process = None
-
+test_number = 1
 
 class bcolors:
     HEADER = '\033[95m'
@@ -49,6 +55,8 @@ def color_str(s, c):
 
 def exit_handler():
     swap_configs()
+    global server_process
+    server_process.kill()
 
 # 
 def swap_configs():
@@ -102,14 +110,14 @@ def clear_database():
         if con:    
             con.close()
 
-def nonBlockReadline(output):
-    fd = output.fileno()
-    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-    try:
-        return output.readline()
-    except:
-        return ''
+# def nonBlockReadline(output):
+#     fd = output.fileno()
+#     fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+#     fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+#     try:
+#         return output.readline()
+#     except:
+#         return ''
 
 # def server_print(func):
 #     def inner(*args, **kwargs):
@@ -133,76 +141,117 @@ def start_server():
         if time.time() - start > 10:
             print 'Server connection timed out'
             sys.exit(1)
-        sys.stdout.write(c)
+        # sys.stdout.write(c)
         output += c
         if 'Listening on ' + str(port) in output:
             print '\nServer initialized'
-            # break
-            return process
+            global server_process
+            server_process = process
+            break
+            # return process
 
 def server_up():
-    print 'Test 1: Server up -',
+    print_test('Server up')
     r = requests.get(url=path)
     expected_status_code = 200
     if r.status_code != expected_status_code:
-        print color_str('Fail', 'red')
+        pfail()
         print 'The server does not appear to be up'
         print 'Expected ' + expected_status_code + ' but got ' + r.status_code
-        os.exit(1)
+        sys.exit(1)
     result_object = json.loads(r.text)
     if not result_object['res']:
-        print color_str('Fail', 'red')
+        pfail()
         print 'Result object is malformed: ' + json.dumps(result_object)
-        os.exit(1)
-    # print bcolors.HEADER + 'Pass' + bcolors.ENDC
-    print color_str('Pass', 'blue')
- 
-def non_existing_user():
-    print 'Test 2: Non existing user -',
-    fake_params = {'email' : 'fakeEmail@gmail.com', 'pass' : 'fakepass'}
-    r = requests.post(url=path + login_path, data=fake_params)
-    try:
-        json_r = json.loads(r.text)
-    except Exception, e:
-        print color_str('Fail', 'red')
-        print 'Malformed response'
-        raise e
-    else:
-        if json_r['res']:
-            print color_str('Fail', 'red')
-            print 'Fake user apparently exists: ' + json_r
-            os.exit(1)
+        sys.exit(1)
+    ppass()
+
+def print_test(ttext):
+    global test_number
+    print 'Test ' + str(test_number) + ': ' + ttext + ' -',
+    test_number += 1
+
+def ppass():
     print color_str('Pass', 'blue')
 
-# @server_print
-def register_user():
-    print 'Test 3: Register user -',
-    r = requests.post(url=path + register_path, data=register_details)
+def pfail():
+    print color_str('Fail', 'red')
+
+# param1 is the result of the api call
+# param2 is the message to be displayed conditional on param3
+# param3 is whether 'res' in the result should be true or false
+def response_handle(r, message2, res_should_be_true):
     try:
         res = json.loads(r.text)['res']
     except Exception, e:
-        print color_str('Fail', 'red')
-        print 'User registration failed with status: ' + r.status_code
+        pfail()
+        print 'Failed with message: ' + r.text
         raise e
-    else:                                                                      
-        if not res:
-            print color_str('Fail', 'red')
-            print 'User registration failed with message: ' + r.text
-    print color_str('Pass', 'blue')
+    else:
+        if not res and res_should_be_true:
+            pfail()
+            print message2 + r.text
+            sys.exit(1)
+
+def non_existing_user():
+    print_test('Non existing user')
+    fake_params = {'email' : 'fakeEmail@gmail.com', 'pass' : 'fakepass'}
+    r = requests.post(url=path + login_path, data=fake_params)
+    response_handle(r, 'Fake user apparently exists: ', False)
+    ppass()
+
+# @server_print
+def register_user():
+    print_test('Register user')
+    r = requests.post(url=path + register_path, data=register_details)
+    response_handle(r, 'User registration failed with message: ', True)
+    global cookie
+    cookie = {'connect.sid': r.cookies['connect.sid']}
+    ppass()
+
+def login_check():
+    print_test('Login check')
+    r = requests.get(url=path + login_check_path, cookies=cookie)
+    response_handle(r, 'User cookie did not persist after register', True)
+    ppass()
+
+def logout():
+    print_test('Logout')
+    r = requests.get(url=path + logout_path, cookies=cookie)
+    response_handle(r, 'User did not logout: ', True)
+    r = requests.get(url=path + login_check_path, cookies=cookie)
+    response_handle(r, 'User logout did not revoke cookie: ', False)
+    ppass()
+
+def login():
+    print_test('Login')
+    r = requests.post(url=path + login_path, data=register_details)
+    response_handle(r, 'Login failed: ', True)
+    global cookie
+    cookie = {'connect.sid': r.cookies['connect.sid']}
+    ppass()
+
+def register_existing():
+    print_test('Register existing user')
+    r = requests.post(url=path + register_path, data=register_details)
+    response_handle(r, 'Existing user registration failed with message: ', False)
+    ppass()
 
 def main():
     swap_configs()
     clear_database()
-    server_process = start_server()
-    # start_server()
+    start_server()
 
     print 'Testing server at path ' + path
     server_up()
     non_existing_user()
     register_user()
-    
+    login_check()
+    logout()
+    login()
+    login_check()
+    register_existing()
 
-    server_process.kill()
 
 if __name__ == '__main__':
     atexit.register(exit_handler)
