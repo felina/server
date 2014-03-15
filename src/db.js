@@ -20,6 +20,7 @@ function init(callback) {
     });
 }
 
+// checks if the token is expired
 function tokenExpiry(email, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -31,12 +32,23 @@ function tokenExpiry(email, callback) {
         query = mysql.format(query, sub);
 
         conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 return callback(err, null);
             } else {
-                // If res.length > 0, an image with this hash exists already
                 console.log(JSON.stringify(res));
-                return callback(null, res.length);
+                if (res.length > 0) {
+                    var exp = res[0].token_expiry;
+                    if (exp) {
+                        var then = new Date(exp);
+                        var now = new Date();
+                        return callback(null, then.getTime() > now.getTime());
+                    } else {
+                        return callback(null, false);
+                    }
+                } else {
+                    return callback(null, false);
+                }
             }
         });
     });
@@ -53,6 +65,7 @@ function imageExists(hash, callback) {
         query = mysql.format(query, sub);
 
         conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 return callback(err, null);
             } else {
@@ -860,6 +873,30 @@ function setUserHash(id, auth) {
     });
 }
 
+//change user password-hash
+function updateUserHash(email, auth, callback) {
+    var query = "UPDATE `local_auth` SET `hash`=? WHERE `userid` IN (SELECT `userid` FROM `users` WHERE `email`=?)";
+    var sub = [ auth, email];
+
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return; //done('Database error', null);
+        }
+        query = mysql.format(query, sub);
+        conn.query(query, function(err, res) {
+            if (err) {
+                // The query failed, respond to the error.
+                console.log(err.code);
+                callback(err,null);
+            } else {
+                console.log(JSON.stringify(res));
+                callback(null, res.changedRows === 1);
+            }
+        });
+        conn.release();
+    });
+}
+
 // Adds a new user to users/local auth. TODO: Use a user object.
 // callback(err, id)
 function addNewUser(user, phash, vhash, callback) {
@@ -990,5 +1027,7 @@ module.exports = {
     getMetaBasic: getMetaBasic,
     getAnnotations: getAnnotations,
     validateEmail: validateEmail,
-    updateUser: updateUser
+    updateUser: updateUser,
+    tokenExpiry: tokenExpiry,
+    updateUserHash: updateUserHash
 };

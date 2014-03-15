@@ -3,6 +3,7 @@ var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var db = require('../db.js');
 var users = require('../user.js');
+var errors = require('../error.js');
 var nodemailer = require('nodemailer');
 var smtp_config = require('../../config/smtp.json');
 var crypto = require('crypto');
@@ -20,12 +21,31 @@ function getValidationHash() {
     return md5.digest('hex');
 }
 
-function register(user, password, callback) {
+function newToken(email, password, callback) {
     bcrypt.hash(password, null, null, function(err, hash) {
         if (err) {
-            console.log('Failed to hash password.');
+            console.log('Failed to hash password');
             console.log(err);
             callback(err, null);
+        } else {
+            db.updateUserHash(email, hash, function(e, r) {
+                if (e) {
+                    console.log('database error');
+                    callback(e, null);
+                } else {
+                    callback(null, r);
+                }
+            });
+        }
+    });
+}
+
+function register(user, password, callback) {
+    bcrypt.hash(password, null, null, function(e, hash) {
+        if (e) {
+            console.log('Failed to hash password.');
+            console.log(e);
+            callback(e, null);
         } else {
             var vhash = getValidationHash();
             db.addNewUser(user, hash, vhash, function(err, id){
@@ -49,11 +69,11 @@ function register(user, password, callback) {
 }
 
 function registerSub(user, password, supervisor, callback) {
-    bcrypt.hash(password, null, null, function(err, hash) {
-        if (err) {
+    bcrypt.hash(password, null, null, function(e, hash) {
+        if (e) {
             console.log('Failed to hash password.');
-            console.log(err);
-            callback(err, null);
+            console.log(e);
+            callback(e, null);
         } else {
             db.addNewSub(user, hash, supervisor, function(err, id){
                 if(err) {
@@ -165,16 +185,8 @@ function authRoutes(app) {
                     } else {
                         // Update id from DB insertion.
                         user.id = id;
-                        console.log(['Registered user:',id,mail,pass,name,priv,grav].join(" "));
+                        console.log(['Registered user:',id,mail,pass,name,priv,grav].join(" "));                        
                         res.send({'res':true, 'user':user});
-                        // Login the newly registered user.
-                        req.login(user, function(err) {
-                            if (err) {
-                                // Login failed for some reason.
-                                console.log('Post registration login failed:');
-                                console.log(err);
-                            }
-                        });
                     }
                 });
             }
@@ -202,15 +214,32 @@ function authRoutes(app) {
     });
 
     // Give the subuser a token 
-    app.get('/token:email', function(req, res) {
-        var email = req.params.email;
+    app.get('/token', function(req, res) {
+        var email = req.query.email;
         if (email) {
-            db.tokenExpiry(email, function(r, err) {
+            console.log(email);
+            db.tokenExpiry(email, function(err, info) {
                 if (err) {
                     console.log(err);
-                    return res.send(new errorAPIe
+                    return res.send(new errors.APIErrResp(2, "database error"));
+                } else if (info) {
+                   //return res.send({'res':true});
+                    var token = getValidationHash();
+                    newToken(email, token, function(e,r) {
+                        if(e) {
+                            return res.send(new errors.APIErrResp(2, "database error"));
+                        } else if (r) {
+                            return res.send({'res': true, 'token': token});
+                        } else {
+                            return res.send(new errors.APIErrResp(3, "invalid email"));
+                        }
+                    });
+                } else {
+                    return res.send(new errors.APIErrResp(3, "token expired"));
                 }
             }); 
+        } else {
+            return res.send(new errors.APIErrResp(3, "email not set"));
         }
     });
 
