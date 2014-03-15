@@ -2,7 +2,7 @@ var mysql = require('mysql');
 var dbCFG = require('../config/db_settings.json');
 var users = require('./user.js');
 var connPool = mysql.createPool(dbCFG);
-//
+
 function init(callback) {
     // Test connection parameters.
     connPool.getConnection(function(connErr, conn) {
@@ -15,6 +15,27 @@ function init(callback) {
                 return callback(err);
             } else {
                 return callback(null);
+            }
+        });
+    });
+}
+
+function imageExists(hash, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback(connErr);
+        }
+
+        var query = "SELECT * FROM `images` WHERE `imageid` = ?";
+        var sub = [ hash ];
+        query = mysql.format(query, sub);
+
+        conn.query(query, function(err, res) {
+            if (err) {
+                return callback(err, null);
+            } else {
+                // If res.length > 0, an image with this hash exists already
+                return callback(null, res.length);
             }
         });
     });
@@ -650,23 +671,23 @@ function getUserImages(user, callback) {
 }
 
 // Adds a new image to the database.
-function addNewImage(user, project, image) {
+function addNewImage(user, project, imageHash, callback) {
     var query = "INSERT INTO `images` (imageid, ownerid, projectid) VALUE (?,?,?)";
-    var sub = [image.imageHash, user.id, project.id];
+    var sub = [imageHash, user.id, project];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
-            return; //callback('Database error', false);
+            return callback('Database error');
         }
 
         conn.query(query, function(err, res) {
             if (err) {
                 console.log(err.code);
-                //callback(err, null);
+                callback(err);
             } else {
                 console.log('Inserted image into db.');
-                //callback(null, res.insertId);
+                callback();
             }
         });
 
@@ -901,6 +922,7 @@ function getUserHash(email, callback) {
 
 module.exports = {
     init: init,
+    imageExists:imageExists,
     getJobImageCount:getJobImageCount,
     getImageFields:getImageFields,
     getProjects:getProjects,
