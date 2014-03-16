@@ -1,7 +1,7 @@
 var validator = require('email-validator');
 var errors = require('./error.js');
 var _ = require('underscore');
-////
+
 var PrivilegeLevel = Object.freeze({
     USER: {
         i: 1,
@@ -94,7 +94,7 @@ User.prototype.isResearcher = function() {
 };
 
 User.prototype.isAdmin = function() {
-    if (this.privilege === PrivilegeLevel.ADMIN) {
+    if (this.privilege === PrivilegeLevel.ADMIN.i) {
         return true;
     }
     return false;

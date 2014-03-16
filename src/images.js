@@ -4,6 +4,7 @@ var aws = require('aws-sdk');
 var async = require('async');
 var _ = require('underscore');
 var errors = require('./error.js');
+var users = require('./user.js');
 
 aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
@@ -20,8 +21,8 @@ var PRIVATE_EXPIRY = 120; // Number of seconds to keep a private image URL valid
 var VALID_MIME_TYPES = [
     'image/jpeg',
     'image/png',
-    'image/bmp',
-    'image/tiff'
+    'image/bmp'
+    // 'image/tiff' // TIFF is not universally supported by major browsers
 ];
 
 function fileType(filePath) {
@@ -104,12 +105,12 @@ function uploadImage(user, iInfo, pid, db, callback) {
             console.log(err);
             return callback(err);
         } else {
-            return db.addNewImage(user, pid, iInfo.felinaHash, function(dbErr) {
+            return db.addNewImage(user, pid, iInfo.felinaHash, function(dbErr, id) {
                 if (dbErr) {
                     console.log(dbErr);
                     return callback(dbErr);
                 } else {
-                    return callback(null);
+                    return callback(null, id);
                 }
             });
         }
@@ -127,6 +128,44 @@ function imageRoutes(app, auth, db) {
                     'res': true,
                     'images': result
                 });
+            }
+        });
+    });
+
+    app.del('/img', function(req, res) {
+        var id = req.query.id;
+        
+        if (typeof id !== 'string' || id.length !== 32) {
+            return res.send(new errors.APIErrResp(2, 'Invalid image id.'));
+        }
+
+        // Need to get the containing bucket and owner id
+        return db.getImageOwner(id, function(err, info) {
+            if (err) {
+                return res.send(new errors.APIErrResp(3, 'Image not found.'));
+            } else if (req.user.isAdmin || info.ownerid === req.user.id) {
+                return db.deleteImage(id, function(err2) {
+                    if (err2) {
+                        return res.send(new errors.APIErrResp(4, 'Failed to delete image.'));
+                    } else {
+                        var params = {
+                            'Bucket': (info.private ? PRIVATE_BUCKET : PUBLIC_BUCKET),
+                            'Key': id
+                        };
+
+                        return s3.deleteObject(params, function(aErr, data) {
+                            if (aErr) {
+                                console.log(aErr);
+                                return res.send(new errors.APIErrResp(5, 'Failed to delete image.'));
+                            }
+                            return res.send({
+                                'res': true
+                            });
+                        });
+                    }
+                });
+            } else {
+                return res.send(new errors.APIErrResp(1, 'Insufficient permissions.'));
             }
         });
     });
@@ -161,60 +200,60 @@ function imageRoutes(app, auth, db) {
     // Image/s upload endpoint
     // Uses express.multipart - this is deprecated and bad! TODO: Replace me!
     app.post('/img', auth.enforceLogin, function(req, res) {
-        async.each(Object.keys(req.files),
-                   function(fKey, done) {
-                       var iInfo = req.files[fKey];
-
-                       // The body must contain a corresponding value that gives the project id.
-                       var project = parseInt(req.body[fKey + '_project']);
-                       if (_.isNaN(project)) {
-                           return done('Must supply a valid project id for each image.');
-                       }
-
-                       // Attempt to hash the file. If any file has an unwanted type, abort the request.
-                       if (VALID_MIME_TYPES.indexOf(iInfo.type) < 0) {
-                           // Invalid mime type, reject request.
-                           return done('Invalid file type: ' + iInfo.type + " name: " + iInfo.name);
-                       }
-
-                       // TODO: Can we avoid loading everything into memory?
-                       iInfo.fileContents = fs.readFileSync(iInfo.path); // semi sketchy decoding
-                       console.log('LENGTHS:' + iInfo.fileContents.length + ' - ' + iInfo.size);
-                       var elementsToHash = "";
-                       for (var j = 0; j < iInfo.fileContents.length; j += iInfo.fileContents.length / 100) {
-                           elementsToHash += iInfo.fileContents[Math.floor(j)];
-                       }
-                       iInfo.felinaHash = md5(elementsToHash);
-
-                       return db.imageExists(iInfo.felinaHash, function(iErr, exists) {
-                           if (exists === 0) {
-                               // New image, upload!
-                               return uploadImage(req.user, iInfo, project, db, done); // Will call done() for us
-                           } else {
-                               // Existing image, reject the request.
-                               return done('Image already exists: ' + iInfo.name);
-                           }
-                       });
-                   },
-                   function(err) {
-                       // If anything errored, abort.
-                       if (err) {
-                           // TODO: be more clear if any images were uploaded or not.
-                           if (err.code === 'ER_NO_REFERENCED_ROW_') {
-                               // We haven't met an FK constraint, this should be down to a bad project id.
-                               return res.send(new errors.APIErrResp(3, 'Invalid project.'));
-                           } else {
-                               console.log(err);
-                               return res.send(new errors.APIErrResp(2, err));
-                           }
-                       } else {
-                           // All images should have uploaded succesfully.
-                           return res.send({
-                               'res': true,
-                               'uploaded': Object.keys(req.files).length
-                           });
-                       }
-                   });
+        async.map(Object.keys(req.files),
+                  function(fKey, done) {
+                      var iInfo = req.files[fKey];
+                      
+                      // The body must contain a corresponding value that gives the project id.
+                      var project = parseInt(req.body[fKey + '_project']);
+                      if (_.isNaN(project)) {
+                          return done('Must supply a valid project id for each image.');
+                      }
+                      
+                      // Attempt to hash the file. If any file has an unwanted type, abort the request.
+                      if (VALID_MIME_TYPES.indexOf(iInfo.type) < 0) {
+                          // Invalid mime type, reject request.
+                          return done('Invalid file type: ' + iInfo.type + " name: " + iInfo.name);
+                      }
+                      
+                      // TODO: Can we avoid loading everything into memory?
+                      iInfo.fileContents = fs.readFileSync(iInfo.path); // semi sketchy decoding
+                      console.log('LENGTHS:' + iInfo.fileContents.length + ' - ' + iInfo.size);
+                      var elementsToHash = "";
+                      for (var j = 0; j < iInfo.fileContents.length; j += iInfo.fileContents.length / 100) {
+                          elementsToHash += iInfo.fileContents[Math.floor(j)];
+                      }
+                      iInfo.felinaHash = md5(elementsToHash);
+                      
+                      return db.imageExists(iInfo.felinaHash, function(iErr, exists) {
+                          if (exists === 0) {
+                              // New image, upload!
+                              return uploadImage(req.user, iInfo, project, db, done); // Will call done() for us
+                          } else {
+                              // Existing image, reject the request.
+                              return done('Image already exists: ' + iInfo.name);
+                          }
+                      });
+                  },
+                  function(err, idArr) {
+                      // If anything errored, abort.
+                      if (err) {
+                          // TODO: be more clear if any images were uploaded or not.
+                          if (err.code === 'ER_NO_REFERENCED_ROW_') {
+                              // We haven't met an FK constraint, this should be down to a bad project id.
+                              return res.send(new errors.APIErrResp(3, 'Invalid project.'));
+                          } else {
+                              console.log(err);
+                              return res.send(new errors.APIErrResp(2, err));
+                          }
+                      } else {
+                          // All images should have uploaded succesfully.
+                          return res.send({
+                              'res': true,
+                              'ids': idArr
+                          });
+                      }
+                  });
     }); // End image upload endpoint.
 }
 

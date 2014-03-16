@@ -11,10 +11,61 @@ function init(callback) {
         }
 
         conn.query('SELECT `userid`, `email`, `name`, `usertype` FROM `users` LIMIT 0', function(err, res) {
+            conn.release();
             if (err) {
                 return callback(err);
             } else {
                 return callback(null);
+            }
+        });
+    });
+}
+
+function getImageOwner(id, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            console.log(connErr);
+            return callback(connErr);
+        }
+
+        var query = "SELECT `ownerid`, `private` FROM `images` WHERE `imageid` = ?";
+        var sub = [ id ];
+        query = mysql.format(query, sub);
+
+        conn.query(query, function(err, res) {
+            conn.release();
+            if (err) {
+                console.log(err);
+                console.log(query);
+                return callback(err);
+            } else if (res.length !== 1) {
+                return callback('Unknown image id.');
+            } else {
+                return callback(null, res[0]);
+            }
+        });
+    });
+}
+
+function deleteImage(id, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            console.log(connErr);
+            return callback(connErr);
+        }
+
+        var query = "DELETE FROM `images` WHERE `imageid` = ?";
+        var sub = [ id ];
+        query = mysql.format(query, sub);
+
+        conn.query(query, function(err, res) {
+            conn.release();
+            if (err) {
+                console.log(err);
+                console.log(query);
+                return callback(err);
+            } else {
+                return callback();
             }
         });
     });
@@ -31,6 +82,7 @@ function imageExists(hash, callback) {
         query = mysql.format(query, sub);
 
         conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 return callback(err, null);
             } else {
@@ -115,6 +167,7 @@ function getJobImageCount(jobid, callback) {
         query = mysql.format(query, sub);
 
         return conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -137,6 +190,7 @@ function getProjects(showAll, callback) {
         }
 
         return conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -164,6 +218,7 @@ function getFields(project, callback) {
         var sub = [ project ];
         query = mysql.format(query, sub);
         return conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 console.log(query);
@@ -211,6 +266,7 @@ function setFields(project, fieldList, callback) {
         query = mysql.format(query, sub);
         console.log(query);
         return conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -238,6 +294,7 @@ function getProject(id, callback) {
         query = mysql.format(query, sub);
         console.log(query);
         conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -261,6 +318,7 @@ function createProject(proj, callback) {
         query = mysql.format(query, sub);
 
         conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 console.log(err);
                 return callback(err);
@@ -364,7 +422,7 @@ function addImageAnno(iid, annotations, callback) {
     }
 
     if (anno.length <= 0) {
-        console.log('Tried to insert empty annotations list!');
+        console.log('Tried to insert empty annotations list, or none were valid!');
         return callback('No valid annotations provided', false);
     } else {
         var query = "INSERT INTO `image_meta_annotations` ";
@@ -687,7 +745,7 @@ function addNewImage(user, project, imageHash, callback) {
                 callback(err);
             } else {
                 console.log('Inserted image into db.');
-                callback();
+                callback(null, imageHash);
             }
         });
 
@@ -922,6 +980,8 @@ function getUserHash(email, callback) {
 
 module.exports = {
     init: init,
+    getImageOwner:getImageOwner,
+    deleteImage:deleteImage,
     imageExists:imageExists,
     getJobImageCount:getJobImageCount,
     getImageFields:getImageFields,
