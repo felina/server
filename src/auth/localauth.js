@@ -1,11 +1,12 @@
-var bcrypt = require('bcrypt-nodejs');
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var db = require('../db.js');
 var users = require('../user.js');
+var errors = require('../error.js');
 var nodemailer = require('nodemailer');
 var smtp_config = require('../../config/smtp.json');
 var crypto = require('crypto');
+var bcrypt = require('bcrypt-nodejs');
 var transport = nodemailer.createTransport("SMTP", smtp_config);
 var host= (process.env.HOST||'nl.ks07.co.uk')+':'+(process.env.PORT || 5000);
 
@@ -20,12 +21,32 @@ function getValidationHash() {
     return md5.digest('hex');
 }
 
-function register(user, password, callback) {
+function newToken(email, password, callback) {
     bcrypt.hash(password, null, null, function(err, hash) {
         if (err) {
-            console.log('Failed to hash password.');
+            console.log('Failed to hash password');
             console.log(err);
             callback(err, null);
+        } else {
+            db.updateUserHash(email, hash, 1, function(e, r) {
+                if (e) {
+                    console.log('database error');
+                    console.log(e);
+                    callback(e, null);
+                } else {
+                    callback(null, r);
+                }
+            });
+        }
+    });
+}
+
+function register(user, password, callback) {
+    bcrypt.hash(password, null, null, function(e, hash) {
+        if (e) {
+            console.log('Failed to hash password.');
+            console.log(e);
+            callback(e, null);
         } else {
             var vhash = getValidationHash();
             db.addNewUser(user, hash, vhash, function(err, id){
@@ -41,6 +62,26 @@ function register(user, password, callback) {
                         text: 'Copy and paste this link in your browser to validate: '+host+'/validate/'+vhash
                     };
                     transport.sendMail(mailOptions);
+                    return callback(null, id);
+                }
+            });
+        }
+    });
+}
+
+function registerSub(user, password, supervisor, callback) {
+    bcrypt.hash(password, null, null, function(e, hash) {
+        if (e) {
+            console.log('Failed to hash password.');
+            console.log(e);
+            callback(e, null);
+        } else {
+            db.addNewSub(user, hash, supervisor, function(err, id){
+                if(err) {
+                    console.log('database enter user fail');
+                    console.log(err);
+                    callback(err, null);
+                } else {
                     return callback(null, id);
                 }
             });
@@ -121,6 +162,40 @@ function authRoutes(app) {
         }
     });
 
+    app.post('/subuser', function(req, res) {
+        if(!req.user) {
+            return res.send({'res':false, 'err':{'code':1, 'msg':'You must be logged in to access this feature.'}});
+        }
+        if (req.user.privilege > 1) {
+            var mail = req.body.email;
+            var name = req.body.name;
+            var pass = getValidationHash();
+            var priv = users.PrivilegeLevel.SUBUSER.i;
+            var grav = req.body.gravatar;
+            var user = new users.User(-1, name, mail, priv, grav);
+            if (user.id === false) {
+                // Details of user are invalid.
+                res.send({'res':false, 'err':{'code':1, 'msg':'User details are invalid!'}});
+            } else {
+                registerSub(user, pass, req.user.id, function(err, id) {
+                    if (err) {
+                        // Registration failed, notify api.
+                        console.log('Registration failed:');
+                        console.log(err);
+                        res.send({'res':false, 'err':{'code':2, 'msg':'Registration failed.'}});
+                    } else {
+                        // Update id from DB insertion.
+                        user.id = id;
+                        console.log(['Registered user:',id,mail,pass,name,priv,grav].join(" "));                        
+                        res.send({'res':true, 'user':user});
+                    }
+                });
+            }
+        } else {
+            res.send({'res':false, 'err':{'code':2, 'msg':'Insufficient Privilege.'}});
+        }
+    });
+
     // Login callback - user auth
     app.post('/login', function(req, res, next) {
         passport.authenticate('local', function(err, user, info) {
@@ -139,6 +214,36 @@ function authRoutes(app) {
         })(req, res, next);
     });
 
+    // Give the subuser a token 
+    app.get('/token', function(req, res) {
+        var email = req.query.email;
+        if (email) {
+            console.log(email);
+            db.tokenExpiry(email, function(err, info) {
+                if (err) {
+                    console.log(err);
+                    return res.send(new errors.APIErrResp(2, "database error"));
+                } else if (info) {
+                    var token = getValidationHash();
+                    newToken(email, token, function(e,r) {
+                        if(e) {
+                            return res.send(new errors.APIErrResp(2, "database error"));
+                        } else if (r) {
+                            return res.send({'res': true, 'token': token});
+                        } else {
+                            return res.send(new errors.APIErrResp(3, "invalid email"));
+                        }
+                    });
+                } else {
+                    return res.send(new errors.APIErrResp(3, "token expired"));
+                }
+            }); 
+        } else {
+            return res.send(new errors.APIErrResp(3, "email not set"));
+        }
+    });
+
+    // validation callback for email validation
     app.get('/validate/:hash', function(req, res) {
         var hash = req.params.hash;
         if(hash.length === 32) {
@@ -159,4 +264,9 @@ function authRoutes(app) {
     });
 }
 
-module.exports = {LocalStrategy:BcryptLocalStrategy, register:register, compare:compare, authRoutes:authRoutes};
+module.exports = {
+    LocalStrategy:BcryptLocalStrategy,
+    register:register, 
+    compare:compare, 
+    authRoutes:authRoutes
+};
