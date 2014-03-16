@@ -1,4 +1,3 @@
-var bcrypt = require('bcrypt-nodejs');
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var db = require('../db.js');
@@ -7,6 +6,7 @@ var errors = require('../error.js');
 var nodemailer = require('nodemailer');
 var smtp_config = require('../../config/smtp.json');
 var crypto = require('crypto');
+var bcrypt = require('bcrypt-nodejs');
 var transport = nodemailer.createTransport("SMTP", smtp_config);
 var host= (process.env.HOST||'nl.ks07.co.uk')+':'+(process.env.PORT || 5000);
 
@@ -28,9 +28,10 @@ function newToken(email, password, callback) {
             console.log(err);
             callback(err, null);
         } else {
-            db.updateUserHash(email, hash, function(e, r) {
+            db.updateUserHash(email, hash, 1, function(e, r) {
                 if (e) {
                     console.log('database error');
+                    console.log(e);
                     callback(e, null);
                 } else {
                     callback(null, r);
@@ -223,7 +224,6 @@ function authRoutes(app) {
                     console.log(err);
                     return res.send(new errors.APIErrResp(2, "database error"));
                 } else if (info) {
-                   //return res.send({'res':true});
                     var token = getValidationHash();
                     newToken(email, token, function(e,r) {
                         if(e) {
@@ -264,4 +264,9 @@ function authRoutes(app) {
     });
 }
 
-module.exports = {LocalStrategy:BcryptLocalStrategy, register:register, compare:compare, authRoutes:authRoutes};
+module.exports = {
+    LocalStrategy:BcryptLocalStrategy,
+    register:register, 
+    compare:compare, 
+    authRoutes:authRoutes
+};

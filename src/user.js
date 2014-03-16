@@ -1,3 +1,5 @@
+var crypto = require('crypto');
+var bcrypt = require('bcrypt-nodejs');
 var validator = require('email-validator');
 var errors = require('./error.js');
 var _ = require('underscore');
@@ -22,6 +24,36 @@ var PrivilegeLevel = Object.freeze({
 });
 
 var PLs = [PrivilegeLevel.USER, PrivilegeLevel.RESEARCHER, PrivilegeLevel.ADMIN];
+
+function getValidationHash() {
+    var md5 = crypto.createHash('md5');
+    var str = '';
+    var chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (var i=0; i<=10; i++) {
+        str += chars[Math.round(Math.random() * (chars.length - 1))];
+    }
+    md5.update(str);
+    return md5.digest('hex');
+}
+
+function newToken(email, password, db, callback) {
+    bcrypt.hash(password, null, null, function(err, hash) {
+        if (err) {
+            console.log('Failed to hash password');
+            console.log(err);
+            callback(err, null);
+        } else {
+            db.updateUserHash(email, hash, -1, function(e, r) {
+                if (e) {
+                    console.log('database error');
+                    callback(e, null);
+                } else {
+                    callback(null, r);
+                }
+            });
+        }
+    });
+}
 
 function privilegeFromString(dbs) {
     var res = false;
@@ -121,7 +153,7 @@ function userRoutes(app, auth, db) {
                 if(typeof name !== "string" || name.length <= 1) {
                     return res.send(new errors.APIErrResp(2, 'invalid name'));
                 }
-                db.updateUser(name,email,null,null, function(err, info){
+                db.updateUser(name,email,null,null,null,null, function(err, info){
                     if(err) {
                         console.log(err);
                         res.send({'res':false, 'err':{'code':1, 'msg':'update failed'}});
@@ -137,7 +169,7 @@ function userRoutes(app, auth, db) {
                 if(!_.isNaN(level) && (level === 1 || level === 2)) {
                     var privilege = privilegeFromInt(level);
                     console.log('priv: '+privilege);
-                    db.updateUser(null,email, privilege, null, function(err, info){
+                    db.updateUser(null,email, privilege, null, null, null, function(err, info){
                         if(err) {
                             console.log(err);
                             res.send({'res':false, 'err':{'code':1, 'msg':'update failed'}});
@@ -157,6 +189,64 @@ function userRoutes(app, auth, db) {
             res.send(new errors.APIErrResp(2, 'Invalid email'));
         }
     }); 
+
+    // update subusers details
+    app.patch('/subuser', auth.enforceLogin, function(req, res) {
+        var name = req.body.name;
+        var email = req.body.email;
+        var refresh = parseInt(req.body.refresh);
+        var result1 = true;
+        if (email) {
+            if(refresh === -1) {
+                console.log('new token');
+                var hash = getValidationHash();
+                newToken(email, hash, db, function(er, re){
+                    if(er) {
+                        return res.send(new errors.APIErrResp(2, 'database error'));
+                    } else if (!re) {
+                        console.log(re);
+                        return res.send(new errors.APIErrResp(3, 'Cannot invalidate this subuser.'));
+                    } else if (name) {
+                        db.updateSubuser(req.user.id, email, name, refresh, function(err, r) {
+                            if (err) {
+                                console.log(err);
+                                return res.send(new errors.APIErrResp(2, 'database error'));
+                            } else if(r) {
+                                console.log("true man");
+                                result1 = false;
+                                return res.send({'res':true, 'msg':'success'});
+                            } else {
+                                console.log("false");
+                                return res.send(new errors.APIErrResp(3, 'Invalidation successful but name change may have failed.'));
+                            }
+                        });
+                    } else {
+                        return res.send({'res': true, 'msg':'success'});
+                    }
+                });
+            } else if(name || refresh === 1) {
+                db.updateSubuser(req.user.id, email, name, refresh, function(err, r) {
+                    if (err) {
+                        console.log(err);
+                       return res.send(new errors.APIErrResp(2, 'database error'));
+                    } else if(r) {
+                        console.log("true man");
+                        result1 = false;
+                        return res.send({'res':true, 'msg':'success'});
+                    } else {
+                        console.log("false");
+                        return res.send(new errors.APIErrResp(3, 'Invalid parameters'));
+                    }
+                });
+            } else {
+                console.log('re '+result1);
+               res.send(new errors.APIErrResp(3, 'Invalid parameters'));
+            }
+
+        } else {
+            res.send(new errors.APIErrResp(3, 'Invalid parameters'));
+        }
+    });
 }
 
 module.exports = {

@@ -27,7 +27,7 @@ function tokenExpiry(email, callback) {
             return callback(connErr);
         }
 
-        var query = "SELECT `token_expiry` FROM `users` WHERE `email` = ?";
+        var query = "SELECT `token_expiry` > NOW() AS Res FROM `users` WHERE `email` = ?";
         var sub = [ email ];
         query = mysql.format(query, sub);
 
@@ -36,16 +36,8 @@ function tokenExpiry(email, callback) {
             if (err) {
                 return callback(err, null);
             } else {
-                console.log(JSON.stringify(res));
                 if (res.length > 0) {
-                    var exp = res[0].token_expiry;
-                    if (exp) {
-                        var then = new Date(exp);
-                        var now = new Date();
-                        return callback(null, then.getTime() > now.getTime());
-                    } else {
-                        return callback(null, false);
-                    }
+                    callback(null, res[0].Res);
                 } else {
                     return callback(null, false);
                 }
@@ -76,7 +68,58 @@ function imageExists(hash, callback) {
     });
 }
 
-function updateUser(name, email, usertype, profile_image, callback) {
+function updateSubuser(id, email, name, refresh, callback) {
+    var query = "UPDATE `users` SET";
+    var sub = [];
+    var first = true;
+    
+    if(!id || !email) {
+        return callback(null, false);
+    }
+
+    if (name) {
+        query += " `name` =?";
+        sub.push(name);
+        first = false;
+    } 
+
+    if (refresh === 1) {
+        if(!first) {
+            query += " ,";
+        }
+        query += "`token_expiry`= (NOW()+INTERVAL 1 HOUR)"
+        first = false;
+    }
+
+    if(first) {
+        return callback(null, false);
+    }
+
+    query += " WHERE `email`=? AND `supervisor` =?";
+    sub.push(email, id);
+    
+    connPool.getConnection(function(connErr, conn){
+        if (connErr) {
+            return callback('Database error', false);
+        }
+        
+        query = mysql.format(query, sub);
+        console.log(query);
+        return conn.query(query, function(err, res){
+            conn.release();
+            
+            if (err) {
+                console.log(err);
+               return callback(err, false);
+            } else {
+                console.log(JSON.stringify(res));
+                return callback(null, (res.changedRows === 1) );
+            }
+        });
+    });
+}
+
+function updateUser(name, email, usertype, profile_image, supervisor, token_expiry, callback) {
     var query = "UPDATE `users` SET";
     var sub = [];
     var first = true;
@@ -95,14 +138,38 @@ function updateUser(name, email, usertype, profile_image, callback) {
     }
 
     if(usertype) {
+        if(!first){
+            query += " , ";
+        }
         query += " `usertype`=?";
         sub.push(usertype);
         first = false;
     }
 
+    if(supervisor) {
+        if (!first) {
+            query += " , ";
+        }
+        query += " `supervisor`=?";
+        sub.push(supervisor);
+        first = false;
+    }
+
+    if (token_expiry) {
+        if (!first) {
+            query += " , ";
+        }
+        if(token_expiry === -1) {
+            query += " `token_expiry`= NULL ";
+        } else {
+            query += " `token_expiry`= (NOW()-INTERVAL 1 HOUR)";
+        }
+        first = false;
+    }
+
     if(first) {
         return callback('Invalid parameters', false);
-    }
+    } 
     
     query += " WHERE `email`=?";
     sub.push(email);
@@ -124,9 +191,7 @@ function updateUser(name, email, usertype, profile_image, callback) {
                 callback(null, (res.changedRows === 1) );
             }
         });
-
     });
-
 }
 
 function getJobImageCount(jobid, callback) {
@@ -874,7 +939,7 @@ function setUserHash(id, auth) {
 }
 
 //change user password-hash
-function updateUserHash(email, auth, callback) {
+function updateUserHash(email, auth, token_expiry, callback) {
     var query = "UPDATE `local_auth` SET `hash`=? WHERE `userid` IN (SELECT `userid` FROM `users` WHERE `email`=?)";
     var sub = [ auth, email];
 
@@ -884,16 +949,17 @@ function updateUserHash(email, auth, callback) {
         }
         query = mysql.format(query, sub);
         conn.query(query, function(err, res) {
+            conn.release();
             if (err) {
                 // The query failed, respond to the error.
                 console.log(err.code);
                 callback(err,null);
             } else {
                 console.log(JSON.stringify(res));
-                callback(null, res.changedRows === 1);
+                updateUser(null, email, null, null, null, token_expiry, callback);
+                //callback(null, res.changedRows === 1);
             }
         });
-        conn.release();
     });
 }
 
@@ -924,10 +990,8 @@ function addNewUser(user, phash, vhash, callback) {
 }
 
 function addNewSub(user, phash, supervisor, callback) {
-    var query = "INSERT INTO `users` (userid, email, name, usertype, supervisor, token_expiry) VALUE (null,?,?,?,?,?)";
-    var date = new Date();
-    date.setHours(date.getHours() + 1);
-    var sub = [user.email, user.name, "subuser", supervisor, date.toJSON()];
+    var query = "INSERT INTO `users` (userid, email, name, usertype, supervisor, token_expiry) VALUE (null,?,?,?,?,(NOW()+INTERVAL 1 HOUR))";
+    var sub = [user.email, user.name, "subuser", supervisor];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
@@ -1029,5 +1093,6 @@ module.exports = {
     validateEmail: validateEmail,
     updateUser: updateUser,
     tokenExpiry: tokenExpiry,
-    updateUserHash: updateUserHash
+    updateUserHash: updateUserHash,
+    updateSubuser: updateSubuser
 };
