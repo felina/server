@@ -162,16 +162,16 @@ function updateSubuser(id, email, name, refresh, callback) {
     }
 
     if (name) {
-        query += " `name` =?";
+        query += " `name`=?";
         sub.push(name);
         first = false;
     } 
 
     if (refresh === 1) {
         if(!first) {
-            query += " ,";
+            query += ",";
         }
-        query += "`token_expiry`= (NOW()+INTERVAL 1 HOUR)"
+        query += " `token_expiry`=(NOW() + INTERVAL 1 HOUR)";
         first = false;
     }
 
@@ -179,7 +179,7 @@ function updateSubuser(id, email, name, refresh, callback) {
         return callback(null, false);
     }
 
-    query += " WHERE `email`=? AND `supervisor` =?";
+    query += " WHERE `email`=? AND `supervisor`=?";
     sub.push(email, id);
     
     connPool.getConnection(function(connErr, conn){
