@@ -21,6 +21,32 @@ function init(callback) {
     });
 }
 
+function getSubusers(id, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            console.log(connErr);
+            return callback(connErr);
+        }
+
+        var query = "SELECT `name`, `email`, `token_expiry` IS NULL AS Invalidated FROM `users` WHERE `supervisor` = ?";
+        var sub = [ id ];
+
+        query = mysql.format(query, sub);
+
+        conn.query(query, function(err, res) {
+            conn.release();
+            if (err) {
+                console.log(err);
+                console.log(query);
+                return callback(err);
+            } else {
+                console.log(res);
+                return callback(null, res);
+            }
+        });
+    });
+}
+
 function getImageOwner(id, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -1156,5 +1182,6 @@ module.exports = {
     updateUser: updateUser,
     tokenExpiry: tokenExpiry,
     updateUserHash: updateUserHash,
-    updateSubuser: updateSubuser
+    updateSubuser: updateSubuser,
+    getSubusers: getSubusers
 };

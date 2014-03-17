@@ -247,6 +247,23 @@ function userRoutes(app, auth, db) {
             res.send(new errors.APIErrResp(3, 'Invalid parameters'));
         }
     });
+
+    app.get('/subuser', auth.enforceLogin, function(req, res){
+        if(req.user.privilege > 1 ) {
+            db.getSubusers(req.user.id, function(err, info){
+                if(err){
+                    console.log(err);
+                    res.send(new errors.APIErrResp(2, 'Database error'));
+                } else {
+                    res.send({'res':true, 'subusers':info});
+                }
+            });
+            
+        } else {
+            res.send(new errors.APIErrResp(3, 'Insufficient Privilege'));
+        }
+    }); 
+
 }
 
 module.exports = {
