@@ -1,6 +1,10 @@
 var mysql = require('mysql');
-var dbCFG = require('../config/db_settings.json');
 var users = require('./user.js');
+
+// Load config and set timezone to UTC so that node-mysql doesn't convert DATETIME values for us
+var dbCFG = require('../config/db_settings.json');
+dbCFG.timezone = '+0000';
+
 var connPool = mysql.createPool(dbCFG);
 
 function init(callback) {
