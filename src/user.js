@@ -23,7 +23,7 @@ var PrivilegeLevel = Object.freeze({
     }
 });
 
-var PLs = [PrivilegeLevel.USER, PrivilegeLevel.RESEARCHER, PrivilegeLevel.ADMIN];
+var PLs = [PrivilegeLevel.SUBUSER, PrivilegeLevel.USER, PrivilegeLevel.RESEARCHER, PrivilegeLevel.ADMIN];
 
 function getValidationHash() {
     var md5 = crypto.createHash('md5');
@@ -75,7 +75,7 @@ function privilegeFromInt(i) {
     return res;
 }
 
-function User(id, name, email, privilege, gravatar) {
+function User(id, name, email, privilege, gravatar, supervisor) {
     if (typeof id !== 'number') {
         this.id = false;
         return;
@@ -93,9 +93,23 @@ function User(id, name, email, privilege, gravatar) {
         this.id = false;
         return;
     }
+    if (privilege === PrivilegeLevel.SUBUSER.i) {
+        // Subuser must have a valid supervisor id, which must not be their own.
+        if (typeof supervisor !== 'number' || supervisor === id) {
+            console.log(typeof supervisor + ' ' + supervisor);
+            console.log('Tried to instantiate subuser with invalid supervisor.');
+            this.id = false;
+            return;
+        } else {
+            this.supervisor = supervisor;
+        }
+    } else {
+        this.supervisor = null;
+    }
     if (typeof gravatar !== 'string' || gravatar.length !== 32) {
         this.gravatar = null;
     }
+
     this.id = id;
     this.name = name;
     this.email = email;
@@ -113,13 +127,19 @@ User.prototype.profileURL = function() {
 };
 
 User.prototype.toJSON = function() {
-    return {
+    var json = {
         'id': this.id,
         'name': this.name,
         'email': this.email,
         'privilege': this.privilege,
         'profile_image': this.profileURL()
     };
+
+    if (this.privilege === PrivilegeLevel.SUBUSER.i) {
+        json.supervisor = this.supervisor;
+    }
+
+    return json;
 };
 
 User.prototype.isResearcher = function() {

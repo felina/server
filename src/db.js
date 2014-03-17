@@ -888,7 +888,7 @@ function addNewImage(user, project, imageHash, callback) {
 // Attempts to deserialize a user, passing it to the done callback.
 // done(err, user)
 function getUser(id, done) {
-    var query = "SELECT `email`, `name`, `usertype`, `gravatar` " +
+    var query = "SELECT `email`, `name`, `usertype`, `gravatar`, `supervisor` " +
         "FROM `users` " +
         "WHERE `userid` = ?";
 
@@ -897,19 +897,19 @@ function getUser(id, done) {
 
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
-            // TODO this function doesn't exist
-            // return callback('Database error', false);
+            console.log(connErr);
+            return done('Database error', false);
         }
 
         conn.query(query, function(err, res) {
             if (err) {
-                // The query failed, respond to the error.
+                console.log(err);
                 done(err, false);
             } else {
                 if (res.length === 0) {
                     done(null, false);
                 } else {
-                    var user = new users.User(id, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar);
+                    var user = new users.User(id, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar, res[0].supervisor);
                     if (user.id === false) {
                         done('User settings invalid.', false);
                     } else {
@@ -1031,19 +1031,21 @@ function setUserHash(id, auth) {
 //change user password-hash
 function updateUserHash(email, auth, token_expiry, callback) {
     var query = "UPDATE `local_auth` SET `hash`=? WHERE `userid` IN (SELECT `userid` FROM `users` WHERE `email`=?)";
-    var sub = [ auth, email];
+    var sub = [ auth, email ];
 
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
-            return; //done('Database error', null);
+            console.log(connErr);
+            return callback('Database error', null);
         }
+
         query = mysql.format(query, sub);
         conn.query(query, function(err, res) {
             conn.release();
             if (err) {
                 // The query failed, respond to the error.
                 console.log(err.code);
-                callback(err,null);
+                callback(err, null);
             } else {
                 console.log(JSON.stringify(res));
                 updateUser(null, email, null, null, null, token_expiry, callback);
@@ -1106,11 +1108,12 @@ function addNewSub(user, phash, supervisor, callback) {
 function validateEmail(vhash, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
+            console.log(connErr);
             return callback('Database error', null);
         }
 
         var query = "UPDATE `users` SET `validation_hash`=NULL WHERE `validation_hash`=?";
-        var sub = [vhash];
+        var sub = [ vhash ];
         query = mysql.format(query, sub);
 
         conn.query(query, function(err, res) {
@@ -1120,7 +1123,7 @@ function validateEmail(vhash, callback) {
                 console.log(err.code);
                 callback(err, null);
             } else {
-                callback(null, (res.changedRows === 1) );
+                callback(null, (res.changedRows === 1));
             }
         });
     });
@@ -1129,33 +1132,35 @@ function validateEmail(vhash, callback) {
 // Looks up a users bcrypt hash from their registered email, compare pass, and give results to callback.
 // callback(err, hash, user)
 function getUserHash(email, callback) {
-    var query = "SELECT `users`.`userid`, `name`, `email`, `hash`, `usertype`, `gravatar` " +
+    var query = "SELECT `users`.`userid`, `name`, `email`, `hash`, `usertype`, `gravatar`, `supervisor` " +
         "FROM `users` " +
         "INNER JOIN `local_auth` USING (`userid`) " +
         "WHERE `email` = ?";
-    var sub = [email];
+    var sub = [ email ];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
+            console.log(connErr);
             return callback('Database error', false);
         }
 
         conn.query(query, function(err, res) {
+            conn.release();
+
             if (err) {
                 // The query failed, respond to the error.
-                callback(err, null, null);
+                console.log(err);
+                return callback(err, null, null);
             } else {
                 if (res.length === 0) {
-                    callback(null, null, null);
+                    return callback(null, null, null);
                 } else {
-                    var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar);
-                    callback(null, user, res[0].hash);
+                    var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar, res[0].supervisor);
+                    return callback(null, user, res[0].hash);
                 }
             }
         });
-
-        conn.release();
     });
 }
 
