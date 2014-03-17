@@ -2,6 +2,7 @@ var crypto = require('crypto');
 var bcrypt = require('bcrypt-nodejs');
 var validator = require('email-validator');
 var errors = require('./error.js');
+var loauth = require('./auth/localauth.js');
 var _ = require('underscore');
 
 var PrivilegeLevel = Object.freeze({
@@ -24,17 +25,6 @@ var PrivilegeLevel = Object.freeze({
 });
 
 var PLs = [PrivilegeLevel.SUBUSER, PrivilegeLevel.USER, PrivilegeLevel.RESEARCHER, PrivilegeLevel.ADMIN];
-
-function getValidationHash() {
-    var md5 = crypto.createHash('md5');
-    var str = '';
-    var chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    for (var i=0; i<=10; i++) {
-        str += chars[Math.round(Math.random() * (chars.length - 1))];
-    }
-    md5.update(str);
-    return md5.digest('hex');
-}
 
 function newToken(email, password, db, callback) {
     bcrypt.hash(password, null, null, function(err, hash) {
@@ -219,7 +209,7 @@ function userRoutes(app, auth, db) {
         if (email) {
             if(refresh === -1) {
                 console.log('new token');
-                var hash = getValidationHash();
+                var hash = loauth.getValidationHash();
                 newToken(email, hash, db, function(er, re){
                     if(er) {
                         return res.send(new errors.APIErrResp(2, 'database error'));

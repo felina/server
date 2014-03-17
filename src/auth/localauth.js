@@ -265,6 +265,7 @@ function authRoutes(app) {
 }
 
 module.exports = {
+    getValidationHash:getValidationHash,
     LocalStrategy:BcryptLocalStrategy,
     register:register, 
     compare:compare, 
