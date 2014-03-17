@@ -109,8 +109,8 @@ function User(id, name, email, privilege, gravatar, supervisor) {
 
 User.prototype.profileURL = function() {
     if (this.gravatar === null) {
-        // TODO:
-        return 'http://nl.ks07.co.uk:5000/user.png';
+        // TODO: Get the host programmatically or via config
+        return 'http://citizen.science.image.storage.public.s3-website-eu-west-1.amazonaws.com/user.png';
     } else {
         return 'http://www.gravatar.com/avatar/' + this.gravatar;
     }
