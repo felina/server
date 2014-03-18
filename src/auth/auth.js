@@ -21,7 +21,7 @@ function enforceLoginCustom(options, req, res, next) {
     if (options === null || typeof options === 'undefined') {
         // options hasn't been supplied, fall back to standard behaviour
         return enforceLogin;
-    } else if (req !== null || typeof req !== 'undefined') {
+    } else if (req !== null && typeof req !== 'undefined') {
         // req has been set, it looks like this is being used as middleware without having set options!
         // fall back to default behaviour
         console.trace('Improper usage of enforceLogin, attempting default behaviour!');
@@ -99,7 +99,7 @@ function authRoutes(app) {
     extauth.fbRoutes(app);
 
     // Import the local auth routes
-    loauth.authRoutes(app);
+    loauth.authRoutes(app, enforceLoginCustom);
 
     app.get('/logout', function(req, res) {
         if (req.user) {

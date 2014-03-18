@@ -161,16 +161,18 @@ function userRoutes(app, auth, db) {
             if(req.body.email===req.user.email) {
                 var name = req.body.name;
                 if(typeof name !== "string" || name.length <= 1) {
-                    return res.send(new errors.APIErrResp(2, 'invalid name'));
+                    return res.send(new errors.APIErrResp(2, 'Invalid name'));
                 }
                 db.updateUser(name,email,null,null,null,null, function(err, info){
                     if(err) {
                         console.log(err);
-                        res.send({'res':false, 'err':{'code':1, 'msg':'update failed'}});
+                        res.send(new errors.APIErrResp(3, 'Update failed'));
                     } else if(info) {
-                        res.send({'res':true, 'msg':'Update successful'});
+                        res.send({
+                            'res': true
+                        });
                     } else {
-                        return res.send({'res':false, 'err':{'code':1, 'msg':'nothing to update'}});
+                        return res.send(new errors.APIErrResp(4, 'Nothing to update'));
                     }
                 });
             } else if(req.user.privilege === PrivilegeLevel.RESEARCHER.i) {
@@ -182,21 +184,23 @@ function userRoutes(app, auth, db) {
                     db.updateUser(null,email, privilege, null, null, null, function(err, info){
                         if(err) {
                             console.log(err);
-                            res.send({'res':false, 'err':{'code':1, 'msg':'update failed'}});
+                            res.send(new errors.APIErrResp(3, 'Update failed'));
                         } else if(info) {
-                            res.send({'res':true, 'msg':'Update successful'});
+                            res.send({
+                                'res': true
+                            });
                         } else {
-                            return res.send({'res':false, 'err':{'code':1, 'msg':'invalid email'}});
+                            return res.send(new errors.APIErrResp(5, 'Invalid email'));
                         }
                     });
                 } else {
-                    res.send(new errors.APIErrResp(2, 'Invalid privilege'));
+                    res.send(new errors.APIErrResp(6, 'Invalid privilege'));
                 }
             } else {
-                res.send(new errors.APIErrResp(2, 'Insufficient Privilege'));
+                res.send(new errors.APIErrResp(1, 'Insufficient Privilege'));
             }
         } else {
-            res.send(new errors.APIErrResp(2, 'Invalid email'));
+            res.send(new errors.APIErrResp(5, 'Invalid email'));
         }
     }); 
 
@@ -224,14 +228,18 @@ function userRoutes(app, auth, db) {
                             } else if(r) {
                                 console.log("true man");
                                 result1 = false;
-                                return res.send({'res':true, 'msg':'success'});
+                                return res.send({
+                                    'res': true
+                                });
                             } else {
                                 console.log("false");
                                 return res.send(new errors.APIErrResp(3, 'Invalidation successful but name change may have failed.'));
                             }
                         });
                     } else {
-                        return res.send({'res': true, 'msg':'success'});
+                        return res.send({
+                            'res': true
+                        });
                     }
                 });
             } else if(name || refresh === 1) {
@@ -242,7 +250,9 @@ function userRoutes(app, auth, db) {
                     } else if(r) {
                         console.log("true man");
                         result1 = false;
-                        return res.send({'res':true, 'msg':'success'});
+                        return res.send({
+                            'res':true
+                        });
                     } else {
                         console.log("false");
                         return res.send(new errors.APIErrResp(3, 'Invalid parameters'));
@@ -265,7 +275,10 @@ function userRoutes(app, auth, db) {
                     console.log(err);
                     res.send(new errors.APIErrResp(2, 'Database error'));
                 } else {
-                    res.send({'res':true, 'subusers':info});
+                    res.send({
+                        'res': true,
+                        'subusers': info
+                    });
                 }
             });
             

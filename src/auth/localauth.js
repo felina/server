@@ -89,10 +89,6 @@ function registerSub(user, password, supervisor, callback) {
     });
 }
 
-function compare(pass, hash) {
-        return bcrypt.compareSync(pass, hash);
-}
-
 function localVerify(username, password, done) {
     console.log("Verifying user: " + username);
     var passHash = db.getUserHash(username, function(err, user, hash) {
@@ -122,7 +118,7 @@ var StrategyOptions = Object.freeze({
 
 var BcryptLocalStrategy = new LocalStrategy(StrategyOptions, localVerify);
 
-function authRoutes(app) {
+function authRoutes(app, enforceLogin) {
     app.post('/register', function(req, res) {
         if (req.body.email && req.body.pass) {
             var mail = req.body.email;
@@ -133,66 +129,67 @@ function authRoutes(app) {
             var user = new users.User(-1, name, mail, priv, grav);
             if (user.id === false) {
                 // Details of user are invalid.
-                res.send({'res':false, 'err':{'code':1, 'msg':'User details are invalid!'}});
+                res.send(new errors.APIErrResp(1, 'User details are invalid!'));
             } else {
                 register(user, pass, function(err, id) {
                     if (err) {
                         // Registration failed, notify api.
                         console.log('Registration failed:');
                         console.log(err);
-                        res.send({'res':false, 'err':{'code':2, 'msg':'Registration failed.'}});
+                        return res.send(new errors.APIErrResp(2, 'Registration failed.'));
                     } else {
                         // Update id from DB insertion.
                         user.id = id;
-                        console.log(['Registered user:',id,mail,pass,name,priv,grav].join(" "));
-                        res.send({'res':true, 'user':user});
+                        console.log(['Registered user:',id,mail,name,priv,grav].join(" "));
                         // Login the newly registered user.
-                        req.login(user, function(err) {
+                        return req.login(user, function(err) {
                             if (err) {
                                 // Login failed for some reason.
                                 console.log('Post registration login failed:');
                                 console.log(err);
+                                return res.send(new errors.APIErrResp(3, 'Registration success but login failed.'));
+                            } else {
+                                return res.send({
+                                    'res':true,
+                                    'user':user
+                                });
                             }
                         });
                     }
                 });
             }
         } else {
-            res.send({'res':false, 'err':{'code':3, 'msg':'Invalid request.'}});
+            res.send(new errors.APIErrResp(4, 'Invalid request.'));
         }
     });
 
-    app.post('/subuser', function(req, res) {
-        if(!req.user) {
-            return res.send({'res':false, 'err':{'code':1, 'msg':'You must be logged in to access this feature.'}});
-        }
-        if (req.user.privilege > 1) {
-            var mail = req.body.email;
-            var name = req.body.name;
-            var pass = getValidationHash();
-            var priv = users.PrivilegeLevel.SUBUSER.i;
-            var grav = req.body.gravatar;
-            var user = new users.User(-1, name, mail, priv, grav);
-            if (user.id === false) {
-                // Details of user are invalid.
-                res.send({'res':false, 'err':{'code':1, 'msg':'User details are invalid!'}});
-            } else {
-                registerSub(user, pass, req.user.id, function(err, id) {
-                    if (err) {
-                        // Registration failed, notify api.
-                        console.log('Registration failed:');
-                        console.log(err);
-                        res.send({'res':false, 'err':{'code':2, 'msg':'Registration failed.'}});
-                    } else {
-                        // Update id from DB insertion.
-                        user.id = id;
-                        console.log(['Registered user:',id,mail,pass,name,priv,grav].join(" "));                        
-                        res.send({'res':true, 'user':user});
-                    }
-                });
-            }
+    app.post('/subuser', enforceLogin({'minPL':2}), function(req, res) {
+        var mail = req.body.email;
+        var name = req.body.name;
+        var pass = getValidationHash();
+        var priv = users.PrivilegeLevel.SUBUSER.i;
+        var grav = req.body.gravatar;
+        var user = new users.User(-1, name, mail, priv, grav);
+        if (user.id === false) {
+            // Details of user are invalid.
+            res.send(new errors.APIErrResp(2, 'User details are invalid!'));
         } else {
-            res.send({'res':false, 'err':{'code':2, 'msg':'Insufficient Privilege.'}});
+            registerSub(user, pass, req.user.id, function(err, id) {
+                if (err) {
+                    // Registration failed, notify api.
+                    console.log('Registration failed:');
+                    console.log(err);
+                    res.send(new errors.APIErrResp(3, 'Registration failed.'));
+                } else {
+                    // Update id from DB insertion.
+                    user.id = id;
+                    console.log(['Registered subuser:',id,mail,pass,name,priv,grav].join(" "));                        
+                    res.send({
+                        'res':true,
+                        'user':user
+                    });
+                }
+            });
         }
     });
 
@@ -200,17 +197,23 @@ function authRoutes(app) {
     app.post('/login', function(req, res, next) {
         passport.authenticate('local', function(err, user, info) {
             if (err) {
-                return next(err);
+                console.log(err);
+                return res.send(new errors.APIErrResp(2, 'Internal server error.'));
             } else if (!user) {
-                return res.send({'res':false, 'err':'No user'});
+                return res.send(new errors.APIErrResp(1, 'Email or password incorrect!'));
+            } else {
+                return req.logIn(user, function(err) {
+                    if (err) {
+                        console.log(err);
+                        return res.send(new errors.APIErrResp(2, 'Internal server error.'));
+                    } else {
+                        return res.send({
+                            'res': true,
+                            'user': user
+                        });
+                    }
+                });
             }
-            req.logIn(user, function(err) {
-                if (err) {
-                    return next(err);
-                } else {
-                    return res.send({'res':true, 'user':user});
-                }
-            });
         })(req, res, next);
     });
 
@@ -226,10 +229,13 @@ function authRoutes(app) {
                 } else if (info) {
                     var token = getValidationHash();
                     newToken(email, token, function(e,r) {
-                        if(e) {
+                        if (e) {
                             return res.send(new errors.APIErrResp(2, "database error"));
                         } else if (r) {
-                            return res.send({'res': true, 'token': token});
+                            return res.send({
+                                'res': true,
+                                'token': token
+                            });
                         } else {
                             return res.send(new errors.APIErrResp(3, "invalid email"));
                         }
@@ -246,28 +252,29 @@ function authRoutes(app) {
     // validation callback for email validation
     app.get('/validate/:hash', function(req, res) {
         var hash = req.params.hash;
-        if(hash.length === 32) {
+        if (hash.length === 32) {
             db.validateEmail(hash, function(err, info){
-                if(err) {
+                if (err) {
                     console.log(err);
-                    res.send({'res':false, 'err':{'code':1, 'msg':'validation failed'}});
-                } else if(info) {
-                    res.send({'res':true, 'msg':'Validation successfull'});
+                    return res.send(new errors.APIErrResp(1, 'Validation failed'));
+                } else if (info) {
+                    return res.send({
+                        'res': true,
+                        'msg': 'Validation successfull'
+                    });
                 } else {
-                    return res.send({'res':false, 'err':{'code':1, 'msg':'invalid url'}});
+                    return res.send(new errors.APIErrResp(2, 'Invalid URL.'));
                 }
             });
         } else {
-            return res.send({'res':false, 'err':{'code':1, 'msg':'invalid url'}});
+            return res.send(new errors.APIErrResp(2, 'Invalid URL.'));
         }
-
     });
 }
 
 module.exports = {
     getValidationHash:getValidationHash,
     LocalStrategy:BcryptLocalStrategy,
-    register:register, 
-    compare:compare, 
+    register:register,
     authRoutes:authRoutes
 };
