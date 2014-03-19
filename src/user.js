@@ -65,7 +65,7 @@ function privilegeFromInt(i) {
     return res;
 }
 
-function User(id, name, email, privilege, gravatar, supervisor) {
+function User(id, name, email, privilege, gravatar, supervisor, projectid) {
     if (typeof id !== 'number') {
         this.id = false;
         return;
@@ -93,8 +93,21 @@ function User(id, name, email, privilege, gravatar, supervisor) {
         } else {
             this.supervisor = supervisor;
         }
+
+        // Subuser must have a valid projectid.
+        if (typeof project !== 'number') {
+            console.log(typeof projectid + ' ' + projectid);
+            console.log('Tried to instantiate subuser with invalid projectid.');
+            this.id = false;
+            return;
+        } else {
+            this.supervisor = supervisor;
+            this.projectid = projectid;
+        }
+       
     } else {
         this.supervisor = null;
+        this.projectid = null; 
     }
     if (typeof gravatar !== 'string' || gravatar.length !== 32) {
         this.gravatar = null;
