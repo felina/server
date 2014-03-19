@@ -6,6 +6,19 @@ CREATE SCHEMA IF NOT EXISTS `felina` DEFAULT CHARACTER SET utf8 COLLATE utf8_gen
 USE `felina` ;
 
 -- -----------------------------------------------------
+-- Table `felina`.`projects`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `felina`.`projects` (
+  `projectid` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(45) NOT NULL,
+  `desc` VARCHAR(255) NOT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`projectid`),
+  UNIQUE INDEX `name_UNIQUE` (`name` ASC))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
 -- Table `felina`.`users`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `felina`.`users` (
@@ -17,13 +30,20 @@ CREATE TABLE IF NOT EXISTS `felina`.`users` (
   `validation_hash` CHAR(32) NULL,
   `supervisor` INT NULL,
   `token_expiry` DATETIME NULL,
+  `assigned_project` INT NULL,
   PRIMARY KEY (`userid`),
   UNIQUE INDEX `email_UNIQUE` (`email` ASC),
   UNIQUE INDEX `validation_hash_UNIQUE` (`validation_hash` ASC),
   INDEX `users_users_rel_idx` (`supervisor` ASC),
+  INDEX `project_users_rel_idx` (`assigned_project` ASC),
   CONSTRAINT `users_users_rel`
     FOREIGN KEY (`supervisor`)
     REFERENCES `felina`.`users` (`userid`)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE,
+  CONSTRAINT `project_users_rel`
+    FOREIGN KEY (`assigned_project`)
+    REFERENCES `felina`.`projects` (`projectid`)
     ON DELETE SET NULL
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
@@ -61,31 +81,20 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `felina`.`projects`
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `felina`.`projects` (
-  `projectid` INT NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(45) NOT NULL,
-  `desc` VARCHAR(255) NOT NULL,
-  `active` TINYINT(1) NOT NULL DEFAULT 0,
-  PRIMARY KEY (`projectid`),
-  UNIQUE INDEX `name_UNIQUE` (`name` ASC))
-ENGINE = InnoDB;
-
-
--- -----------------------------------------------------
 -- Table `felina`.`images`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `felina`.`images` (
   `imageid` CHAR(32) NOT NULL,
   `ownerid` INT NOT NULL,
   `projectid` INT NOT NULL,
+  `uploaderid` INT NOT NULL,
   `datetime` DATETIME NULL,
   `location` POINT NULL,
   `private` TINYINT(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`imageid`),
   INDEX `ownerid_idx` (`ownerid` ASC),
   INDEX `projectid_idx` (`projectid` ASC),
+  INDEX `uploader_image_rel_idx` (`uploaderid` ASC),
   CONSTRAINT `user_image_rel`
     FOREIGN KEY (`ownerid`)
     REFERENCES `felina`.`users` (`userid`)
@@ -94,6 +103,11 @@ CREATE TABLE IF NOT EXISTS `felina`.`images` (
   CONSTRAINT `project_image_rel`
     FOREIGN KEY (`projectid`)
     REFERENCES `felina`.`projects` (`projectid`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT `uploader_image_rel`
+    FOREIGN KEY (`uploaderid`)
+    REFERENCES `felina`.`users` (`userid`)
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
