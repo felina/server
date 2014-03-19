@@ -888,7 +888,7 @@ function addNewImage(user, project, imageHash, callback) {
 // Attempts to deserialize a user, passing it to the done callback.
 // done(err, user)
 function getUser(id, done) {
-    var query = "SELECT `email`, `name`, `usertype`, `gravatar`, `supervisor`" +
+    var query = "SELECT `email`, `name`, `usertype`, `gravatar`, `supervisor`, `assigned_project`" +
         "FROM `users` " +
         "WHERE `userid` = ?";
 
@@ -909,7 +909,7 @@ function getUser(id, done) {
                 if (res.length === 0) {
                     done(null, false);
                 } else {
-                    var user = new users.User(id, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar, res[0].supervisor);
+                    var user = new users.User(id, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar, res[0].supervisor, res[0].assigned_project);
                     if (user.id === false) {
                         done('User settings invalid.', false);
                     } else {
@@ -1083,7 +1083,7 @@ function addNewUser(user, phash, vhash, callback) {
 
 function addNewSub(user, phash, callback) {
     var query = "INSERT INTO `users` (userid, email, name, usertype, supervisor, token_expiry, assigned_project) VALUE (null,?,?,?,?,(NOW()+INTERVAL 1 HOUR),?)";
-    var sub = [user.email, user.name, "subuser", user.supervisor, user.projectid];
+    var sub = [user.email, user.name, users.privilegeFromInt(user.privilege), user.supervisor, user.projectid];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
