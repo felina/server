@@ -894,7 +894,7 @@ function getUser(id, done) {
 
     var sub = [id];
     query = mysql.format(query, sub);
-
+    console.log(query);
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             console.log(connErr);
@@ -909,6 +909,7 @@ function getUser(id, done) {
                 if (res.length === 0) {
                     done(null, false);
                 } else {
+                    console.log(res);
                     var user = new users.User(id, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar, res[0].supervisor, res[0].assigned_project);
                     if (user.id === false) {
                         done('User settings invalid.', false);
@@ -1132,7 +1133,7 @@ function validateEmail(vhash, callback) {
 // Looks up a users bcrypt hash from their registered email, compare pass, and give results to callback.
 // callback(err, hash, user)
 function getUserHash(email, callback) {
-    var query = "SELECT `users`.`userid`, `name`, `email`, `hash`, `usertype`, `gravatar`, `supervisor` " +
+    var query = "SELECT `users`.`userid`, `name`, `email`, `hash`, `usertype`, `gravatar`, `supervisor`, `assigned_project` " +
         "FROM `users` " +
         "INNER JOIN `local_auth` USING (`userid`) " +
         "WHERE `email` = ?";
@@ -1156,7 +1157,7 @@ function getUserHash(email, callback) {
                 if (res.length === 0) {
                     return callback(null, null, null);
                 } else {
-                    var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar, res[0].supervisor);
+                    var user = new users.User(res[0].userid, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar, res[0].supervisor, res[0].assigned_project);
                     return callback(null, user, res[0].hash);
                 }
             }

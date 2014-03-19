@@ -95,7 +95,7 @@ function User(id, name, email, privilege, gravatar, supervisor, projectid) {
         }
 
         // Subuser must have a valid projectid.
-        if (typeof project !== 'number') {
+        if (typeof projectid !== 'number') {
             console.log(typeof projectid + ' ' + projectid);
             console.log('Tried to instantiate subuser with invalid projectid.');
             this.id = false;
@@ -307,5 +307,6 @@ module.exports = {
     User: User,
     Researcher: Researcher,
     privilegeFromString: privilegeFromString,
+    privilegeFromInt: privilegeFromInt,
     userRoutes: userRoutes
 };

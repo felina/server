@@ -69,14 +69,14 @@ function register(user, password, callback) {
     });
 }
 
-function registerSub(user, password, supervisor, callback) {
+function registerSub(user, password, callback) {
     bcrypt.hash(password, null, null, function(e, hash) {
         if (e) {
             console.log('Failed to hash password.');
             console.log(e);
             callback(e, null);
         } else {
-            db.addNewSub(user, hash, supervisor, function(err, id){
+            db.addNewSub(user, hash, function(err, id){
                 if(err) {
                     console.log('database enter user fail');
                     console.log(err);
@@ -169,13 +169,13 @@ function authRoutes(app, enforceLogin) {
         var pass = getValidationHash();
         var priv = users.PrivilegeLevel.SUBUSER.i;
         var grav = req.body.gravatar;
-        var proj = req.body.projectid;
-        var user = new users.User(-1, name, mail, priv, grav, proj);
+        var proj = parseInt(req.body.projectid);
+        var user = new users.User(-1, name, mail, priv, grav, req.user.id, proj);
         if (user.id === false) {
             // Details of user are invalid.
             res.send(new errors.APIErrResp(2, 'User details are invalid!'));
         } else {
-            registerSub(user, pass, req.user.id, function(err, id) {
+            registerSub(user, pass, function(err, id) {
                 if (err) {
                     // Registration failed, notify api.
                     console.log('Registration failed:');
