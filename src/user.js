@@ -101,7 +101,6 @@ function User(id, name, email, privilege, gravatar, supervisor, projectid) {
             this.id = false;
             return;
         } else {
-            this.supervisor = supervisor;
             this.projectid = projectid;
         }
        
@@ -140,6 +139,7 @@ User.prototype.toJSON = function() {
 
     if (this.privilege === PrivilegeLevel.SUBUSER.i) {
         json.supervisor = this.supervisor;
+        json.projectid = this.projectid;
     }
 
     return json;
