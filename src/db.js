@@ -888,7 +888,7 @@ function addNewImage(user, project, imageHash, callback) {
 // Attempts to deserialize a user, passing it to the done callback.
 // done(err, user)
 function getUser(id, done) {
-    var query = "SELECT `email`, `name`, `usertype`, `gravatar`, `supervisor` " +
+    var query = "SELECT `email`, `name`, `usertype`, `gravatar`, `supervisor`" +
         "FROM `users` " +
         "WHERE `userid` = ?";
 
@@ -1081,9 +1081,9 @@ function addNewUser(user, phash, vhash, callback) {
     });
 }
 
-function addNewSub(user, phash, supervisor, callback) {
-    var query = "INSERT INTO `users` (userid, email, name, usertype, supervisor, token_expiry) VALUE (null,?,?,?,?,(NOW()+INTERVAL 1 HOUR))";
-    var sub = [user.email, user.name, "subuser", supervisor];
+function addNewSub(user, phash, callback) {
+    var query = "INSERT INTO `users` (userid, email, name, usertype, supervisor, token_expiry, assigned_project) VALUE (null,?,?,?,?,(NOW()+INTERVAL 1 HOUR),?)";
+    var sub = [user.email, user.name, "subuser", user.supervisor, user.projectid];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {

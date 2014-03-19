@@ -169,7 +169,8 @@ function authRoutes(app, enforceLogin) {
         var pass = getValidationHash();
         var priv = users.PrivilegeLevel.SUBUSER.i;
         var grav = req.body.gravatar;
-        var user = new users.User(-1, name, mail, priv, grav);
+        var proj = req.body.projectid;
+        var user = new users.User(-1, name, mail, priv, grav, proj);
         if (user.id === false) {
             // Details of user are invalid.
             res.send(new errors.APIErrResp(2, 'User details are invalid!'));
@@ -183,7 +184,7 @@ function authRoutes(app, enforceLogin) {
                 } else {
                     // Update id from DB insertion.
                     user.id = id;
-                    console.log(['Registered subuser:',id,mail,pass,name,priv,grav].join(" "));                        
+                    console.log(['Registered subuser:',id,mail,pass,name,priv,grav,proj].join(" "));                        
                     res.send({
                         'res':true,
                         'user':user
