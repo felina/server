@@ -152,6 +152,13 @@ User.prototype.isResearcher = function() {
     return false;
 };
 
+User.prototype.isSubuser = function() {
+    if (this.privilege === PrivilegeLevel.SUBUSER) {
+        return true;
+    }
+    return false;
+};
+
 User.prototype.isAdmin = function() {
     if (this.privilege === PrivilegeLevel.ADMIN.i) {
         return true;

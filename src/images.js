@@ -204,8 +204,13 @@ function imageRoutes(app, auth, db) {
                   function(fKey, done) {
                       var iInfo = req.files[fKey];
                       
-                      // The body must contain a corresponding value that gives the project id.
-                      var project = parseInt(req.body[fKey + '_project']);
+                      // The body must contain a corresponding value that gives the project id.                 
+                      var project = false;
+                      if(req.user.privilege === users.PrivilegeLevel.SUBUSER.i){
+                          project = req.user.projectid;
+                      } else {
+                          project = parseInt(req.body[fKey + '_project']);
+                      }
                       if (_.isNaN(project)) {
                           return done('Must supply a valid project id for each image.');
                       }
@@ -255,6 +260,8 @@ function imageRoutes(app, auth, db) {
                       }
                   });
     }); // End image upload endpoint.
+
+
 }
 
 module.exports = {
