@@ -862,8 +862,13 @@ function getUserImages(user, callback) {
 
 // Adds a new image to the database.
 function addNewImage(user, project, imageHash, callback) {
-    var query = "INSERT INTO `images` (imageid, ownerid, projectid) VALUE (?,?,?)";
-    var sub = [imageHash, user.id, project];
+    var query = "INSERT INTO `images` (imageid, projectid, uploaderid, ownerid) VALUE (?,?,?,?)";
+    var sub = [imageHash, project, user.id];
+    if(user.privilege === users.PrivilegeLevel.SUBUSER.i) {
+        sub.push(user.supervisor);
+    } else {
+        sub.push(user.id);
+    }
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
