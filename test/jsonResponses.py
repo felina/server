@@ -83,6 +83,15 @@ class JsonResponses:
             "ids": [JsonResponses.hash_image(im) for im in ims] if isinstance(ims, list) else JsonResponses.hash_image(ims)
             }
 
+    @staticmethod
+    def existing_image(im):
+        return {
+              "res": False,
+              "err": {
+                "code": 2,
+                "msg": "Image already exists: " + im
+              }
+            }
 
     @staticmethod
     def upload_image_no_project():

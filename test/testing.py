@@ -42,6 +42,7 @@ test_number = 1
 
 test_image1 = 'flack.png'
 test_image2 = 'Output.png'
+test_image3 = 'molecule.png'
 
 jsr = jsonResponses.JsonResponses()
 
@@ -305,20 +306,6 @@ def register_project():
     # sys.exit(1)
     ppass()
 
-def upload_image():
-    print_test('Upload image')
-
-    m = MultipartEncoder(
-    fields = {
-        test_image1 + '_project': str(project_details['id']),
-        test_image1: (test_image1, open(test_image1, 'rb'), 'image/png'),
-    })
-    r = requests.post(url=path + upload_image_path, data=m, headers={'Content-Type': m.content_type}, cookies=cookie)
-    response_handle(r, 'Image upload with project should not res false: ', True)
-    response_object_check(r, jsr.images(test_image1))
-
-    ppass()
-
 def upload_images():
     print_test('Upload images')
     m = MultipartEncoder(
@@ -331,8 +318,29 @@ def upload_images():
     r = requests.post(url=path + upload_image_path, data=m, headers={'Content-Type': m.content_type}, cookies=cookie)
     response_handle(r, 'Image upload with project should not res false: ', True)
     response_object_check(r, jsr.images([test_image1, test_image2]))
-
     ppass()
+
+
+def upload_existing_image():
+    print_test('Upload existing image')
+
+    m = MultipartEncoder(
+    fields = {
+        test_image1 + '_project': str(project_details['id']),
+        test_image1: (test_image1, open(test_image1, 'rb'), 'image/png'),
+    })
+    r = requests.post(url=path + upload_image_path, data=m, headers={'Content-Type': m.content_type}, cookies=cookie)
+    response_handle(r, 'Image upload with project should not res false: ', False)
+    response_object_check(r, jsr.existing_image(test_image1))
+    ppass()
+
+
+def retrieve_images():
+    print_test('Retrieve images')
+
+    r = requests.get(url=path + upload_image_path + '/' + jsr.hash_image(test_image1), cookies=cookie)
+    print r.text
+
 
 def main():
     swap_configs() 
@@ -350,9 +358,10 @@ def main():
     register_existing()
     upload_image_no_project()
     register_project()
-    upload_image()
     upload_images()
+    upload_existing_image()
 
+    retrieve_images()
 
     ##Do project tests
     # line = ''

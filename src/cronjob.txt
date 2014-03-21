@@ -1,0 +1,6 @@
+* * * * * cd /code/server && \
+	git pull --rebase  > /dev/null 2>&1 && \
+	killall node && \
+	sed '/var port = process.env.PORT || 5000;/c \var port = process.env.PORT || 8080;' index.js  && \
+	node main.js > /dev/null 2>&1 
+
