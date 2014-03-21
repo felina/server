@@ -152,7 +152,7 @@ function imageExists(hash, callback) {
     });
 }
 
-function updateSubuser(id, email, name, refresh, callback) {
+function updateSubuser(id, email, name, refresh, projectid, callback) {
     var query = "UPDATE `users` SET";
     var sub = [];
     var first = true;
@@ -165,7 +165,13 @@ function updateSubuser(id, email, name, refresh, callback) {
         query += " `name`=?";
         sub.push(name);
         first = false;
-    } 
+    }
+
+    if (projectid) {
+        query += " `assigned_project`=?";
+        sub.push(projectid);
+        first = false;
+    }
 
     if (refresh === 1) {
         if(!first) {

@@ -2,7 +2,6 @@ var crypto = require('crypto');
 var bcrypt = require('bcrypt-nodejs');
 var validator = require('email-validator');
 var errors = require('./error.js');
-var loauth = require('./auth/localauth.js');
 var _ = require('underscore');
 
 var PrivilegeLevel = Object.freeze({
@@ -25,6 +24,17 @@ var PrivilegeLevel = Object.freeze({
 });
 
 var PLs = [PrivilegeLevel.SUBUSER, PrivilegeLevel.USER, PrivilegeLevel.RESEARCHER, PrivilegeLevel.ADMIN];
+
+function getRandomHash() {
+    var md5 = crypto.createHash('md5');
+    var str = '';
+    var chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (var i=0; i<=10; i++) {
+        str += chars[Math.round(Math.random() * (chars.length - 1))];
+    }
+    md5.update(str);
+    return md5.digest('hex');
+}
 
 function newToken(email, password, db, callback) {
     bcrypt.hash(password, null, null, function(err, hash) {
@@ -229,27 +239,31 @@ function userRoutes(app, auth, db) {
         var name = req.body.name;
         var email = req.body.email;
         var refresh = parseInt(req.body.refresh);
+        var projectid = parseInt(req.body.projectid);
         var result1 = true;
+        if (_.isNaN(projectid)) {
+            return res.send(new errors.APIErrResp(3, 'invalid projectid'));
+        }
         if (email) {
             if(refresh === -1) {
                 console.log('new token');
-                var hash = loauth.getValidationHash();
+                var hash = getRandomHash();
                 newToken(email, hash, db, function(er, re){
                     if(er) {
                         return res.send(new errors.APIErrResp(2, 'database error'));
                     } else if (!re) {
                         console.log(re);
                         return res.send(new errors.APIErrResp(3, 'Cannot invalidate this subuser.'));
-                    } else if (name) {
-                        db.updateSubuser(req.user.id, email, name, refresh, function(err, r) {
+                    } else if (name || projectid) {
+                        db.updateSubuser(req.user.id, email, name, refresh, projectid, function(err, r) {
                             if (err) {
                                 console.log(err);
                                 return res.send(new errors.APIErrResp(2, 'database error'));
                             } else if(r) {
-                                console.log("true man");
                                 result1 = false;
                                 return res.send({
-                                    'res': true
+                                    'res': true,
+                                    'msg': 'success'
                                 });
                             } else {
                                 console.log("false");
@@ -258,17 +272,17 @@ function userRoutes(app, auth, db) {
                         });
                     } else {
                         return res.send({
-                            'res': true
+                            'res': true,
+                            'msg': 'success'
                         });
                     }
                 });
-            } else if(name || refresh === 1) {
-                db.updateSubuser(req.user.id, email, name, refresh, function(err, r) {
+            } else if(name || projectid || refresh === 1) {
+                db.updateSubuser(req.user.id, email, name, refresh, projectid, function(err, r) {
                     if (err) {
                         console.log(err);
                        return res.send(new errors.APIErrResp(2, 'database error'));
                     } else if(r) {
-                        console.log("true man");
                         result1 = false;
                         return res.send({
                             'res':true
