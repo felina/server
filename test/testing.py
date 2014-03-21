@@ -41,7 +41,7 @@ server_process = None
 test_number = 1
 
 test_image1 = 'flack.png'
-test_image2 = 'LondonDusk.png'
+test_image2 = 'LondonDusk.jpg'
 
 jsr = jsonResponses.JsonResponses()
 
@@ -307,37 +307,32 @@ def register_project():
 
 def upload_image():
     print_test('Upload image')
-    # f1 = {'file':open(test_image1, 'rb')}
+
     m = MultipartEncoder(
     fields = {
         test_image1 + '_project': str(project_details['id']),
         test_image1: (test_image1, open(test_image1, 'rb'), 'image/png'),
     })
     r = requests.post(url=path + upload_image_path, data=m, headers={'Content-Type': m.content_type}, cookies=cookie)
-
-    # r = requests.post(url=path + upload_image_path, files=f1, data=project_details, cookies=cookie)
     response_handle(r, 'Image upload with project should not res false: ', True)
     response_object_check(r, jsr.images(test_image1))
-    # print r.text
 
     ppass()
 
 def upload_images():
-    print_test('Upload image')
-    # f1 = {'file':open(test_image1, 'rb')}
+    print_test('Upload images')
+
     m = MultipartEncoder(
     fields = {
         test_image1 + '_project': str(project_details['id']),
         test_image1: (test_image1, open(test_image1, 'rb'), 'image/png'),
-        'filename_project': str(project_details['id']),
-        'filename': ('filename', open(test_image1, 'rb'), 'image/png')
+        test_image2 + '_project': str(project_details['id']),
+        test_image2: (test_image2, open(test_image2, 'rb'), 'image/jpg')
 
     })
     r = requests.post(url=path + upload_image_path, data=m, headers={'Content-Type': m.content_type}, cookies=cookie)
-
-    # r = requests.post(url=path + upload_image_path, files=f1, data=project_details, cookies=cookie)
-    response_handle(r, 'Image upload with project should not res false: ', True)
-    # print r.text
+    # response_handle(r, 'Image upload with project should not res false: ', True)
+    # response_object_check(r, jsr.images([test_image1, test_image2]))
 
     ppass()
 
@@ -357,8 +352,8 @@ def main():
     register_existing()
     upload_image_no_project()
     register_project()
-    upload_image()
-    # upload_images()
+    # upload_image()
+    upload_images()
     #Do project tests
     # print jsr.hash_image(test_image1)
     # line = ''
