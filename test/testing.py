@@ -306,40 +306,41 @@ def register_project():
     # sys.exit(1)
     ppass()
 
+def request_images(path_, *images):
+    tb_fields = {}
+    for im in images:
+        tb_fields[im + '_project'] = str(project_details['id'])
+        tb_fields[im] = (im, open(im, 'rb'), 'image/' + im.split('.')[-1])
+
+    m = MultipartEncoder (
+    fields = tb_fields
+    )
+    return requests.post(url=path_, data=m, headers={'Content-Type': m.content_type}, cookies=cookie)
+
+
 def upload_images():
     print_test('Upload images')
-    m = MultipartEncoder(
-    fields = {
-        test_image1 + '_project': str(project_details['id']),
-        test_image1: (test_image1, open(test_image1, 'rb'), 'image/png'),
-        test_image2 + '_project': str(project_details['id']),
-        test_image2: (test_image2, open(test_image2, 'rb'), 'image/png')
-    })
-    r = requests.post(url=path + upload_image_path, data=m, headers={'Content-Type': m.content_type}, cookies=cookie)
+    r = request_images(path + upload_image_path, test_image1, test_image2)
     response_handle(r, 'Image upload with project should not res false: ', True)
-    response_object_check(r, jsr.images([test_image1, test_image2]))
+    response_object_check(r, jsr.images(test_image1, test_image2))
+
     ppass()
 
 
 def upload_existing_image():
     print_test('Upload existing image')
-
-    m = MultipartEncoder(
-    fields = {
-        test_image1 + '_project': str(project_details['id']),
-        test_image1: (test_image1, open(test_image1, 'rb'), 'image/png'),
-    })
-    r = requests.post(url=path + upload_image_path, data=m, headers={'Content-Type': m.content_type}, cookies=cookie)
+    r = request_images(path + upload_image_path, test_image1)
     response_handle(r, 'Image upload with project should not res false: ', False)
     response_object_check(r, jsr.existing_image(test_image1))
     ppass()
 
 
-def retrieve_images():
-    print_test('Retrieve images')
+# def retrieve_images():
+#     print_test('Retrieve images')
 
-    r = requests.get(url=path + upload_image_path + '/' + jsr.hash_image(test_image1), cookies=cookie)
-    print r.text
+#     r = requests.get(url=path + upload_image_path + '/' + jsr.hash_image(test_image1), cookies=cookie)
+#     if r.text == open(test_image1, 'rb').read():
+#         print 'Equal!'
 
 
 def main():
@@ -361,7 +362,7 @@ def main():
     upload_images()
     upload_existing_image()
 
-    retrieve_images()
+    # retrieve_images()
 
     ##Do project tests
     # line = ''

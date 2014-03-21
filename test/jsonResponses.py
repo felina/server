@@ -77,10 +77,10 @@ class JsonResponses:
             }
 
     @staticmethod
-    def images(ims):
+    def images(*ims):
         return {
             "res": True,
-            "ids": [JsonResponses.hash_image(im) for im in ims] if isinstance(ims, list) else JsonResponses.hash_image(ims)
+            "ids": [JsonResponses.hash_image(im) for im in ims]
             }
 
     @staticmethod
