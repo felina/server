@@ -120,7 +120,7 @@ function uploadImage(user, iInfo, pid, db, callback) {
 function imageRoutes(app, auth, db) {
     // Endpoint to get list of images
     app.get('/images', auth.enforceLogin, function(req, res) {
-        db.getUserImages(req.user, function(err, result) {
+        db.getUserImages(req.user, req.query.uploader, function(err, result) {
             if (err) {
                 res.send(new errors.APIErrResp(2, 'Could not load image list.'));
             } else {

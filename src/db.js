@@ -837,9 +837,13 @@ function getAnnotations(iid, callback) {
 }
 
 // Returns a list of all images uploaded by a user.
-function getUserImages(user, callback) {
+function getUserImages(user, uploader, callback) {
     var query = "SELECT `imageid`, `datetime`, AsText(`location`) AS 'loc', `private`, `email` AS 'uploader' FROM `images` INNER JOIN `users` ON `userid`=`uploaderid` WHERE `ownerid`=?";
     var sub = [user.id];
+    if (uploader) {
+        query += " AND `email`=?";
+        sub.push(uploader);
+    }
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
