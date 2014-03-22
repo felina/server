@@ -1,5 +1,6 @@
 import hashlib
 import math 
+import json
 
 class JsonResponses:
 
@@ -128,21 +129,76 @@ class JsonResponses:
         m.update(h)
         # print h
         return m.hexdigest()
-# LENGTHS:111431 - 111431
 
-# 13767751881971221192493912517821720921719921234102162182235101074420765141244157
-# 22441911116816913711912443192865018723296157153117231219351832271125213237237284
-# 44902332101191511724617622620864211561401991561889113114715261802193517974128200
-# 35320344230252982130
+    # @staticmethod
+    # def meta_example(*images):
+    #     return json.dumps([
+    #           {
+    #             "id": JsonResponses().hash_image(im),
+    #             "datetime": "2014-02-14T03:39:13.000Z",
+    #             "location": 
+    #               {
+    #                 "lat": 54.5,
+    #                 "lon": 0.4
+    #               },
+    #             "private": 1,
+    #             "annotations": [
+    #               {
+    #                 "region": [
+    #                   { "x": 100, "y": 200 },
+    #                   { "x": 150, "y": 240 }
+    #                 ],
+    #                 "tag": "I will be replaced soon, dont use me"
+    #               }
+    #             ]
+    #           }
+    #           for im in images])
 
-# step = 1114.31
+    @staticmethod
+    def meta_example(*images):
+        return json.dumps([{
+        'url': JsonResponses().hash_image(images[0]),
+        'metadata': {
+            'title': 'Elephant',
+            'datetime': '2014-02-27T21:32:16.667Z',
+            'location': {
+                'name': 'Africa',
+                'coords': {
+                    'lat': 0.1,
+                    'lng': 0.2
+                }
+            }
+        },
+        'annotations': {}
+    }])
+
+    @staticmethod
+    def image_listing(*images):
+        return {
+              "res": True,
+              "images": [
+                {
+                  "imageid": JsonResponses().hash_image(im),
+                  "datetime": None,
+                  "loc": None,
+                  "private": 1
+                }
+              for im in images]
+            }
 
 
-# 137/67/75/188/197/122/119/249/3/9/125/178/217/209/217/199/21/234/10/216/21/82/235/
-# 10/107/44/207/65/141/244/15/72/244/191/11/168/169/137/119/124/43/192/86/50/187/232/
-# 96/157/153/117/231/219/35/183/22/71/125/213/237/237/2/84/44/90/233/210/119/151/172/46
-# /176/226/208/64/211/56/140/199/156/188/91/131/147/15/26/180/219/35/179/74/128/200/3/
-# 53/203/44/230/252/98/2/130/
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

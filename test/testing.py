@@ -22,6 +22,8 @@ login_path = '/login'
 images_path = '/images'
 upload_image_path = '/img'
 new_project_path = '/project/new'
+meta_upload_path = '/upload/metadata'
+image_listing_path = '/images'
 
 register_details = {
     'email': 'test@gmail.com',
@@ -301,9 +303,6 @@ def register_project():
     response_handle(r, 'Project create failed: ', True)
     response_object_check(r, jsr.register_project(project_details))
     project_details['id'] = json.loads(r.text)['project']['id']
-    # print r.text
-    # print project_details
-    # sys.exit(1)
     ppass()
 
 def request_images(path_, *images):
@@ -313,7 +312,7 @@ def request_images(path_, *images):
         tb_fields[im] = (im, open(im, 'rb'), 'image/' + im.split('.')[-1])
 
     m = MultipartEncoder (
-    fields = tb_fields
+        fields = tb_fields
     )
     return requests.post(url=path_, data=m, headers={'Content-Type': m.content_type}, cookies=cookie)
 
@@ -330,18 +329,61 @@ def upload_images():
 def upload_existing_image():
     print_test('Upload existing image')
     r = request_images(path + upload_image_path, test_image1)
-    response_handle(r, 'Image upload with project should not res false: ', False)
+    response_handle(r, 'Image upload with project should not res true: ', False)
     response_object_check(r, jsr.existing_image(test_image1))
     ppass()
 
+# def images_equal(im1, im2):
+#     b = ''.join([str(ord(x)) for x in im1])
+#     a = ''.join([str(ord(y)) for y in im2])
+#     print len(a), len(b)
+#     return a == b
 
 # def retrieve_images():
 #     print_test('Retrieve images')
 
 #     r = requests.get(url=path + upload_image_path + '/' + jsr.hash_image(test_image1), cookies=cookie)
-#     if r.text == open(test_image1, 'rb').read():
+#     if images_equal(r.text, open(test_image1, 'rb').read()):
 #         print 'Equal!'
+#     else:
+#         print 'Not equal!'
 
+def meta_upload():
+    print_test('Metadata upload')
+    # print jsr.meta_example(test_image1)
+    r = requests.post(url = path + meta_upload_path, data=jsr.meta_example(test_image1), cookies=cookie)
+    # r = requests.post(url = path + meta_upload_path, data=[
+    #           {
+    #             "id": jsr.hash_image(test_image1),
+    #             "datetime": "2014-02-14T03:39:13.000Z"
+    #             # ,
+    #             # "location": 
+    #             #   {
+    #             #     "lat": 54.5,
+    #             #     "lon": 0.4
+    #             #   },
+    #             # "private": 1,
+    #             # "annotations": [
+    #             #   {
+    #             #     "region": [
+    #             #       { "x": 100, "y": 200 },
+    #             #       { "x": 150, "y": 240 }
+    #             #     ],
+    #             #     "tag": "I will be replaced soon, dont use me"
+    #             #   }
+    #             # ]
+    #           }], cookies=cookie)
+
+    print r.text
+
+def image_listing():
+    print_test('Image listing')
+
+    r = requests.get(url=path + image_listing_path, cookies=cookie)
+    # print r.text
+    response_handle(r, 'Image listing should not res false', True)
+    response_object_check(r, jsr.image_listing(test_image1, test_image2))
+    ppass()
 
 def main():
     swap_configs() 
@@ -361,9 +403,13 @@ def main():
     register_project()
     upload_images()
     upload_existing_image()
-
     # retrieve_images()
+    meta_upload() # not working
+    image_listing()
 
+    # r = requests.get(url = path + '/projects', cookies=cookie)
+    # print r.text
+    
     ##Do project tests
     # line = ''
     # for c in iter(lambda: server_process.stdout.read(1), ''):
