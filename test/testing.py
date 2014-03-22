@@ -25,26 +25,17 @@ new_project_path = '/project/new'
 meta_upload_path = '/upload/metadata'
 image_listing_path = '/images'
 
-register_details = {
-    'email': 'test@gmail.com',
-    'name': 'testtest',
-    'pass': 'secrettest'
-}
-
-project_details = {
-    'name': 'testproject',
-    'desc': 'a super awesome test project'
-}
+test_config = json.loads(open('test/testConfig.json').read())
+register_details = test_config['register_details']
+project_details = test_config['project_details']
+test_image1 = test_config['images']['test_image1']
+test_image2 = test_config['images']['test_image2']
 
 cookie = None
 with open('config/db_settings.json', 'r') as db_settings_file:
     db_settings = json.loads(db_settings_file.read())
 server_process = None
 test_number = 1
-
-test_image1 = 'flack.png'
-test_image2 = 'Output.png'
-test_image3 = 'molecule.png'
 
 jsr = jsonResponses.JsonResponses()
 
