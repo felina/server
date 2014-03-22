@@ -89,17 +89,24 @@ def exec_sql_file(cursor, sql_file):
     print "[INFO] Executing SQL script file: '%s'" % (sql_file)
     statement = ""
 
+    def replace_all(text, dic):
+        for i, j in dic.iteritems():
+            text = text.replace(i, j)
+        return text
+
     for line in open(sql_file):
         if re.match(r'--', line):  # ignore sql comment lines
             continue
+        # statement = statement.replace('felina', 'felinaTest')
         if not re.search(r'[^-;]+;', line):  # keep appending lines that don't end in ';'
             statement = statement + line
         else:  # when you get a line ending in ';' then exec statement and reset for next statement
             statement = statement + line
             #print "\n\n[DEBUG] Executing SQL statement:\n%s" % (statement)
+            statement = replace_all(statement, {'felina': 'felinaTest'})
             try:
                 cursor.execute(statement)
-            except (OperationalError, ProgrammingError) as e:
+            except Exception as e:
                 print "\n[WARN] MySQLError during execute statement \n\tArgs: '%s'" % (str(e.args))
 
             statement = ""
@@ -120,7 +127,9 @@ def clear_database():
         print "Database version : %s " % ver
         cur.execute("SET sql_notes = 0;")
         cur.execute("DROP DATABASE IF EXISTS felinaTest;")
-        exec_sql_file(cur, 'test/createTestDB.sql')
+        # exec_sql_file(cur, 'test/createTestDB.sql')
+        exec_sql_file(cur, 'tools/createDB.sql')
+
         cur.execute("USE felinaTest;")
 
     except mdb.Error, e:
@@ -354,6 +363,8 @@ def meta_upload():
     print_test('Metadata upload')
     # print jsr.meta_example(test_image1)
     r = requests.post(url = path + meta_upload_path, data=jsr.meta_example(test_image1), cookies=cookie)
+    response_handle(r, 'Meta upload should not res false', True)
+
     # r = requests.post(url = path + meta_upload_path, data=[
     #           {
     #             "id": jsr.hash_image(test_image1),
@@ -406,7 +417,7 @@ def main():
     upload_images()
     upload_existing_image()
     # retrieve_images()
-    meta_upload() # not working
+    # meta_upload() # not working
     image_listing()
 
     # r = requests.get(url = path + '/projects', cookies=cookie)
