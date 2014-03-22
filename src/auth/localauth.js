@@ -9,6 +9,8 @@ var crypto = require('crypto');
 var bcrypt = require('bcrypt-nodejs');
 var transport = nodemailer.createTransport("SMTP", smtp_config);
 var host= (process.env.HOST||'nl.ks07.co.uk')+':'+(process.env.PORT || 5000);
+var dbCFG = require('../../config/db_settings.json'); 
+
 
 function getValidationHash() {
     var md5 = crypto.createHash('md5');
@@ -55,13 +57,15 @@ function register(user, password, callback) {
                     console.log(err);
                     callback(err, null);
                 } else {
-                    var mailOptions = {
-                        from: smtp_config.auth.email,
-                        to: user.email,
-                        subject: "Validate email for Felina",
-                        text: 'Copy and paste this link in your browser to validate: '+host+'/validate/'+vhash
-                    };
-                    transport.sendMail(mailOptions);
+                    // if (dbCFG.database !== 'felinaTest') {
+                        var mailOptions = {
+                            from: smtp_config.auth.email,
+                            to: user.email,
+                            subject: "Validate email for Felina",
+                            text: 'Copy and paste this link in your browser to validate: '+host+'/validate/'+vhash
+                        };
+                        transport.sendMail(mailOptions);
+                    // }
                     return callback(null, id);
                 }
             });
@@ -96,7 +100,8 @@ function localVerify(username, password, done) {
             console.log(err);
             return done(err, null);
         } else if (user === null || hash === null) {
-            return done('Unregistered user.', null);
+            return done(null, false);//, JSON.stringify({res:false, err:{code:1, msg: 'Unregistered user.'}}));
+            // return done(JSON.stringify({res:false, err:{code:1, msg: 'Unregistered user.'}}), false);//, JSON.stringify({res:false, err:{code:1, msg: 'Unregistered user.'}}));
         } else {
             bcrypt.compare(password, hash, function(hErr, correct) {
                 if (hErr) {
