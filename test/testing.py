@@ -48,6 +48,8 @@ test_image3 = 'molecule.png'
 
 jsr = jsonResponses.JsonResponses()
 
+
+
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -410,7 +412,7 @@ def main():
     # r = requests.get(url = path + '/projects', cookies=cookie)
     # print r.text
     
-    ##Do project tests
+    ## Printing server output, warning: never ends, have to ctrl-C
     # line = ''
     # for c in iter(lambda: server_process.stdout.read(1), ''):
     #             line += c
