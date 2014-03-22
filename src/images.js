@@ -214,7 +214,6 @@ function imageRoutes(app, auth, db) {
                       if (_.isNaN(project)) {
                           return done('Must supply a valid project id for each image.');
                       }
-                      
                       // Attempt to hash the file. If any file has an unwanted type, abort the request.
                       if (VALID_MIME_TYPES.indexOf(iInfo.type) < 0) {
                           // Invalid mime type, reject request.
@@ -229,7 +228,7 @@ function imageRoutes(app, auth, db) {
                           elementsToHash += iInfo.fileContents[Math.floor(j)];
                       }
                       iInfo.felinaHash = md5(elementsToHash);
-                      
+
                       return db.imageExists(iInfo.felinaHash, function(iErr, exists) {
                           if (exists === 0) {
                               // New image, upload!
