@@ -32,7 +32,7 @@ node src/index.js
 
 ## Testing
 
-Create a new file ```test/db_settingsTest.json``` that is the same as ```config/db_settings.json``` but replace the line ```"database" : "felina"``` with ```"database" : "felinaTest"```, Otherwise the server has issues.
+Create a new file ```test/db_settingsTest.json``` that is the same as ```config/db_settings.json``` but replace the line ```"database" : "felina"``` with ```"database" : "felinaTest"```, otherwise the server has issues.
 
 Edit the file ```test/testConfig.json``` and change the paths of the two tests images to ones on your machine.  
 
