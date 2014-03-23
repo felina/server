@@ -97,6 +97,10 @@ function jobRoutes(app, db) {
     app.post('/target', function() {
         console.log('posted executable to target');
     });
+
+    app.post('/exec', function(req, res) {
+
+    });
 }
 
 module.exports = {

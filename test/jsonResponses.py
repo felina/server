@@ -130,6 +130,46 @@ class JsonResponses:
         # print h
         return m.hexdigest()
 
+
+    @staticmethod
+    def meta_example(*images):
+        return json.dumps([
+               {
+                  "id": JsonResponses().hash_image(im),
+                  "metadata":{
+                     "title":"Pingu",
+                     "datetime":"2014-02-27T21:32:16.667Z",
+                     "location":{
+                        "name":"Africa",
+                        "coords":{
+                           "lat":0.1,
+                           "lng":0.2
+                        }
+                     }
+                  },
+                  "annotations":{
+                     # [
+                     "chest":{
+                       "shapes": {
+                           "type":"rect",
+                           "pos":{
+                               "x":123,
+                               "y": 456
+                             },
+                           "size": {
+                               "height": 321,
+                               "width": 999
+                             }
+                        }
+                      }
+                     # ]
+                    
+                  }
+               }
+             for im in images])
+
+    
+
     # @staticmethod
     # def meta_example(*images):
     #     return json.dumps([

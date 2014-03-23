@@ -131,29 +131,6 @@ def clear_database():
         if con:    
             con.close()
 
-# def nonBlockReadline(output):
-#     fd = output.fileno()
-#     fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-#     fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-#     try:
-#         return output.readline()
-#     except:
-#         return ''
-
-# def server_print(func):
-#     def inner(*args, **kwargs):
-#         r = func(*args, **kwargs)
-#         while True:
-#             line = ''
-            # for c in iter(lambda: server_process.stdout.read(1), ''):
-            #     line += c
-            #     if c == '\n':
-            #         print line
-            #         break
-#         return r
-#     return inner
-
-
 def start_server():
     start = time.time()
     process = subprocess.Popen('node src/index.js', stdout=subprocess.PIPE, shell=True)
@@ -228,7 +205,6 @@ def non_existing_user():
     response_object_check(r, jsr.non_existing_user())
     ppass()
 
-# @server_print
 def register_user():
     print_test('Register user')
     r = requests.post(url=path + register_path, data=register_details)
@@ -272,29 +248,14 @@ def register_existing():
 
 def upload_image_no_project():
     print_test('Upload image no project')
-    # r = requests.get(url=path + images_path, cookies=cookie)
-    # response_handle(r, 'Image list fetch failed with message: ', True)
-    # if len(json.loads(r.text)['images']) != 0:
-    #     print 'User should have zero images but has: ' + len(json.loads(r.text)['images'])
-    #     pfail()
     m = MultipartEncoder(
         fields = {
             'filename_project': '1',
             'filename': ('filename', open(test_image1, 'rb'), 'image/png')
         })
     r = requests.post(url=path + upload_image_path, data=m, headers={'Content-Type': m.content_type}, cookies=cookie)
-    # files = {'file': open(test_image1, 'rb')}
-    # value = {'file_project': 1}
-    # payload = {'potato': open(test_image1, 'rb'),
-    #             'potato_project': 1}
-    # f1 = {'potato':open(test_image1, 'rb')}
-    # data = {'file_project', 1}
-    # files = {'file': ('flack.png', open(test_image1, 'rb'), 'image/png', {'Expires': '0'})}
-    # r = requests.post(url=path + upload_image_path, files=files, data=value, cookies=cookie)
     response_handle(r, 'Image upload with no project should have failed: ', False)
     response_object_check(r, jsr.upload_image_no_project())
-    # print r.text
-    
     ppass()
     
 
@@ -354,6 +315,7 @@ def meta_upload():
     print_test('Metadata upload')
     # print jsr.meta_example(test_image1)
     r = requests.post(url = path + meta_upload_path, data=jsr.meta_example(test_image1), cookies=cookie)
+    print r.text
     response_handle(r, 'Meta upload should not res false', True)
 
     # r = requests.post(url = path + meta_upload_path, data=[
@@ -389,6 +351,13 @@ def image_listing():
     response_object_check(r, jsr.image_listing(test_image1, test_image2))
     ppass()
 
+def test_name():
+    print_test('Test name')
+    r = requests.get(url=path + test_path, cookies=cookie) # plus other parameters
+    response_handle(r, 'Explanation of error if res is not what is expected', True) # Bool is expected res value
+    response_object_check(r, jsr.test_name(test_params)) # Compare the response object to the expected response object
+    ppass()
+
 def main():
     swap_configs() 
     clear_database()
@@ -408,7 +377,7 @@ def main():
     upload_images()
     upload_existing_image()
     # retrieve_images()
-    # meta_upload() # not working
+    meta_upload() # not working
     image_listing()
 
     # r = requests.get(url = path + '/projects', cookies=cookie)

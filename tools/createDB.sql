@@ -5,6 +5,30 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';
 CREATE SCHEMA IF NOT EXISTS `felina` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci ;
 USE `felina` ;
 
+
+-- -- -----------------------------------------------------
+-- -- Table `felina`.`executables`
+-- -- -----------------------------------------------------
+-- CREATE TABLE IF NOT EXISTS `felina`.`executables` (
+--   `execid` INT NOT NULL AUTO_INCREMENT,
+--   `exechash` 
+--   `name` VARCHAR(45) NOT NULL,
+--   PRIMARY KEY (`projectid`),
+--   UNIQUE INDEX `name_UNIQUE` (`name` ASC))
+-- ENGINE = InnoDB;
+
+-- -- -----------------------------------------------------
+-- -- Table `felina`.`DLLs`
+-- -- -----------------------------------------------------
+-- CREATE TABLE IF NOT EXISTS `felina`.`executables` (
+--   `dllid` INT NOT NULL AUTO_INCREMENT,
+--   `name` VARCHAR(45) NOT NULL,
+--   `desc` VARCHAR(255) NOT NULL,
+--   `active` TINYINT(1) NOT NULL DEFAULT 0,
+--   PRIMARY KEY (`projectid`),
+--   UNIQUE INDEX `name_UNIQUE` (`name` ASC))
+-- ENGINE = InnoDB;
+
 -- -----------------------------------------------------
 -- Table `felina`.`projects`
 -- -----------------------------------------------------
