@@ -1,8 +1,14 @@
 var fs = require('fs');
 var _ = require('underscore');
+var aws = require('aws-sdk');
 var errors = require('./error.js');
 var crypto = require('crypto');
 var async = require('async');
+
+aws.config.loadFromPath('./config/aws.json');
+var s3 = new aws.S3();
+
+var PRIVATE_BUCKET = 'citizen.science.executable.storage';
 
 
 function jobRoutes(app, db) {
@@ -106,18 +112,58 @@ function jobRoutes(app, db) {
         async.map(Object.keys(req.files), function(fKey, done) {
             var iInfo = req.files[fKey];
             var fd = fs.createReadStream(iInfo.path);
-            var hash = crypto.createHash('sha1');
+            console.log(iInfo.path);
+            var hash = crypto.createHash('md5');
             hash.setEncoding('hex');
 
             fd.on('end', function() {
                 hash.end();
-                console.log(hash.read()); // the desired sha1sum
+                // console.log(hash.read()); // the desired sha1sum
+                iInfo.zipHash = hash.read();
+                console.log(iInfo.zipHash);
+                iInfo.name = req.body['name'];
+
+                return db.zipExists(iInfo.felinaHash, function(iErr, exists) {
+                    if (exists === 0) {
+                        // New image, upload!
+                        return uploadZip(req.user, iInfo, db, done); // Will call done() for us
+                    } else {
+                        // Existing image, reject the request.
+                        return done('Zip already exists: ' + iInfo.name);
+                    }
+                });
             });
 
             // read all file and pipe it (write it) to the hash object
             fd.pipe(hash);
 
         });  
+    });
+}
+
+function uploadZip(user, iInfo, db, callback) {
+    console.log('Trying to upload: ' + iInfo.felinaHash);
+    var params = {
+        'Bucket': PRIVATE_BUCKET,
+        'Key': iInfo.felinaHash,
+        'ContentType': iInfo.type,
+        'Body': iInfo.fileContents
+    };
+
+    return s3.putObject(params, function(err, data) {
+        if (err) {
+            console.log(err);
+            return callback(err);
+        } else {
+            return db.addNewZip(user, pid, iInfo.felinaHash, function(dbErr, id) {
+                if (dbErr) {
+                    console.log(dbErr);
+                    return callback(dbErr);
+                } else {
+                    return callback(null, id);
+                }
+            });
+        }
     });
 }
 

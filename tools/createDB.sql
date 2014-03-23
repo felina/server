@@ -330,7 +330,7 @@ CREATE TABLE IF NOT EXISTS `felina`.`executables` (
   INDEX `executables_users_rel_idx` (`ownerid` ASC),
   CONSTRAINT `executables_users_rel`
     FOREIGN KEY (`ownerid`)
-    REFERENCES `felina`.`users` (`email`)
+    REFERENCES `felina`.`users` (`userid`)
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;

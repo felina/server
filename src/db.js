@@ -25,6 +25,57 @@ function init(callback) {
     });
 }
 
+function zipExists(zipHash, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback(connErr);
+        }
+
+        var query = "SELECT * FROM `executables` WHERE `exeid` = ?";
+        var sub = [ zipHash ];
+        query = mysql.format(query, sub);
+
+        conn.query(query, function(err, res) {
+            conn.release();
+            if (err) {
+                return callback(err, null);
+            } else {
+                // If res.length > 0, an image with this hash exists already
+                return callback(null, res.length);
+            }
+        });
+    });
+}
+
+function addNewZip(user, zipHash, name, filename, callback) {
+    var query = "INSERT INTO `executables` (exeid, name, filename, ownerid) VALUE (?,?,?,?)";
+    var sub = [zipHash, name, filename, user.id];
+    // if(user.privilege === users.PrivilegeLevel.SUBUSER.i) {
+    //     sub.push(user.supervisor);
+    // } else {
+    //     sub.push(user.id);
+    // }
+    query = mysql.format(query, sub);
+
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback('Database error');
+        }
+
+        conn.query(query, function(err, res) {
+            if (err) {
+                console.log(err.code);
+                callback(err);
+            } else {
+                console.log('Inserted image into db.');
+                callback(null, zipHash);
+            }
+        });
+
+        conn.release();
+    });
+}
+
 function getSubusers(id, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -1212,6 +1263,8 @@ function getUserHash(email, callback) {
 
 module.exports = {
     init: init,
+    zipExists:zipExists,
+    addNewZip:addNewZip,
     getImageOwner:getImageOwner,
     deleteImage:deleteImage,
     imageExists:imageExists,
