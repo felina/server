@@ -285,7 +285,6 @@ def upload_images():
     r = request_images(path + upload_image_path, test_image1, test_image2)
     response_handle(r, 'Image upload with project should not res false: ', True)
     response_object_check(r, jsr.images(test_image1, test_image2))
-
     ppass()
 
 

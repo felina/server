@@ -67,7 +67,7 @@ function addNewZip(user, zipHash, name, filename, callback) {
                 console.log(err.code);
                 callback(err);
             } else {
-                console.log('Inserted image into db.');
+                console.log('Inserted executable into db.');
                 callback(null, zipHash);
             }
         });

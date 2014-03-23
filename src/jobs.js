@@ -11,9 +11,35 @@ var s3 = new aws.S3();
 var PRIVATE_BUCKET = 'citizen.science.executable.storage';
 
 
-function jobRoutes(app, db) {
+function uploadZip(user, iInfo, db, callback) {
+    console.log('Trying to upload: ' + iInfo.zipHash);
+    var params = {
+        'Bucket': PRIVATE_BUCKET,
+        'Key': iInfo.zipHash,
+        'ContentType': iInfo.type,
+        'Body': iInfo.fileContents
+    };
+
+    return s3.putObject(params, function(err, data) {
+        if (err) {
+            console.log(err);
+            return callback(err);
+        } else {
+            return db.addNewZip(user, iInfo.zipHash, iInfo.name, iInfo.filename, function(dbErr, id) {
+                if (dbErr) {
+                    console.log(dbErr);
+                    return callback(dbErr);
+                } else {
+                    return callback(null, id);
+                }
+            });
+        }
+    });
+}
+
+function jobRoutes(app, auth, db) {
     // Job start req
-    app.post('/start', function(req, res) {
+    app.post('/start', auth.enforceLogin, function(req, res) {
         // Get the image IDs for processing
         var idData = req.files;
         var images = [];
@@ -39,7 +65,7 @@ function jobRoutes(app, db) {
 
     // Job progress check
     // For now, assume progress = percentage of possible images sent to processor
-    app.get('/progress', function(req, res) {
+    app.get('/progress', auth.enforceLogin, function(req, res) {
         var jobID = parseInt(req.query.id);
 
         if (_.isNaN(jobID)) {
@@ -62,7 +88,7 @@ function jobRoutes(app, db) {
     });
 
     // Job results
-    app.get('/results', function(req, res) {
+    app.get('/results', auth.enforceLogin, function(req, res) {
         var jobID = req.get('jobID');
         if (jobID) {
             console.log('Job results req: jobID ' + jobID);
@@ -82,7 +108,7 @@ function jobRoutes(app, db) {
 
     // Get all the jobs started by the researcher with the given id
     // TODO: actually get ID, read from database, etc.
-    app.get('/jobs', function(req, res) {
+    app.get('/jobs', auth.enforceLogin, function(req, res) {
         res.send({
             'res': true,
             'jobs': [
@@ -104,68 +130,70 @@ function jobRoutes(app, db) {
         });
     });
 
-    app.post('/target', function() {
+    app.post('/target', auth.enforceLogin, function() {
         console.log('posted executable to target');
     });
 
-    app.post('/exec', function(req, res) {
+    app.post('/exec', auth.enforceLogin, function(req, res) {
         async.map(Object.keys(req.files), function(fKey, done) {
+            // console.log(req.files);
             var iInfo = req.files[fKey];
+            iInfo['filename'] = fKey;
             var fd = fs.createReadStream(iInfo.path);
-            console.log(iInfo.path);
+            // console.log(iInfo.path);
+
             var hash = crypto.createHash('md5');
             hash.setEncoding('hex');
-
             fd.on('end', function() {
+                // console.log(done);
+
                 hash.end();
                 // console.log(hash.read()); // the desired sha1sum
                 iInfo.zipHash = hash.read();
-                console.log(iInfo.zipHash);
+                // console.log(iInfo.zipHash);
                 iInfo.name = req.body['name'];
+                iInfo.fileContents = fs.readFileSync(iInfo.path);
 
-                return db.zipExists(iInfo.felinaHash, function(iErr, exists) {
+                return db.zipExists(iInfo.zipHash, function(iErr, exists) {
                     if (exists === 0) {
                         // New image, upload!
                         return uploadZip(req.user, iInfo, db, done); // Will call done() for us
                     } else {
                         // Existing image, reject the request.
-                        return done('Zip already exists: ' + iInfo.name);
+                        console.trace(done);
+                        if (done) {
+                           return done('Zip already exists: ' + iInfo.name);
+                        }
                     }
                 });
             });
-
             // read all file and pipe it (write it) to the hash object
             fd.pipe(hash);
-
-        });  
+        }, 
+        function(err, idArr) {
+          // If anything errored, abort.
+          if (err) {
+              // TODO: be more clear if any images were uploaded or not.
+              if (err.code === 'ER_NO_REFERENCED_ROW_') {
+                  // We haven't met an FK constraint, this should be down to a bad project id.
+                  return res.send(new errors.APIErrResp(3, 'Invalid project.'));
+              } else {
+                  console.log(err);
+                  return res.send(new errors.APIErrResp(2, err));
+              }
+          } else {
+              // All images should have uploaded succesfully.
+              return res.send({
+                  'res': true,
+                  'ids': idArr
+              });
+          }
+      }
+        );  
     });
 }
 
-function uploadZip(user, iInfo, db, callback) {
-    console.log('Trying to upload: ' + iInfo.felinaHash);
-    var params = {
-        'Bucket': PRIVATE_BUCKET,
-        'Key': iInfo.felinaHash,
-        'ContentType': iInfo.type,
-        'Body': iInfo.fileContents
-    };
 
-    return s3.putObject(params, function(err, data) {
-        if (err) {
-            console.log(err);
-            return callback(err);
-        } else {
-            return db.addNewZip(user, pid, iInfo.felinaHash, function(dbErr, id) {
-                if (dbErr) {
-                    console.log(dbErr);
-                    return callback(dbErr);
-                } else {
-                    return callback(null, id);
-                }
-            });
-        }
-    });
-}
 
 module.exports = {
     jobRoutes: jobRoutes

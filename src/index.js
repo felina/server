@@ -83,7 +83,7 @@ images.imageRoutes(app, auth, db);
 meta.metaRoutes(app, auth, db);
 
 // Import job related routes, mostly dummy endpoints for now
-jobs.jobRoutes(app, db);
+jobs.jobRoutes(app, auth, db);
 
 // Import user routes
 user.userRoutes(app, auth, db);
