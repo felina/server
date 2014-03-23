@@ -32,7 +32,7 @@ node src/index.js
 
 ## Testing
 
-Create a new file ```test/db_settingsTest.json``` that is the same as ```config/db_settings.json``` but replace the line ```"database" : "felina"``` with ```"database" : "felinaTest"```, Otherwise the server has issues.
+Create a new file ```test/db_settingsTest.json``` that is the same as ```config/db_settings.json``` but replace the line ```"database" : "felina"``` with ```"database" : "felinaTest"```, otherwise the server has issues.
 
 Edit the file ```test/testConfig.json``` and change the paths of the two tests images to ones on your machine.  
 
@@ -40,6 +40,17 @@ To perform the tests run
 ```bash
 python test/testing.py
 ```
+
+Example testcase: 
+```python
+def test_name():
+    print_test('Test name')
+    r = requests.get(url=path + test_path, data=data_for_request, cookies=cookie) # .get or .post endpoint with parameters
+    response_handle(r, 'Explanation of error if res is not what is expected', True) # Bool is expected res value
+    response_object_check(r, jsr.test_name(test_params)) # Compare the response object to the expected response object
+    ppass()
+```
+When adding a testcase you must also add an expected result JSON object to test/jsonResponses.py. Try to make it dynamic eg.  the example response for an uploaded image computes the hash of the image to compare with the returned id. 
 
 
 ## License

@@ -613,7 +613,7 @@ function addImageAnno(iid, annotations, callback) {
     }
 }
 
-function updateMetaR(mdArr, callback, rSet) {
+function updateMetaR(uid, mdArr, callback, rSet) {
     if (mdArr.length === 0) {
         // Reached the end, send to callback.
         return callback(rSet);
@@ -653,8 +653,8 @@ function updateMetaR(mdArr, callback, rSet) {
         first = false;
     }
 
-    query += " WHERE `imageid`=?";
-    sub.push(md.id);
+    query += " WHERE `imageid`=? AND `ownerid`=?";
+    sub.push(md.id, uid);
 
     if (!first) {
         // Not first, so we are updating at least one value.
@@ -680,7 +680,12 @@ function updateMetaR(mdArr, callback, rSet) {
                     console.log(e);
                     // false if any errors occured in either query.
                     rSet.push(false);
+                } else if (r.affectedRows === 0) {
+                    // The given id was not found
+                    console.log('Update metadata id not found, or not owner.');
+                    rSet.push(false);
                 } else if (md.annotations !== null && annotationsLength > 0) {
+                    console.log('Adding image anno.');
                     return addImageAnno(md.id, md.annotations, function(e2, r2) {
                         if (e2) {
                             console.log(e2);
@@ -689,25 +694,26 @@ function updateMetaR(mdArr, callback, rSet) {
                             rSet.push(true);
                         }
 
-                        return updateMetaR(mdArr, callback, rSet);
+                        return updateMetaR(uid, mdArr, callback, rSet);
                     });
                 } else {
+                    console.log('No image anno');
                     rSet.push(true);
                 }
 
-                return updateMetaR(mdArr, callback, rSet);
+                return updateMetaR(uid, mdArr, callback, rSet);
             });
         });
     } else {
         console.log('Skipping entry with no meta.'); //TODO: anno support here
         rSet.push(false);
-        return updateMetaR(mdArr, callback, rSet);
+        return updateMetaR(uid, mdArr, callback, rSet);
     }
 }
 
 // Updates image metadata TODO: Check privileges!
-function addImageMeta(mdArr, callback) {
-    return updateMetaR(mdArr, callback, []);
+function addImageMeta(uid, mdArr, callback) {
+    return updateMetaR(uid, mdArr, callback, []);
 }
 
 // Checks eligibility to load an image.
