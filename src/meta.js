@@ -192,8 +192,10 @@ function parseQueryCombine(parsed, qRes, onSuccess, callback) {
                function(ele, acallback) {
                    if (ele && ele.metadata.priv !== null) {
                        // Success in setting metadata. Call on success to move the image to the other bucket.
-                       onSuccess(ele.id, ele.metadata.priv, acallback);
+                       return onSuccess(ele.id, ele.metadata.priv, acallback);
                    }
+
+                   return acallback();
                },
                function(err) {
                    if (err) {
@@ -224,7 +226,7 @@ function metaRoutes(app, auth, db) {
             res.send(new errors.APIErrResp(2, 'Invalid request.'));
         } else {
             var asParsed = req.body.slice(); // Use slice() to shallow copy the array, so we don't lose it's contents.
-            db.addImageMeta(req.body, function(sqlRes) {
+            db.addImageMeta(req.user.id, req.body, function(sqlRes) {
                 // sqlRes = Array of booleans
                 // asParsed = resultant parsed request
                 var errPresent = _.every(sqlRes); // TODO: Check for adjustments made in parser.
