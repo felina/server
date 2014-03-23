@@ -1,5 +1,9 @@
+var fs = require('fs');
 var _ = require('underscore');
 var errors = require('./error.js');
+var crypto = require('crypto');
+var async = require('async');
+
 
 function jobRoutes(app, db) {
     // Job start req
@@ -99,7 +103,21 @@ function jobRoutes(app, db) {
     });
 
     app.post('/exec', function(req, res) {
+        async.map(Object.keys(req.files), function(fKey, done) {
+            var iInfo = req.files[fKey];
+            var fd = fs.createReadStream(iInfo.path);
+            var hash = crypto.createHash('sha1');
+            hash.setEncoding('hex');
 
+            fd.on('end', function() {
+                hash.end();
+                console.log(hash.read()); // the desired sha1sum
+            });
+
+            // read all file and pipe it (write it) to the hash object
+            fd.pipe(hash);
+
+        });  
     });
 }
 

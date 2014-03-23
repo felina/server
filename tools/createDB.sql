@@ -6,28 +6,39 @@ CREATE SCHEMA IF NOT EXISTS `felina` DEFAULT CHARACTER SET utf8 COLLATE utf8_gen
 USE `felina` ;
 
 
--- -- -----------------------------------------------------
--- -- Table `felina`.`executables`
--- -- -----------------------------------------------------
--- CREATE TABLE IF NOT EXISTS `felina`.`executables` (
---   `execid` INT NOT NULL AUTO_INCREMENT,
---   `exechash` 
---   `name` VARCHAR(45) NOT NULL,
---   PRIMARY KEY (`projectid`),
---   UNIQUE INDEX `name_UNIQUE` (`name` ASC))
--- ENGINE = InnoDB;
+-- -----------------------------------------------------
+-- Table `felina`.`executables`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `felina`.`executables` (
+  `execid` INT NOT NULL AUTO_INCREMENT,
+  `exechash` CHAR(32) NULL,
+  `name` VARCHAR(45) NOT NULL,
+  `ownerid` INT NOT NULL,
+  PRIMARY KEY (`execid`),
+  UNIQUE INDEX `exechash_UNIQUE` (`exechash` ASC),
+  CONSTRAINT `exec_owner_rel`
+    FOREIGN KEY (`ownerid`)
+    REFERENCES `felina`.`users` (`userid`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
+ENGINE = InnoDB;
 
--- -- -----------------------------------------------------
--- -- Table `felina`.`DLLs`
--- -- -----------------------------------------------------
--- CREATE TABLE IF NOT EXISTS `felina`.`executables` (
---   `dllid` INT NOT NULL AUTO_INCREMENT,
---   `name` VARCHAR(45) NOT NULL,
---   `desc` VARCHAR(255) NOT NULL,
---   `active` TINYINT(1) NOT NULL DEFAULT 0,
---   PRIMARY KEY (`projectid`),
---   UNIQUE INDEX `name_UNIQUE` (`name` ASC))
--- ENGINE = InnoDB;
+-- -----------------------------------------------------
+-- Table `felina`.`DLLs`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `felina`.`dlls` (
+  `dllid` INT NOT NULL AUTO_INCREMENT,
+  `dllhash` CHAR(32) NULL,
+  `name` VARCHAR(45) NOT NULL,
+  `ownerid` INT NOT NULL,
+  PRIMARY KEY (`dllid`),
+  UNIQUE INDEX `dllhash_UNIQUE` (`dllhash` ASC),
+  CONSTRAINT `dll_owner_rel`
+    FOREIGN KEY (`ownerid`)
+    REFERENCES `felina`.`users` (`userid`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
+ENGINE = InnoDB;
 
 -- -----------------------------------------------------
 -- Table `felina`.`projects`
