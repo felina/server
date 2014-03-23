@@ -5,41 +5,6 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';
 CREATE SCHEMA IF NOT EXISTS `felina` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci ;
 USE `felina` ;
 
-
--- -----------------------------------------------------
--- Table `felina`.`executables`
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `felina`.`executables` (
-  `execid` INT NOT NULL AUTO_INCREMENT,
-  `exechash` CHAR(32) NULL,
-  `name` VARCHAR(45) NOT NULL,
-  `ownerid` INT NOT NULL,
-  PRIMARY KEY (`execid`),
-  UNIQUE INDEX `exechash_UNIQUE` (`exechash` ASC),
-  CONSTRAINT `exec_owner_rel`
-    FOREIGN KEY (`ownerid`)
-    REFERENCES `felina`.`users` (`userid`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE)
-ENGINE = InnoDB;
-
--- -----------------------------------------------------
--- Table `felina`.`DLLs`
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `felina`.`dlls` (
-  `dllid` INT NOT NULL AUTO_INCREMENT,
-  `dllhash` CHAR(32) NULL,
-  `name` VARCHAR(45) NOT NULL,
-  `ownerid` INT NOT NULL,
-  PRIMARY KEY (`dllid`),
-  UNIQUE INDEX `dllhash_UNIQUE` (`dllhash` ASC),
-  CONSTRAINT `dll_owner_rel`
-    FOREIGN KEY (`ownerid`)
-    REFERENCES `felina`.`users` (`userid`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE)
-ENGINE = InnoDB;
-
 -- -----------------------------------------------------
 -- Table `felina`.`projects`
 -- -----------------------------------------------------
@@ -347,6 +312,25 @@ CREATE TABLE IF NOT EXISTS `felina`.`job_images` (
   CONSTRAINT `images_jimages_relb`
     FOREIGN KEY (`imageb`)
     REFERENCES `felina`.`images` (`imageid`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `felina`.`executables`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `felina`.`executables` (
+  `exeid` CHAR(32) NOT NULL,
+  `name` VARCHAR(45) NOT NULL,
+  `filename` VARCHAR(45) NOT NULL,
+  `ownerid` INT NOT NULL,
+  PRIMARY KEY (`exeid`),
+  UNIQUE INDEX `name_UNIQUE` (`name` ASC),
+  INDEX `executables_users_rel_idx` (`ownerid` ASC),
+  CONSTRAINT `executables_users_rel`
+    FOREIGN KEY (`ownerid`)
+    REFERENCES `felina`.`users` (`email`)
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
