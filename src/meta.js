@@ -105,94 +105,98 @@ function parseAnnotations(an) {
     }
 }
 
-function parseMetadata(mdArr) {
-    if (!_.isArray(mdArr)) {
-        console.log('Metadata not a list.');
+function parseMetadata(mdObj) {
+    if (!_.isObject(mdObj)) {
+        console.log('Metadata not an object.');
         return false;
     } else {
-        for (var i = 0; i < mdArr.length; i++) {
-            if (typeof mdArr[i].id === 'string' && mdArr[i].id != null && mdArr[i].id.length === 32) {
-                // Check if title has been sent
-                if (isUnset(mdArr[i].metadata.title)) {
-                    // Mark as unset
-                    mdArr[i].metadata.title = null;
-                } else if (typeof mdArr[i].metadata.title !== 'string') {
-                    mdArr[i].metadata.title = false;
-                }
-
-                // Check if datetime has been sent
-                if (!isUnset(mdArr[i].metadata.datetime)) {
-                    mdArr[i].metadata.datetime = Date.parse(mdArr[i].metadata.datetime);
-                    if (isNaN(mdArr[i].metadata.datetime)) {
-                        console.log('Failed to parse datetime field.');
-                        // Mark as invalid
-                        mdArr[i].metadata.datetime = false;
+        for (var id in mdObj) {
+            if (mdObj.hasOwnProperty(id)) {
+                if (typeof id === 'string' && id.length === 32) {
+                    var md = mdObj[id];
+                    // Check if title has been sent
+                    if (isUnset(md.metadata.title)) {
+                        // Mark as unset
+                        md.metadata.title = null;
+                    } else if (typeof md.metadata.title !== 'string') {
+                        md.metadata.title = false;
+                    }
+                    
+                    // Check if datetime has been sent
+                    if (!isUnset(md.metadata.datetime)) {
+                        md.metadata.datetime = Date.parse(md.metadata.datetime);
+                        if (isNaN(md.metadata.datetime)) {
+                            console.log('Failed to parse datetime field.');
+                            // Mark as invalid
+                            md.metadata.datetime = false;
+                        } else {
+                            // Convert to Date object.
+                            md.metadata.datetime = new Date(md.metadata.datetime);
+                        }
                     } else {
-                        // Convert to Date object.
-                        mdArr[i].metadata.datetime = new Date(mdArr[i].metadata.datetime);
+                        // Mark as unset
+                        md.metadata.datetime = null;
                     }
-                } else {
-                    // Mark as unset
-                    mdArr[i].metadata.datetime = null;
-                }
-
-                // Check if location has been sent
-                if (!isUnset(mdArr[i].metadata.location)) {
-                    if (typeof mdArr[i].metadata.location !== 'object' || typeof mdArr[i].metadata.location.coords !== 'object' ||
-                        typeof mdArr[i].metadata.location.coords.lat === 'undefined' ||
-                        typeof mdArr[i].metadata.location.coords.lng === 'undefined' ||
-                        mdArr[i].metadata.location.coords.lat < -90 || mdArr[i].metadata.location.coords.lat > 90 ||
-                        mdArr[i].metadata.location.coords.lng < -180 || mdArr[i].metadata.location.coords.lng > 180) {
-                        console.log('Invalid location.');
-                        // Mark as invalid
-                        mdArr[i].metadata.location = false;
-                    }
-                } else {
-                    // Mark as unset
-                    mdArr[i].metadata.location = null;
-                }
-
-                // Check if priv has been sent
-                if (!isUnset(mdArr[i].metadata.priv)) {
-                    // Accept any type for priv, convert to a simple boolean.
-                    mdArr[i].metadata.priv = !! mdArr[i].metadata.priv;
-                } else {
-                    // Mark as unset
-                    mdArr[i].metadata.priv = null;
-                }
-
-                // Check if annotations have been sent
-                if (!isUnset(mdArr[i].annotations)) {
-                    if (_.isObject(mdArr[i].annotations)) {
-                        // Parse annotations list
-                        parseAnnotations(mdArr[i].annotations);
+                    
+                    // Check if location has been sent
+                    if (!isUnset(md.metadata.location)) {
+                        if (typeof md.metadata.location !== 'object' || typeof md.metadata.location.coords !== 'object' ||
+                            typeof md.metadata.location.coords.lat === 'undefined' ||
+                            typeof md.metadata.location.coords.lng === 'undefined' ||
+                            md.metadata.location.coords.lat < -90 || md.metadata.location.coords.lat > 90 ||
+                            md.metadata.location.coords.lng < -180 || md.metadata.location.coords.lng > 180) {
+                            console.log('Invalid location.');
+                            // Mark as invalid
+                            md.metadata.location = false;
+                        }
                     } else {
-                        console.log('Invalid annotations.');
-                        mdArr[i].annotations = false;
+                        // Mark as unset
+                        md.metadata.location = null;
+                    }
+                    
+                    // Check if priv has been sent
+                    if (!isUnset(md.metadata.priv)) {
+                        // Accept any type for priv, convert to a simple boolean.
+                        md.metadata.priv = !! md.metadata.priv;
+                    } else {
+                        // Mark as unset
+                        md.metadata.priv = null;
+                    }
+                    
+                    // Check if annotations have been sent
+                    if (!isUnset(md.annotations)) {
+                        if (_.isObject(md.annotations)) {
+                            // Parse annotations list
+                            parseAnnotations(md.annotations);
+                        } else {
+                            console.log('Invalid annotations.');
+                            md.annotations = false;
+                        }
+                    } else {
+                        // Mark as unset
+                        md.annotations = [];
                     }
                 } else {
-                    // Mark as unset
-                    mdArr[i].annotations = [];
+                    console.log('No id specified for metadata.');
+                    mdObj[id] = false;
+                    console.log(mdObj);
                 }
-            } else {
-                console.log('No id specified for metadata.');
-                mdArr[i] = false;
             }
         }
     }
-    return mdArr;
+    return mdObj;
 }
 
 function parseQueryCombine(parsed, qRes, onSuccess, callback) {
     var ret = _.map(qRes, function(val, i) {
-        return (val === false) ? false : parsed[i];
+        return (val[1] === false) ? false : _.pairs(parsed)[i];
     });
 
     async.each(ret,
                function(ele, acallback) {
-                   if (ele && ele.metadata.priv !== null) {
+                   if (ele[1] && ele[1].metadata.priv !== null) {
                        // Success in setting metadata. Call on success to move the image to the other bucket.
-                       return onSuccess(ele.id, ele.metadata.priv, acallback);
+                       return onSuccess(ele[0], ele[1].metadata.priv, acallback);
                    }
 
                    return acallback();
@@ -221,11 +225,14 @@ function metaRoutes(app, auth, db) {
     // The four properties of a metadata object are all optional. If you do not wish to set one of these properties,
     // the property should be left undefined or set to null.
     app.post('/upload/metadata', auth.enforceLogin, function(req, res) {
+        console.log('META UP');
+        console.log(JSON.stringify(req.body));
+        console.log('META DOWN');
         // Check that we've been sent an array
         if (parseMetadata(req.body) === false) {
             res.send(new errors.APIErrResp(2, 'Invalid request.'));
         } else {
-            var asParsed = req.body.slice(); // Use slice() to shallow copy the array, so we don't lose it's contents.
+            var asParsed = _.clone(req.body); // Use slice() to shallow copy the array, so we don't lose it's contents.
             db.addImageMeta(req.user.id, req.body, function(sqlRes) {
                 // sqlRes = Array of booleans
                 // asParsed = resultant parsed request

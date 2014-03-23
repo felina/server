@@ -613,17 +613,41 @@ function addImageAnno(iid, annotations, callback) {
     }
 }
 
-function updateMetaR(uid, mdArr, callback, rSet) {
-    if (mdArr.length === 0) {
+function updateMetaR(uid, mdObj, callback, rSet) {
+    var topID = null;
+    var mdLength = 0;
+
+    for (var id in mdObj) {
+        if (mdObj.hasOwnProperty(id)) {
+            if (topID === null) {
+                topID = id;
+            }
+            mdLength++;
+        }
+    }
+
+    if (mdLength === 0) {
         // Reached the end, send to callback.
         return callback(rSet);
     }
 
     var first = true;
-    var md = mdArr.shift();
+    var md = mdObj[id];
+    delete mdObj[id];
+    console.log('REMOVING: ' + id);
+    console.log(mdObj);
+    console.log(md);
     var query = "UPDATE `images` SET";
     var sub = [];
 
+    if (md === false) {
+        console.log('Skipping an invalid id.');
+        rSet.push(false);
+        return updateMetaR(uid, mdObj, callback, rSet);
+    }
+
+    console.log('WHY AM I HERE?');
+        
     if (md.metadata.title) {
         // Add me
     }
@@ -654,7 +678,7 @@ function updateMetaR(uid, mdArr, callback, rSet) {
     }
 
     query += " WHERE `imageid`=? AND `ownerid`=?";
-    sub.push(md.id, uid);
+    sub.push(id, uid);
 
     if (!first) {
         // Not first, so we are updating at least one value.
@@ -686,7 +710,7 @@ function updateMetaR(uid, mdArr, callback, rSet) {
                     rSet.push(false);
                 } else if (md.annotations !== null && annotationsLength > 0) {
                     console.log('Adding image anno.');
-                    return addImageAnno(md.id, md.annotations, function(e2, r2) {
+                    return addImageAnno(id, md.annotations, function(e2, r2) {
                         if (e2) {
                             console.log(e2);
                             rSet.push(false);
@@ -694,20 +718,20 @@ function updateMetaR(uid, mdArr, callback, rSet) {
                             rSet.push(true);
                         }
 
-                        return updateMetaR(uid, mdArr, callback, rSet);
+                        return updateMetaR(uid, mdObj, callback, rSet);
                     });
                 } else {
                     console.log('No image anno');
                     rSet.push(true);
                 }
 
-                return updateMetaR(uid, mdArr, callback, rSet);
+                return updateMetaR(uid, mdObj, callback, rSet);
             });
         });
     } else {
         console.log('Skipping entry with no meta.'); //TODO: anno support here
         rSet.push(false);
-        return updateMetaR(uid, mdArr, callback, rSet);
+        return updateMetaR(uid, mdObj, callback, rSet);
     }
 }
 
