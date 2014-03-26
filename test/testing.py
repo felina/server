@@ -318,32 +318,7 @@ def meta_upload():
     print_test('Metadata upload')
     # print jsr.meta_example(test_image1)
     r = requests.post(url = path + meta_upload_path, data=jsr.meta_example(test_image1), cookies=cookie)
-    print r.text
-    response_handle(r, 'Meta upload should not res false', True)
-
-    # r = requests.post(url = path + meta_upload_path, data=[
-    #           {
-    #             "id": jsr.hash_image(test_image1),
-    #             "datetime": "2014-02-14T03:39:13.000Z"
-    #             # ,
-    #             # "location": 
-    #             #   {
-    #             #     "lat": 54.5,
-    #             #     "lon": 0.4
-    #             #   },
-    #             # "private": 1,
-    #             # "annotations": [
-    #             #   {
-    #             #     "region": [
-    #             #       { "x": 100, "y": 200 },
-    #             #       { "x": 150, "y": 240 }
-    #             #     ],
-    #             #     "tag": "I will be replaced soon, dont use me"
-    #             #   }
-    #             # ]
-    #           }], cookies=cookie)
-
-    print r.text
+    response_handle(r, 'Meta upload should not res false: ', True)
 
 def image_listing():
     print_test('Image listing')
