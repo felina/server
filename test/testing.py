@@ -200,6 +200,17 @@ def response_object_check(res, correct):
     if json.loads(res.text) != correct:
         'Results unequal expected ' + str(correct) + ' got ' + str(json.loads(res.text))
 
+def bin_equal(im1, im2):
+    b = ''.join([str(ord(x)) for x in im1])
+    a = ''.join([str(ord(y)) for y in im2])
+    return a == b
+
+def response_handle_binary(r, message2, bin_expected):
+    if (not bin_equal(r.content, bin_expected)):
+        pfail()
+        print message2 + r.url
+        sys.exit(1)
+
 def non_existing_user():
     print_test('Non existing user')
     fake_params = {'email' : 'fakeEmail@gmail.com', 'pass' : 'fakepass'}
@@ -260,7 +271,6 @@ def upload_image_no_project():
     response_handle(r, 'Image upload with no project should have failed: ', False)
     response_object_check(r, jsr.upload_image_no_project())
     ppass()
-    
 
 def register_project():
     print_test('Register project')
@@ -297,20 +307,12 @@ def upload_existing_image():
     response_object_check(r, jsr.existing_image(test_image1))
     ppass()
 
-# def images_equal(im1, im2):
-#     b = ''.join([str(ord(x)) for x in im1])
-#     a = ''.join([str(ord(y)) for y in im2])
-#     print len(a), len(b)
-#     return a == b
+def retrieve_images():
+    print_test('Retrieve images')
 
-# def retrieve_images():
-#     print_test('Retrieve images')
-
-#     r = requests.get(url=path + upload_image_path + '/' + jsr.hash_image(test_image1), cookies=cookie)
-#     if images_equal(r.text, open(test_image1, 'rb').read()):
-#         print 'Equal!'
-#     else:
-#         print 'Not equal!'
+    r = requests.get(url=path + upload_image_path + '/' + jsr.hash_image(test_image1), cookies=cookie)
+    response_handle_binary(r, 'Uploaded image should match the returned image at URL: ', open(test_image1, 'rb').read())
+    ppass()
 
 def meta_upload():
     print_test('Metadata upload')
@@ -377,7 +379,7 @@ def main():
     register_project()
     upload_images()
     upload_existing_image()
-    # retrieve_images()
+    retrieve_images()
     meta_upload() # not working
     image_listing()
 
