@@ -5,6 +5,7 @@ var async = require('async');
 var _ = require('underscore');
 var errors = require('./error.js');
 var users = require('./user.js');
+var express = require('express');
 
 aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
@@ -199,7 +200,7 @@ function imageRoutes(app, auth, db) {
 
     // Image/s upload endpoint
     // Uses express.multipart - this is deprecated and bad! TODO: Replace me!
-    app.post('/img', auth.enforceLogin, function(req, res) {
+    app.post('/img', [auth.enforceLogin, express.multipart()], function(req, res) {
         // Don't return here, temp file cleanup at end!
         async.map(Object.keys(req.files),
                   function(fKey, done) {

@@ -4,6 +4,7 @@ var aws = require('aws-sdk');
 var errors = require('./error.js');
 var crypto = require('crypto');
 var async = require('async');
+var express = require('express');
 
 aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
@@ -134,7 +135,7 @@ function jobRoutes(app, auth, db) {
         console.log('posted executable to target');
     });
 
-    app.post('/exec', auth.enforceLogin, function(req, res) {
+    app.post('/exec', [auth.enforceLogin, express.multipart()], function(req, res) {
         async.map(Object.keys(req.files), function(fKey, done) {
             // console.log(req.files);
             var iInfo = req.files[fKey];
@@ -192,8 +193,6 @@ function jobRoutes(app, auth, db) {
         );  
     });
 }
-
-
 
 module.exports = {
     jobRoutes: jobRoutes
