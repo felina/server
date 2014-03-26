@@ -245,10 +245,10 @@ function imageRoutes(app, auth, db) {
                           // TODO: be more clear if any images were uploaded or not.
                           if (err.code === 'ER_NO_REFERENCED_ROW_') {
                               // We haven't met an FK constraint, this should be down to a bad project id.
-                              return res.send(new errors.APIErrResp(3, 'Invalid project.'));
+                              return res.send(new errors.APIErrResp(3, 'Invalid project.'), 400);
                           } else {
                               console.log(err);
-                              return res.send(new errors.APIErrResp(2, err));
+                              return res.send(new errors.APIErrResp(2, err), 400);
                           }
                       } else {
                           // All images should have uploaded succesfully.
