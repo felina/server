@@ -200,6 +200,7 @@ function imageRoutes(app, auth, db) {
     // Image/s upload endpoint
     // Uses express.multipart - this is deprecated and bad! TODO: Replace me!
     app.post('/img', auth.enforceLogin, function(req, res) {
+        // Don't return here, temp file cleanup at end!
         async.map(Object.keys(req.files),
                   function(fKey, done) {
                       var iInfo = req.files[fKey];
@@ -258,8 +259,19 @@ function imageRoutes(app, auth, db) {
                           });
                       }
                   });
-    }); // End image upload endpoint.
 
+        // Cleanup all temporary files used by upload.
+        async.each(Object.keys(req.files),
+                   function(fKey, done) {
+                       console.log('Deleting: ' + req.files[fKey].path);
+                       fs.unlink(req.files[fKey].path, done);
+                   },
+                   function(e) {
+                       if (e) {
+                           console.log(e);
+                       }
+                   });
+    }); // End image upload endpoint.
 
 }
 
