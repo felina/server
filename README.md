@@ -36,9 +36,14 @@ Create a new file ```test/db_settingsTest.json``` that is the same as ```config/
 
 Edit the file ```test/testConfig.json``` and change the paths of the two tests images to ones on your machine.  
 
+The test scripts require some dependencies to be installed on your system. If you're on Debian, or a derivative, you can use the setup script provided (tested on Debian 7):
+```bash
+./test/setup.sh
+```
+
 To perform the tests run
 ```bash
-python test/testing.py
+./test/testing.py
 ```
 
 Example testcase: 

@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from requests_toolbelt import MultipartEncoder
 import MySQLdb as mdb
 import sys
