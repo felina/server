@@ -990,10 +990,11 @@ function getUser(id, done) {
 
     var sub = [id];
     query = mysql.format(query, sub);
-    console.log(query);
+
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             console.log(connErr);
+            console.log(query);
             return done('Database error', false);
         }
 
@@ -1005,7 +1006,6 @@ function getUser(id, done) {
                 if (res.length === 0) {
                     done(null, false);
                 } else {
-                    console.log(res);
                     var user = new users.User(id, res[0].name, res[0].email, users.privilegeFromString(res[0].usertype), res[0].gravatar, res[0].supervisor, res[0].assigned_project);
                     if (user.id === false) {
                         done('User settings invalid.', false);
