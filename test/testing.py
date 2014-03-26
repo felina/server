@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from mimetypes import guess_type
 from requests_toolbelt import MultipartEncoder
 import MySQLdb as mdb
 import sys
@@ -253,7 +254,7 @@ def upload_image_no_project():
     m = MultipartEncoder(
         fields = {
             'filename_project': '1',
-            'filename': ('filename', open(test_image1, 'rb'), 'image/png')
+            'filename': ('filename', open(test_image1, 'rb'), guess_type(test_image1)[0])
         })
     r = requests.post(url=path + upload_image_path, data=m, headers={'Content-Type': m.content_type}, cookies=cookie)
     response_handle(r, 'Image upload with no project should have failed: ', False)
@@ -274,7 +275,7 @@ def request_images(path_, *images):
     tb_fields = {}
     for im in images:
         tb_fields[im + '_project'] = str(project_details['id'])
-        tb_fields[im] = (im, open(im, 'rb'), 'image/' + im.split('.')[-1])
+        tb_fields[im] = (im, open(im, 'rb'), guess_type(im)[0])
 
     m = MultipartEncoder (
         fields = tb_fields
@@ -288,7 +289,6 @@ def upload_images():
     response_handle(r, 'Image upload with project should not res false: ', True)
     response_object_check(r, jsr.images(test_image1, test_image2))
     ppass()
-
 
 def upload_existing_image():
     print_test('Upload existing image')
