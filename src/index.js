@@ -44,8 +44,8 @@ var allowCrossDomain = function(req, res, next) {
 
 app.configure(function() {
     app.use(allowCrossDomain);
+    app.use(express.logger('dev'));
     app.use(express.static(__dirname + '/../static'));
-    app.use(express.logger());
     app.use(express.cookieParser());
     // bodyParser is deprecated, replaced by json and urlencoded
     //app.use(express.bodyParser());
