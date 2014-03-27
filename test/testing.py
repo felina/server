@@ -40,7 +40,6 @@ test_number = 1
 jsr = jsonResponses.JsonResponses()
 
 
-
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -57,6 +56,7 @@ class bcolors:
         self.FAIL = ''
         self.ENDC = ''
 
+
 def color_str(s, c):
     h = ''
     if c == 'red':
@@ -65,16 +65,20 @@ def color_str(s, c):
         h = bcolors.HEADER
     return h + s + bcolors.ENDC
 
+
 def exit_handler():
     swap_configs()
     global server_process
     server_process.kill()
 
-# 
+#
+
+
 def swap_configs():
     os.system('mv config/db_settings.json test/db_settings.json')
     os.system('mv test/db_settingsTest.json config/db_settings.json')
     os.system('mv test/db_settings.json test/db_settingsTest.json')
+
 
 def exec_sql_file(cursor, sql_file):
     print "[INFO] Executing SQL script file: '%s'" % (sql_file)
@@ -89,11 +93,14 @@ def exec_sql_file(cursor, sql_file):
         if re.match(r'--', line):  # ignore sql comment lines
             continue
         # statement = statement.replace('felina', 'felinaTest')
-        if not re.search(r'[^-;]+;', line):  # keep appending lines that don't end in ';'
+        # keep appending lines that don't end in ';'
+        if not re.search(r'[^-;]+;', line):
             statement = statement + line
-        else:  # when you get a line ending in ';' then exec statement and reset for next statement
+        # when you get a line ending in ';' then exec statement and reset for
+        # next statement
+        else:
             statement = statement + line
-            #print "\n\n[DEBUG] Executing SQL statement:\n%s" % (statement)
+            # print "\n\n[DEBUG] Executing SQL statement:\n%s" % (statement)
             statement = replace_all(statement, {'felina': 'felinaTest'})
             try:
                 cursor.execute(statement)
@@ -104,14 +111,14 @@ def exec_sql_file(cursor, sql_file):
 
 
 # Remove old database if it exists and then load the
-# test database. 
+# test database.
 def clear_database():
     try:
         # os
-        con = mdb.connect(db_settings['host'], 
-                          db_settings['user'], 
-                          db_settings['password'], 
-                          local_infile = 1)
+        con = mdb.connect(db_settings['host'],
+                          db_settings['user'],
+                          db_settings['password'],
+                          local_infile=1)
         cur = con.cursor()
         cur.execute("SELECT VERSION()")
         ver = cur.fetchone()
@@ -124,16 +131,30 @@ def clear_database():
         cur.execute("USE felinaTest;")
 
     except mdb.Error, e:
-        print "Error %d: %s" % (e.args[0],e.args[1])
+        print "Error %d: %s" % (e.args[0], e.args[1])
         sys.exit(1)
-        
-    finally:       
-        if con:    
+
+    finally:
+        if con:
             con.close()
 
+
+def kill_existing_server():
+    o = subprocess.Popen(
+        "ps -a | grep node", stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+    lines = ''.join(
+        [x for x in iter(lambda: o.stdout.read(1), '')]).split('\n')
+    for line in lines:
+        line = line.split()
+        if 'src/index.js' in line:
+            os.system('kill -9 ' + line[0])
+
+
 def start_server():
+    kill_existing_server()
     start = time.time()
-    process = subprocess.Popen('node src/index.js', stdout=subprocess.PIPE, shell=True)
+    process = subprocess.Popen(
+        'node src/index.js', stdout=subprocess.PIPE, shell=True)
     output = ''
     for c in iter(lambda: process.stdout.read(1), ''):
         if time.time() - start > 10:
@@ -147,6 +168,7 @@ def start_server():
             server_process = process
             break
             # return process
+
 
 def server_up():
     print_test('Server up')
@@ -165,13 +187,16 @@ def server_up():
     response_object_check(r, jsr.server())
     ppass()
 
+
 def print_test(ttext):
     global test_number
     print 'Test ' + str(test_number) + ': ' + ttext + ' -',
     test_number += 1
 
+
 def ppass():
     print color_str('Pass', 'blue')
+
 
 def pfail():
     print color_str('Fail', 'red')
@@ -179,6 +204,8 @@ def pfail():
 # param1 is the result of the api call
 # param2 is the message to be displayed conditional on param3
 # param3 is whether 'res' in the result should be true or false
+
+
 def response_handle(r, message2, res_expected):
     try:
         res = json.loads(r.text)['res']
@@ -192,18 +219,22 @@ def response_handle(r, message2, res_expected):
             print message2 + r.text
             sys.exit(1)
 
+
 def response_object_check(res, correct):
     # print json.loads(res.text), correct
     if json.loads(res.text) != correct:
-        'Results unequal expected ' + str(correct) + ' got ' + str(json.loads(res.text))
+        'Results unequal expected ' + \
+            str(correct) + ' got ' + str(json.loads(res.text))
+
 
 def non_existing_user():
     print_test('Non existing user')
-    fake_params = {'email' : 'fakeEmail@gmail.com', 'pass' : 'fakepass'}
+    fake_params = {'email': 'fakeEmail@gmail.com', 'pass': 'fakepass'}
     r = requests.post(url=path + login_path, data=fake_params)
     response_handle(r, 'Fake user apparently exists: ', False)
     response_object_check(r, jsr.non_existing_user())
     ppass()
+
 
 def register_user():
     print_test('Register user')
@@ -214,12 +245,14 @@ def register_user():
     response_object_check(r, jsr.register_user(register_details))
     ppass()
 
+
 def login_check():
     print_test('Login check')
     r = requests.get(url=path + login_check_path, cookies=cookie)
     response_handle(r, 'User cookie did not persist after register', True)
     response_object_check(r, jsr.login_check(register_details))
     ppass()
+
 
 def logout():
     print_test('Logout')
@@ -230,6 +263,7 @@ def logout():
     response_object_check(r, jsr.logout_login())
     ppass()
 
+
 def login():
     print_test('Login')
     r = requests.post(url=path + login_path, data=register_details)
@@ -239,34 +273,41 @@ def login():
     response_object_check(r, jsr.login(register_details))
     ppass()
 
+
 def register_existing():
     print_test('Register existing user')
     r = requests.post(url=path + register_path, data=register_details)
-    response_handle(r, 'Existing user registration failed with message: ', False)
+    response_handle(
+        r, 'Existing user registration failed with message: ', False)
     response_object_check(r, jsr.existing_register())
     ppass()
+
 
 def upload_image_no_project():
     print_test('Upload image no project')
     m = MultipartEncoder(
-        fields = {
+        fields={
             'filename_project': '1',
             'filename': ('filename', open(test_image1, 'rb'), 'image/png')
         })
-    r = requests.post(url=path + upload_image_path, data=m, headers={'Content-Type': m.content_type}, cookies=cookie)
-    response_handle(r, 'Image upload with no project should have failed: ', False)
+    r = requests.post(url=path + upload_image_path, data=m,
+                      headers={'Content-Type': m.content_type}, cookies=cookie)
+    response_handle(
+        r, 'Image upload with no project should have failed: ', False)
     response_object_check(r, jsr.upload_image_no_project())
     ppass()
-    
+
 
 def register_project():
     print_test('Register project')
     global project_details
-    r = requests.post(url=path + new_project_path, data=project_details, cookies=cookie)
+    r = requests.post(
+        url=path + new_project_path, data=project_details, cookies=cookie)
     response_handle(r, 'Project create failed: ', True)
     response_object_check(r, jsr.register_project(project_details))
     project_details['id'] = json.loads(r.text)['project']['id']
     ppass()
+
 
 def request_images(path_, *images):
     tb_fields = {}
@@ -274,8 +315,8 @@ def request_images(path_, *images):
         tb_fields[im + '_project'] = str(project_details['id'])
         tb_fields[im] = (im, open(im, 'rb'), 'image/' + im.split('.')[-1])
 
-    m = MultipartEncoder (
-        fields = tb_fields
+    m = MultipartEncoder(
+        fields=tb_fields
     )
     return requests.post(url=path_, data=m, headers={'Content-Type': m.content_type}, cookies=cookie)
 
@@ -283,7 +324,8 @@ def request_images(path_, *images):
 def upload_images():
     print_test('Upload images')
     r = request_images(path + upload_image_path, test_image1, test_image2)
-    response_handle(r, 'Image upload with project should not res false: ', True)
+    response_handle(
+        r, 'Image upload with project should not res false: ', True)
     response_object_check(r, jsr.images(test_image1, test_image2))
     ppass()
 
@@ -291,7 +333,8 @@ def upload_images():
 def upload_existing_image():
     print_test('Upload existing image')
     r = request_images(path + upload_image_path, test_image1)
-    response_handle(r, 'Image upload with project should not res true: ', False)
+    response_handle(
+        r, 'Image upload with project should not res true: ', False)
     response_object_check(r, jsr.existing_image(test_image1))
     ppass()
 
@@ -310,10 +353,12 @@ def upload_existing_image():
 #     else:
 #         print 'Not equal!'
 
+
 def meta_upload():
     print_test('Metadata upload')
     # print jsr.meta_example(test_image1)
-    r = requests.post(url = path + meta_upload_path, data=jsr.meta_example(test_image1), cookies=cookie)
+    r = requests.post(url=path + meta_upload_path,
+                      data=jsr.meta_example(test_image1), cookies=cookie)
     print r.text
     response_handle(r, 'Meta upload should not res false', True)
 
@@ -321,25 +366,26 @@ def meta_upload():
     #           {
     #             "id": jsr.hash_image(test_image1),
     #             "datetime": "2014-02-14T03:39:13.000Z"
-    #             # ,
-    #             # "location": 
-    #             #   {
-    #             #     "lat": 54.5,
-    #             #     "lon": 0.4
-    #             #   },
-    #             # "private": 1,
-    #             # "annotations": [
-    #             #   {
-    #             #     "region": [
-    #             #       { "x": 100, "y": 200 },
-    #             #       { "x": 150, "y": 240 }
-    #             #     ],
-    #             #     "tag": "I will be replaced soon, dont use me"
-    #             #   }
-    #             # ]
+    # ,
+    # "location":
+    # {
+    # "lat": 54.5,
+    # "lon": 0.4
+    # },
+    # "private": 1,
+    # "annotations": [
+    # {
+    # "region": [
+    # { "x": 100, "y": 200 },
+    # { "x": 150, "y": 240 }
+    # ],
+    # "tag": "I will be replaced soon, dont use me"
+    # }
+    # ]
     #           }], cookies=cookie)
 
     print r.text
+
 
 def image_listing():
     print_test('Image listing')
@@ -350,15 +396,21 @@ def image_listing():
     response_object_check(r, jsr.image_listing(test_image1, test_image2))
     ppass()
 
+
 def test_name():
     print_test('Test name')
-    r = requests.get(url=path + test_path, cookies=cookie) # plus other parameters
-    response_handle(r, 'Explanation of error if res is not what is expected', True) # Bool is expected res value
-    response_object_check(r, jsr.test_name(test_params)) # Compare the response object to the expected response object
+    # plus other parameters
+    r = requests.get(url=path + test_path, cookies=cookie)
+    # Bool is expected res value
+    response_handle(
+        r, 'Explanation of error if res is not what is expected', True)
+    # Compare the response object to the expected response object
+    response_object_check(r, jsr.test_name(test_params))
     ppass()
 
+
 def main():
-    swap_configs() 
+    swap_configs()
     clear_database()
     start_server()
 
@@ -376,13 +428,13 @@ def main():
     upload_images()
     upload_existing_image()
     # retrieve_images()
-    meta_upload() # not working
+    meta_upload()  # not working
     image_listing()
 
     # r = requests.get(url = path + '/projects', cookies=cookie)
     # print r.text
-    
-    ## Printing server output, warning: never ends, have to ctrl-C
+
+    # Printing server output, warning: never ends, have to ctrl-C
     # line = ''
     # for c in iter(lambda: server_process.stdout.read(1), ''):
     #             line += c
@@ -394,8 +446,6 @@ def main():
     #     name, desc
 
 
-
 if __name__ == '__main__':
     atexit.register(exit_handler)
     main()
-
