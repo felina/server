@@ -196,21 +196,23 @@ class JsonResponses:
 
     @staticmethod
     def meta_example(*images):
-        return json.dumps([{
-        'url': JsonResponses().hash_image(images[0]),
-        'metadata': {
-            'title': 'Elephant',
-            'datetime': '2014-02-27T21:32:16.667Z',
-            'location': {
-                'name': 'Africa',
-                'coords': {
-                    'lat': 0.1,
-                    'lng': 0.2
-                }
-            }
-        },
-        'annotations': {}
-    }])
+        return json.dumps({
+                JsonResponses().hash_image(images[0]): {
+                    'metadata': {
+                        'title': 'Elephant',
+                        'datetime': '2014-02-27T21:32:16.667Z',
+                        'location': {
+                            'name': 'Africa',
+                            'coords': {
+                                'lat': 0.1,
+                                'lng': 0.2
+                                }
+                            },
+                        'priv': False
+                        },
+                    'annotations': {}
+                    }
+                })
 
     @staticmethod
     def image_listing(*images):

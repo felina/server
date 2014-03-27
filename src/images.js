@@ -5,6 +5,7 @@ var async = require('async');
 var _ = require('underscore');
 var errors = require('./error.js');
 var users = require('./user.js');
+var express = require('express');
 
 aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
@@ -199,7 +200,8 @@ function imageRoutes(app, auth, db) {
 
     // Image/s upload endpoint
     // Uses express.multipart - this is deprecated and bad! TODO: Replace me!
-    app.post('/img', auth.enforceLogin, function(req, res) {
+    app.post('/img', [auth.enforceLogin, express.multipart()], function(req, res) {
+        // Don't return here, temp file cleanup at end!
         async.map(Object.keys(req.files),
                   function(fKey, done) {
                       var iInfo = req.files[fKey];
@@ -245,10 +247,10 @@ function imageRoutes(app, auth, db) {
                           // TODO: be more clear if any images were uploaded or not.
                           if (err.code === 'ER_NO_REFERENCED_ROW_') {
                               // We haven't met an FK constraint, this should be down to a bad project id.
-                              return res.send(new errors.APIErrResp(3, 'Invalid project.'));
+                              return res.send(new errors.APIErrResp(3, 'Invalid project.'), 400);
                           } else {
                               console.log(err);
-                              return res.send(new errors.APIErrResp(2, err));
+                              return res.send(new errors.APIErrResp(2, err), 400);
                           }
                       } else {
                           // All images should have uploaded succesfully.
@@ -258,8 +260,19 @@ function imageRoutes(app, auth, db) {
                           });
                       }
                   });
-    }); // End image upload endpoint.
 
+        // Cleanup all temporary files used by upload.
+        async.each(Object.keys(req.files),
+                   function(fKey, done) {
+                       console.log('Deleting: ' + req.files[fKey].path);
+                       fs.unlink(req.files[fKey].path, done);
+                   },
+                   function(e) {
+                       if (e) {
+                           console.log(e);
+                       }
+                   });
+    }); // End image upload endpoint.
 
 }
 

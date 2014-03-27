@@ -217,7 +217,8 @@ function userRoutes(app, auth, db) {
                             res.send(new errors.APIErrResp(3, 'Update failed'));
                         } else if(info) {
                             res.send({
-                                'res': true
+                                'res': true,
+                                'msg': 'success'
                             });
                         } else {
                             return res.send(new errors.APIErrResp(5, 'Invalid email'));
@@ -235,14 +236,17 @@ function userRoutes(app, auth, db) {
     }); 
 
     // update subusers details
-    app.patch('/subuser', auth.enforceLogin, function(req, res) {
+    app.post('/updatesub', auth.enforceLogin, function(req, res) {
         var name = req.body.name;
         var email = req.body.email;
         var refresh = parseInt(req.body.refresh);
-        var projectid = parseInt(req.body.projectid);
+        var projectid = req.body.projectid;
         var result1 = true;
-        if (_.isNaN(projectid)) {
-            return res.send(new errors.APIErrResp(3, 'invalid projectid'));
+        if (projectid) {
+            projectid = parseInt(projectid);
+            if (_.isNaN(projectid)) {
+                return res.send(new errors.APIErrResp(3, 'invalid projectid'));
+            }
         }
         if (email) {
             if(refresh === -1) {
@@ -285,7 +289,8 @@ function userRoutes(app, auth, db) {
                     } else if(r) {
                         result1 = false;
                         return res.send({
-                            'res':true
+                            'res':true,
+                            'msg': 'success'
                         });
                     } else {
                         console.log("false");

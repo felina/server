@@ -1,3 +1,6 @@
+#!/usr/bin/python
+
+from mimetypes import guess_type
 from requests_toolbelt import MultipartEncoder
 import MySQLdb as mdb
 import sys
@@ -227,6 +230,19 @@ def response_object_check(res, correct):
             str(correct) + ' got ' + str(json.loads(res.text))
 
 
+def bin_equal(im1, im2):
+    b = ''.join([str(ord(x)) for x in im1])
+    a = ''.join([str(ord(y)) for y in im2])
+    return a == b
+
+
+def response_handle_binary(r, message2, bin_expected):
+    if (not bin_equal(r.content, bin_expected)):
+        pfail()
+        print message2 + r.url
+        sys.exit(1)
+
+
 def non_existing_user():
     print_test('Non existing user')
     fake_params = {'email': 'fakeEmail@gmail.com', 'pass': 'fakepass'}
@@ -288,7 +304,7 @@ def upload_image_no_project():
     m = MultipartEncoder(
         fields={
             'filename_project': '1',
-            'filename': ('filename', open(test_image1, 'rb'), 'image/png')
+            'filename': ('filename', open(test_image1, 'rb'), guess_type(test_image1)[0])
         })
     r = requests.post(url=path + upload_image_path, data=m,
                       headers={'Content-Type': m.content_type}, cookies=cookie)
@@ -313,7 +329,7 @@ def request_images(path_, *images):
     tb_fields = {}
     for im in images:
         tb_fields[im + '_project'] = str(project_details['id'])
-        tb_fields[im] = (im, open(im, 'rb'), 'image/' + im.split('.')[-1])
+        tb_fields[im] = (im, open(im, 'rb'), guess_type(im)[0])
 
     m = MultipartEncoder(
         fields=tb_fields
@@ -338,20 +354,15 @@ def upload_existing_image():
     response_object_check(r, jsr.existing_image(test_image1))
     ppass()
 
-# def images_equal(im1, im2):
-#     b = ''.join([str(ord(x)) for x in im1])
-#     a = ''.join([str(ord(y)) for y in im2])
-#     print len(a), len(b)
-#     return a == b
 
-# def retrieve_images():
-#     print_test('Retrieve images')
+def retrieve_images():
+    print_test('Retrieve images')
 
-#     r = requests.get(url=path + upload_image_path + '/' + jsr.hash_image(test_image1), cookies=cookie)
-#     if images_equal(r.text, open(test_image1, 'rb').read()):
-#         print 'Equal!'
-#     else:
-#         print 'Not equal!'
+    r = requests.get(url=path + upload_image_path +
+                     '/' + jsr.hash_image(test_image1), cookies=cookie)
+    response_handle_binary(
+        r, 'Uploaded image should match the returned image at URL: ', open(test_image1, 'rb').read())
+    ppass()
 
 
 def meta_upload():
@@ -359,32 +370,7 @@ def meta_upload():
     # print jsr.meta_example(test_image1)
     r = requests.post(url=path + meta_upload_path,
                       data=jsr.meta_example(test_image1), cookies=cookie)
-    print r.text
-    response_handle(r, 'Meta upload should not res false', True)
-
-    # r = requests.post(url = path + meta_upload_path, data=[
-    #           {
-    #             "id": jsr.hash_image(test_image1),
-    #             "datetime": "2014-02-14T03:39:13.000Z"
-    # ,
-    # "location":
-    # {
-    # "lat": 54.5,
-    # "lon": 0.4
-    # },
-    # "private": 1,
-    # "annotations": [
-    # {
-    # "region": [
-    # { "x": 100, "y": 200 },
-    # { "x": 150, "y": 240 }
-    # ],
-    # "tag": "I will be replaced soon, dont use me"
-    # }
-    # ]
-    #           }], cookies=cookie)
-
-    print r.text
+    response_handle(r, 'Meta upload should not res false: ', True)
 
 
 def image_listing():
@@ -428,6 +414,8 @@ def main():
     upload_images()
     upload_existing_image()
     # retrieve_images()
+    meta_upload()  # not working
+    retrieve_images()
     meta_upload()  # not working
     image_listing()
 
