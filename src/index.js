@@ -11,12 +11,20 @@ var jobs = require('./jobs.js');
 var meta = require('./meta.js');
 var projects = require('./projects.js');
 var user = require('./user.js');
+var jobAPI = require('./windows_api/api.js');
 
 // Check db settings
 db.init(function(err) {
     if (err) {
 	console.log(err);
 	throw new Error('Database Unvailable. Your database settings are incorrect, the server is down, or you have not completed installation. Refusing to start!');
+    }
+});
+
+// Check job server settings
+jobAPI.init(function(err) {
+    if (err) {
+        throw new Error('Job server settings are incorrect. Refusing to start!');
     }
 });
 
