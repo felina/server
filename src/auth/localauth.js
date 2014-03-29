@@ -176,6 +176,11 @@ function authRoutes(app, enforceLogin) {
         var grav = req.body.gravatar;
         var proj = parseInt(req.body.projectid);
         var user = new users.User(-1, name, mail, priv, grav, req.user.id, proj);
+        
+        if (req.user.privilege < users.PrivilegeLevel.RESEARCHER.i) {
+          res.send(new errors.APIErrResp(2, 'Insufficient privilege'));
+        }
+        
         if (user.id === false) {
             // Details of user are invalid.
             res.send(new errors.APIErrResp(2, 'User details are invalid!'));
