@@ -5,12 +5,12 @@ var errors = require('./error.js');
 var crypto = require('crypto');
 var async = require('async');
 var express = require('express');
+var jsapi = require('./windows_api/api.js');
 
 aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
 
 var PRIVATE_BUCKET = 'citizen.science.executable.storage';
-
 
 function uploadZip(user, iInfo, db, callback) {
     console.log('Trying to upload: ' + iInfo.zipHash);
@@ -65,23 +65,19 @@ function jobRoutes(app, auth, db) {
     });
 
     // Job progress check
-    // For now, assume progress = percentage of possible images sent to processor
     app.get('/progress', auth.enforceLogin, function(req, res) {
-        var jobID = parseInt(req.query.id);
+        var jobID = parseInt(req.query.jobID);
 
         if (_.isNaN(jobID)) {
-            return res.send(new errors.APIErrResp(2, 'Invalid job id.'));
+            return res.send(new errors.APIErrResp(2, 'Invalid job ID.'));
         } else {
-            db.getJobImageCount(jobID, function(err, prog) {
+            jsapi.getProgress(jobID, function(err, prog) {
                 if (err) {
                     return res.send(new errors.APIErrResp(3, 'Failed to retrieve job progress.'));
-                } else if (prog[0].total === 0) {
-                    return res.send(new errors.APIErrResp(4, 'Job id does not exist.'));
                 } else {
                     return res.send({
                         'res': true,
-                        'processed': prog[0].processed,
-                        'total': prog[0].total
+                        'progress': prog
                     });
                 }
             });
@@ -90,20 +86,21 @@ function jobRoutes(app, auth, db) {
 
     // Job results
     app.get('/results', auth.enforceLogin, function(req, res) {
-        var jobID = req.get('jobID');
-        if (jobID) {
-            console.log('Job results req: jobID ' + jobID);
-            // TODO: Query job server
-            return res.send({
-                'res': true,
-                'data': [{
-                    'some': 'data'
-                }, {
-                    'some more': 'data'
-                }]
-            });
+        var jobID = parseInt(req.query.jobID);
+
+        if (_.isNaN(jobID)) {
+            return res.send(new errors.APIErrResp(2, 'Invalid job ID.'));
         } else {
-            return res.send(new errors.APIErrResp(2, 'No jobID provided'));
+            jsapi.getResults(jobID, function(err, results) {
+                if (err) {
+                    return res.send(new errors.APIErrResp(3, 'Failed to retrieve job progress.'));
+                } else {
+                    return res.send({
+                        'res': true,
+                        'results': results
+                    });
+                }
+            });
         }
     });
 
@@ -129,10 +126,6 @@ function jobRoutes(app, auth, db) {
                 }
             ]
         });
-    });
-
-    app.post('/target', auth.enforceLogin, function() {
-        console.log('posted executable to target');
     });
 
     app.post('/exec', [auth.enforceLogin, express.multipart()], function(req, res) {
