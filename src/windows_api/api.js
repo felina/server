@@ -27,17 +27,13 @@ function init(callback) {
     }
 }
 
-function createJob(jobid, zipid, pairsList) {
-    var post_data = JSON.stringify({
-        'jobid': jobid,
-        'zip': zipid,
-        'work_units': pairsList
-    });
-
+// callback(err, res)
+function jsPOST(path, data, callback) {
+    var post_data = JSON.stringify(data);
     var post_options = {
         'host': target_config.host,
         'port': target_config.port,
-        'path': '/api/CreateJob',
+        'path': path,
         'method': 'POST',
         'headers': {
             'Content-Type': 'application/json',
@@ -46,16 +42,55 @@ function createJob(jobid, zipid, pairsList) {
     };
 
     var post_req = http.request(post_options, function(res) {
-        res.setEncoding('utf8');
-        res.on('data', function(data) {
-            console.log(data);
-        });
+        console.log('Job server status code: ' + res.statusCode);
+        if (res.statusCode === 200) {
+            var resData = '';
+            res.setEncoding('utf8');
+            res.on('data', function(dPart) {
+                console.log('Received part from job server.');
+                resData += dPart;
+            });
+            res.on('end', function() {
+                console.log('Job server response done.');
+                return callback(null, resData);
+            });
+        } else {
+            return callback(res.statusCode);
+        }
+    });
+
+    post_req.on('error', function(err) {
+        console.log(err);
+        return callback(err);
+    });
+
+    post_req.on('timeout', function() {
+        console.log('Job server request timed out.');
+        return callback('Job server timed out.');
     });
 
     post_req.write(post_data);
     post_req.end();
 }
 
+function createJob(jobid, zipid, pairsList, callback) {
+    return jsPOST('/api/CreateJob',
+                  {
+                      'jobid': jobid,
+                      'zipid': zipid,
+                      'work': pairsList
+                  },
+                  function(err, res) {
+                      if (err) {
+                          console.log(err);
+                          return callback(err);
+                      } else {
+                          return callback(null, res);
+                      }
+                  });
+}
+
 module.exports = {
-    init: init
+    init: init,
+    createJob: createJob
 };
