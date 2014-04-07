@@ -52,7 +52,17 @@ function jsPOST(path, data, callback) {
             });
             res.on('end', function() {
                 console.log('Job server response done.');
-                return callback(null, resData);
+                var resParsed = {};
+
+                try {
+                    resParsed = JSON.parse(resData);
+                } catch (e) {
+                    console.log('Job server response was not valid JSON!.');
+                    console.log(resData);
+                    return callback('Invalid response formatting.');
+                }
+
+                return callback(null, resParsed);
             });
         } else {
             return callback(res.statusCode);
@@ -73,8 +83,54 @@ function jsPOST(path, data, callback) {
     post_req.end();
 }
 
+// callback(err, res)
+function jsGET(path, callback) {
+    var get_options = {
+        'host': target_config.host,
+        'port': target_config.port,
+        'path': path
+    };
+
+    var get_req = http.get(get_options, function(res) {
+        if (res.statusCode === 200) {
+            var resData = '';
+            res.setEncoding('utf8');
+            res.on('data', function(dPart) {
+                console.log('Received part from job server.');
+                resData += dPart;
+            });
+            res.on('end', function() {
+                console.log('Job server response done.');
+                var resParsed = {};
+
+                try {
+                    resParsed = JSON.parse(resData);
+                } catch (e) {
+                    console.log('Job server response was not valid JSON!.');
+                    console.log(resData);
+                    return callback('Invalid response formatting.');
+                }
+
+                return callback(null, resParsed);
+            });
+        } else {
+            return callback(res.statusCode);
+        }
+    });
+
+    get_req.on('error', function(err) {
+        console.log(err);
+        return callback(err);
+    });
+
+    get_req.on('timeout', function() {
+        console.log('Job server request timed out.');
+        return callback('Job server timed out.');
+    });
+}
+
 function createJob(jobid, zipid, pairsList, callback) {
-    return jsPOST('/api/CreateJob',
+    return jsPOST('/api/JobCreate',
                   {
                       'jobid': jobid,
                       'zipid': zipid,
@@ -90,7 +146,68 @@ function createJob(jobid, zipid, pairsList, callback) {
                   });
 }
 
+function getProgress(jobid, callback) {
+    return jsGET('/api/JobProgress?jobid=' + encodeURIComponent(jobid), function(err, res) {
+        if (err) {
+            console.log(err);
+            return callback(err);
+        } else {
+            return callback(null, res);
+        }
+    });
+}
+
+function getResults(jobid, callback) {
+    return jsGET('/api/JobResults?jobid=' + encodeURIComponent(jobid), function(err, res) {
+        if (err) {
+            console.log(err);
+            return callback(err);
+        } else {
+            return callback(null, res);
+        }
+    });
+}
+
+var JOB_CONTROL_ACTIONS = ['PAUSE', 'STOP', 'RESUME', 'RESTART'];
+
+// If terminate, the job should be cancelled and will not be possible to be resumed.
+function controlJob(jobid, action, callback) {
+    if (JOB_CONTROL_ACTIONS.indexOf(action) < 0) {
+        return callback('Invalid action.');
+    } else {
+        return jsPOST('/api/JobControl',
+                      {
+                          'jobid': jobid,
+                          'action': action
+                      },
+                      function(err, res) {
+                          if (err) {
+                              console.log(err);
+                              return callback(err);
+                          } else {
+                              return callback(null, res);
+                          }
+                      });
+    }
+}
+
+function getQueue(callback) {
+    return jsGET('/api/JobQueue', function(err, res) {
+        if (err) {
+            console.log(err);
+            return callback(err);
+        } else {
+            return callback(null, res);
+        }
+    });
+}
+
 module.exports = {
     init: init,
-    createJob: createJob
+    createJob: createJob,
+    getProgress: getProgress,
+    getResults: getResults,
+    JOB_CONTROL_ACTIONS: JOB_CONTROL_ACTIONS,
+    controlJob: controlJob,
+    getQueue: getQueue
 };
