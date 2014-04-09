@@ -42,26 +42,15 @@ function jobRoutes(app, auth, db) {
     // Job start req
     app.post('/start', auth.enforceLogin, function(req, res) {
         // Get the image IDs for processing
-        var idData = req.files;
-        var images = [];
-        for (var imageName in idData) {
-            images.push(idData[imageName]);
-        }
-        if (images.length > 0) {
-            return res.send('Some image IDs received');
+        var executable = req.body.executable;
+        var images = req.body.images;
+
+        if (images && executable && images.length > 0 && executable.length > 0) {
+            return res.send({'res': true, 'code': 0, 'images': images, 'executable': executable});
         } else {
-            return res.send('Need to specify images for job');
+            return res.send({'res':false, 'code': 2, // Do proper code checks
+                'msg': 'Need to specify images and executable for a job'});
         }
-
-        /*if (req.files) {
-          console.log('File exists');
-          // console.log(req.files);
-          console.log('Num files: ' + Object.keys(req.files).length)
-
-      } else {
-          console.log('File does not exist');
-      }
-      return res.send("Some image thing recieved\n");*/
     });
 
     // Job progress check
@@ -134,6 +123,8 @@ function jobRoutes(app, auth, db) {
     app.post('/target', auth.enforceLogin, function() {
         console.log('posted executable to target');
     });
+
+
 
     app.get('/exec', [auth.enforceLogin, express.multipart()], function(req, res) {
 
