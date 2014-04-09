@@ -139,10 +139,12 @@ function jobRoutes(app, auth, db) {
 
         db.zipsForUser(req.user, function(fErr, result) {
             if (fErr) {
-                console.log("Aww sheit, error");
+                return res.send({
+                  'res': false,
+                  'msg': 'an error occured'
+              });
             }
-            console.log(result);
-            res.send({
+            return res.send({
                   'res': true,
                   'execs': result
               });
