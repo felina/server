@@ -135,6 +135,20 @@ function jobRoutes(app, auth, db) {
         console.log('posted executable to target');
     });
 
+    app.get('/exec', [auth.enforceLogin, express.multipart()], function(req, res) {
+
+        db.zipsForUser(req.user, function(fErr, result) {
+            if (fErr) {
+                console.log("Aww sheit, error");
+            }
+            console.log(result);
+            res.send({
+                  'res': true,
+                  'execs': result
+              });
+        });
+    });
+
     app.post('/exec', [auth.enforceLogin, express.multipart()], function(req, res) {
         async.map(Object.keys(req.files), function(fKey, done) {
             // console.log(req.files);
@@ -161,7 +175,7 @@ function jobRoutes(app, auth, db) {
                         return uploadZip(req.user, iInfo, db, done); // Will call done() for us
                     } else {
                         // Existing image, reject the request.
-                        console.trace(done);
+                        // console.trace(done);
                         if (done) {
                            return done('Zip already exists: ' + iInfo.name);
                         }

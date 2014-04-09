@@ -25,6 +25,27 @@ function init(callback) {
     });
 }
 
+function zipsForUser(user, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback(connErr);
+        }
+        var query = "SELECT * FROM `executables` WHERE `ownerid` = ?";
+        var sub = [ user['id'] ];
+        query = mysql.format(query, sub);
+
+        conn.query(query, function(err, res) {
+            conn.release();
+            if (err) {
+                return callback(err, null);
+            } else {
+                // If res.length > 0, an image with this hash exists already
+                return callback(null, res);
+            }
+        });
+    });
+}
+
 function zipExists(zipHash, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -1263,6 +1284,7 @@ function getUserHash(email, callback) {
 
 module.exports = {
     init: init,
+    zipsForUser:zipsForUser,
     zipExists:zipExists,
     addNewZip:addNewZip,
     getImageOwner:getImageOwner,
