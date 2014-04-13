@@ -23,12 +23,17 @@ var db = {
 };
 
 var smtp = {
-    "service": "Gmail",
-    "auth": {
-        "user": "EMAIL",
-        "pass": "PASSWORD"
+    'service': 'Gmail',
+    'auth': {
+        'user': 'EMAIL',
+        'pass': 'PASSWORD'
     }
 };
+
+var job_server = {
+    'host': 'localhost',
+    'port': 4999
+}
 
 var dir = 'config';
 
@@ -50,5 +55,6 @@ write('aws', aws);
 write('db_settings', db);
 write('fb', fb);
 write('smtp', smtp);
+write('job_server', job_server);
 
 console.log('Done'.green);
