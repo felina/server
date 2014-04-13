@@ -1,5 +1,6 @@
 var mysql = require('mysql');
 var users = require('./user.js');
+var _ = require('underscore');
 
 // Load config and set timezone to UTC so that node-mysql doesn't convert DATETIME values for us
 var dbCFG = require('../config/db_settings.json');
@@ -452,6 +453,46 @@ function getFields(project, callback) {
     });
 }
 
+function setupEnums(conn, project, fieldList, callback) {
+    var query = "SELECT `fieldid`, `name` FROM `project_fields` WHERE `projectid` = ? AND `type` = 'enum'";
+    var sub = [ project ];
+    query = mysql.format(query, sub);
+    return conn.query(query, function(err, res) {
+        query = "INSERT INTO `enum_definitions` (`fieldid`, `name`) VALUES ";
+        sub = [];
+        var i, j, enumvals;
+        for (i = 0; i < res.length - 1; i++) {
+            enumvals = _.findWhere(fieldList, {'name':res[i].name}).enumvals;
+            for (j = 0; j < enumvals.length; j++) {
+                query = query + "(?,?),";
+                sub.push(res[i].fieldid);
+                sub.push(enumvals[j]);
+            }
+        }
+        enumvals = _.findWhere(fieldList, {'name':res[i].name}).enumvals;
+        for (j = 0; j < enumvals.length - 1; j++) {
+            query = query + "(?,?),";
+            sub.push(res[i].fieldid);
+            sub.push(enumvals[j]);
+        }
+        query = query + "(?,?)";
+        sub.push(res[i].fieldid);
+        sub.push(enumvals[j]);
+
+        query = mysql.format(query, sub);
+        console.log(query);
+        return conn.query(query, function(e, r) {
+            conn.release();
+            if (e) {
+                console.log(e);
+                return callback(e);
+            } else {
+                return callback(null);
+            }
+        });
+    });
+}
+
 function setFields(project, fieldList, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -476,12 +517,12 @@ function setFields(project, fieldList, callback) {
         query = mysql.format(query, sub);
         console.log(query);
         return conn.query(query, function(err, res) {
-            conn.release();
             if (err) {
+                conn.release();
                 console.log(err);
                 return callback(err);
             } else {
-                return callback();
+                return setupEnums(conn, project, fieldList, callback);
             }
         });
     });

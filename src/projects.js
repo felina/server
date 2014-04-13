@@ -27,33 +27,8 @@ function Project(id, name, desc, active) {
 }
 
 var FIELD_NAME_LENGTH = 45;
-var FIELD_TYPES = ['apoly', 'arect', 'apoint', 'string', 'number']; // TODO: Support enum
+var FIELD_TYPES = ['enum', 'string', 'number'];
 var ANNO_TYPES = ['apoly', 'arect', 'apoint'];
-
-function parseFields(fieldList) {
-    var errIdx = -1;
-
-    fieldList.every(function(f, i) {
-        if (_.isObject(f)) {
-            // Array item is an object (or list), check it's properties.
-            if (typeof f.name !== 'string' || f.name.length < 1 || f.name.length > FIELD_NAME_LENGTH) {
-                errIdx = i;
-                return false;
-            }
-            if (typeof f.type !== 'string' || FIELD_TYPES.indexOf(f.type) < 0) {
-                errIdx = i;
-                return false;
-            }
-            // TODO: Support an optional/required property.
-            return true;
-        } else {
-            errIdx = i;
-            return false;
-        }
-    });
-
-    return errIdx;
-}
 
 function typeToShape(type) {
     switch(type) {
@@ -65,6 +40,97 @@ function typeToShape(type) {
         // apoly, or any erroneous input should be the most generic poly.
         return 'poly';
     }
+}
+
+function shapeToType(shape) {
+    switch(shape) {
+    case 'rect':
+        return 'arect';
+    case 'point':
+        return 'apoint';
+    case 'poly':
+        return 'apoly';
+    default:
+        return null;
+    }
+}
+
+function parseFields(fieldList, annoList) {
+    var errIdx = -1;
+    var errList = '';
+
+    fieldList.every(function(f, i) {
+        if (_.isObject(f)) {
+            // Array item is an object (or list), check it's properties.
+            if (typeof f.name !== 'string' || f.name.length < 1 || f.name.length > FIELD_NAME_LENGTH) {
+                console.log('Bad field name.');
+                errIdx = i;
+                errList = 'fields';
+                return false;
+            }
+            if (typeof f.type !== 'string' || FIELD_TYPES.indexOf(f.type) < 0) {
+                console.log('Bad field type.');
+                errIdx = i;
+                errList = 'fields';
+                return false;
+            }
+            if (f.type === 'enum' && (!_.isArray(f.enumvals) || f.enumvals.length < 1)) {
+                console.log("Bad enumvals.");
+                errIdx = i;
+                errList = 'fields';
+                return false;
+            }
+            if (typeof f.required !== 'boolean' && typeof f.required !== 'number') {
+                console.log('Bad required flag.');
+                errIdx = i;
+                errList = 'fields';
+                return false;
+            }
+            return true;
+        } else {
+            errIdx = i;
+            errList = 'fields';
+            return false;
+        }
+    });
+
+    // Skip checking annotations if fields are invalid.
+    if (errIdx === -1) {
+        annoList.every(function(f, i) {
+            if (_.isObject(f)) {
+                // Array item is an object (or list), check it's properties.
+                if (typeof f.name !== 'string' || f.name.length < 1 || f.name.length > FIELD_NAME_LENGTH) {
+                    console.log('Bad name.');
+                    errIdx = i;
+                    errList = 'anno';
+                    return false;
+                }
+                f.type = shapeToType(f.shape);
+                if (f.type === null) {
+                    console.log('Bad type.');
+                    errIdx = i;
+                    errList = 'anno';
+                    return false;
+                }
+                if (typeof f.required !== 'boolean' && typeof f.required !== 'number') {
+                    console.log('Bad required flag.');
+                    errIdx = i;
+                    errList = 'anno';
+                    return false;
+                }
+                return true;
+            } else {
+                errIdx = i;
+                errList = 'anno';
+                return false;
+            }
+        });
+    }
+
+    return {
+        'part': errList,
+        'i': errIdx
+    };  
 }
 
 function projectRoutes(app, auth, db) {
@@ -128,16 +194,17 @@ function projectRoutes(app, auth, db) {
             return res.send(new errors.APIErrResp(2, 'Invalid project id.'));
         }
         var fieldList = req.body.fields;
-        if (!_.isArray(fieldList) || fieldList.length < 1) {
-            return res.send(new errors.APIErrResp(3, 'Invalid field list.'));
+        var annoList = req.body.anno;
+        if (!_.isArray(fieldList) || !_.isArray(annoList) || (fieldList.length < 1 && annoList.length < 1)) {
+            return res.send(new errors.APIErrResp(3, 'Invalid field or annotation list.'));
         } else {
-            var errField = parseFields(fieldList);
-            if (errField !== -1) {
-                return res.send(new errors.APIErrResp(3, 'Invalid field at position: ' + errField));
+            var parseError = parseFields(fieldList, annoList);
+            if (parseError.i !== -1) {
+                return res.send(new errors.APIErrResp(3, 'Invalid field in section ' + parseError.part + ' position: ' + parseError.i));
             }
         }
 
-        db.setFields(id, fieldList, function(err) {
+        db.setFields(id, fieldList.concat(annoList), function(err) {
             if (err) {
                 console.log(err);
                 return res.send(new errors.APIErrResp(4, 'Failed to update project.'));
