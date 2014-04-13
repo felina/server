@@ -124,6 +124,7 @@ CREATE TABLE IF NOT EXISTS `felina`.`project_fields` (
   `required` TINYINT(1) NOT NULL DEFAULT TRUE,
   PRIMARY KEY (`fieldid`),
   INDEX `project_pfield_rel_idx` (`projectid` ASC),
+  UNIQUE INDEX `project_name_UNIQUE` (`projectid` ASC, `name` ASC),
   CONSTRAINT `project_pfield_rel`
     FOREIGN KEY (`projectid`)
     REFERENCES `felina`.`projects` (`projectid`)
@@ -299,6 +300,7 @@ CREATE TABLE IF NOT EXISTS `felina`.`job_images` (
   `imageb` CHAR(32) NOT NULL,
   PRIMARY KEY (`jobid`, `imagea`, `imageb`),
   INDEX `images_jimages_relb_idx` (`imageb` ASC),
+  INDEX `images_jimages_rela_idx` (`imagea` ASC),
   CONSTRAINT `jobs_jimages_rel`
     FOREIGN KEY (`jobid`)
     REFERENCES `felina`.`jobs` (`jobid`)
