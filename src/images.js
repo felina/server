@@ -6,6 +6,8 @@ var _ = require('underscore');
 var errors = require('./error.js');
 var users = require('./user.js');
 var express = require('express');
+var exzip = require('express-zip');
+var mktemp = require('mktemp');
 
 aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
@@ -18,6 +20,9 @@ var S3_URL = 'http://' + PUBLIC_BUCKET + '.s3-website-eu-west-1.amazonaws.com/';
 
 var PRIVATE_EXPIRY = 120; // Number of seconds to keep a private image URL valid for
 
+// Number of download threads to run simultaneously when creating a zip.
+var IMAGE_DOWNLOADS_LIMIT = 1;
+
 // Defines the MIME types we accept as image uploads.
 var VALID_MIME_TYPES = [
     'image/jpeg',
@@ -26,6 +31,47 @@ var VALID_MIME_TYPES = [
     // 'image/tiff' // TIFF is not universally supported by major browsers
 ];
 
+function proxyImage(id, priv, stream) {
+    var params = {
+        'Bucket': (priv) ? PRIVATE_BUCKET : PUBLIC_BUCKET,
+        'Key': id
+    };
+    try {
+        console.log(params);
+        s3.getObject(params).createReadStream().pipe(stream);
+    } catch (err) {
+        console.log(err);
+        stream.end();
+    }
+}
+
+function collectImages(images, done) {
+    try {
+        var dir = mktemp.createDirSync('/tmp/img-XXXXX/');
+    } catch (e) {
+        console.log(e);
+        return done(e);
+    }
+    // Only download a limited number of images at once.
+    return async.eachLimit(
+        images,
+        IMAGE_DOWNLOADS_LIMIT,
+        function(img, callback) {
+            try {
+                var out = fs.createWriteStream(dir + img.imageid);
+                proxyImage(img.imageid, img.private, out);
+                return callback();
+            } catch (err) {
+                console.log(err);
+                return callback(err);
+            }
+        },
+        function(err) {
+            return done(err);
+        }
+    );
+}
+
 function fileType(filePath) {
     for (var i = filePath.length; i > 0; i--) {
         if (filePath[i] === '.') {
@@ -33,14 +79,6 @@ function fileType(filePath) {
         }
     }
     return null;
-}
-
-function proxyImage(id, priv, res) {
-    var params = {
-        'Bucket': (priv) ? PRIVATE_BUCKET : PUBLIC_BUCKET,
-        'Key': id
-    };
-    s3.getObject(params).createReadStream().pipe(res);
 }
 
 function setAccess(id, priv, callback) {
@@ -273,6 +311,22 @@ function imageRoutes(app, auth, db) {
                        }
                    });
     }); // End image upload endpoint.
+
+    app.get('/export', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
+        db.getUserImages(req.user, null, function(err, images) {
+            if (err) {
+                return res.send(new errors.APIErrResp(2, 'Failed to gather image listing.'));
+            } else {
+                return collectImages(images, function(e, dir) {
+                    if (e) {
+                        return res.send(new errors.APIErrResp(3, 'Failed to collect images for download.'));
+                    } else {
+                        return res.send(dir);
+                    }
+                });
+            }
+        });
+    });
 
 }
 

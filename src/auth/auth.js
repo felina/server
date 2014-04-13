@@ -44,7 +44,7 @@ function enforceLoginCustom(options, req, res, next) {
     if (minPL !== false) {
         middlewares.push(function(req, res, next) {
             // This layer should enforce a login level.
-            if (req.user.privilege.i >= minPL) {
+            if (req.user.privilege >= minPL) {
                 return next();
             } else {
                 return res.send(new errors.APIErrResp(1, 'Insufficient user level for this resource.'));
