@@ -207,7 +207,11 @@ function projectRoutes(app, auth, db) {
         db.setFields(id, fieldList.concat(annoList), function(err) {
             if (err) {
                 console.log(err);
-                return res.send(new errors.APIErrResp(4, 'Failed to update project.'));
+                if (err.code === 'ER_DUP_ENTRY') {
+                    return res.send(new errors.APIErrResp(4, 'Duplicate field names found for this project.'));
+                } else {
+                    return res.send(new errors.APIErrResp(5, 'Failed to update project.'));
+                }
             } else {
                 return res.send({'res': true});
             }
