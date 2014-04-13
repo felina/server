@@ -33,7 +33,7 @@ var smtp = {
 var job_server = {
     'host': 'localhost',
     'port': 4999
-}
+};
 
 var dir = 'config';
 

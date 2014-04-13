@@ -42,26 +42,15 @@ function jobRoutes(app, auth, db) {
     // Job start req
     app.post('/start', auth.enforceLogin, function(req, res) {
         // Get the image IDs for processing
-        var idData = req.files;
-        var images = [];
-        for (var imageName in idData) {
-            images.push(idData[imageName]);
-        }
-        if (images.length > 0) {
-            return res.send('Some image IDs received');
+        var executable = req.body.executable;
+        var images = req.body.images;
+
+        if (images && executable && images.length > 0 && executable.length > 0) {
+            return res.send({'res': true, 'code': 0, 'images': images, 'executable': executable});
         } else {
-            return res.send('Need to specify images for job');
+            return res.send({'res':false, 'code': 2, // Do proper code checks
+                'msg': 'Need to specify images and executable for a job'});
         }
-
-        /*if (req.files) {
-          console.log('File exists');
-          // console.log(req.files);
-          console.log('Num files: ' + Object.keys(req.files).length)
-
-      } else {
-          console.log('File does not exist');
-      }
-      return res.send("Some image thing recieved\n");*/
     });
 
     // Job progress check
@@ -128,6 +117,22 @@ function jobRoutes(app, auth, db) {
         });
     });
 
+    app.get('/exec', [auth.enforceLogin, express.multipart()], function(req, res) {
+
+        db.zipsForUser(req.user, function(fErr, result) {
+            if (fErr) {
+                return res.send({
+                  'res': false,
+                  'msg': 'an error occured'
+              });
+            }
+            return res.send({
+                  'res': true,
+                  'execs': result
+              });
+        });
+    });
+
     app.post('/exec', [auth.enforceLogin, express.multipart()], function(req, res) {
         async.map(Object.keys(req.files), function(fKey, done) {
             // console.log(req.files);
@@ -135,12 +140,12 @@ function jobRoutes(app, auth, db) {
             iInfo['filename'] = fKey;
             var fd = fs.createReadStream(iInfo.path);
             // console.log(iInfo.path);
-
+            
             var hash = crypto.createHash('md5');
             hash.setEncoding('hex');
             fd.on('end', function() {
                 // console.log(done);
-
+                
                 hash.end();
                 // console.log(hash.read()); // the desired sha1sum
                 iInfo.zipHash = hash.read();
@@ -154,36 +159,35 @@ function jobRoutes(app, auth, db) {
                         return uploadZip(req.user, iInfo, db, done); // Will call done() for us
                     } else {
                         // Existing image, reject the request.
-                        console.trace(done);
+                        // console.trace(done);
                         if (done) {
-                           return done('Zip already exists: ' + iInfo.name);
+                            return done('Zip already exists: ' + iInfo.name);
                         }
                     }
                 });
             });
             // read all file and pipe it (write it) to the hash object
             fd.pipe(hash);
-        }, 
+        },
         function(err, idArr) {
-          // If anything errored, abort.
-          if (err) {
-              // TODO: be more clear if any images were uploaded or not.
-              if (err.code === 'ER_NO_REFERENCED_ROW_') {
-                  // We haven't met an FK constraint, this should be down to a bad project id.
-                  return res.send(new errors.APIErrResp(3, 'Invalid project.'));
-              } else {
-                  console.log(err);
-                  return res.send(new errors.APIErrResp(2, err));
-              }
-          } else {
+            // If anything errored, abort.
+            if (err) {
+                // TODO: be more clear if any images were uploaded or not.
+                if (err.code === 'ER_NO_REFERENCED_ROW_') {
+                    // We haven't met an FK constraint, this should be down to a bad project id.
+                    return res.send(new errors.APIErrResp(3, 'Invalid project.'));
+                } else {
+                    console.log(err);
+                    return res.send(new errors.APIErrResp(2, err));
+                }
+            } else {
               // All images should have uploaded succesfully.
-              return res.send({
-                  'res': true,
-                  'ids': idArr
-              });
-          }
-      }
-        );  
+                return res.send({
+                    'res': true,
+                    'ids': idArr
+                });
+            }
+        });  
     });
 }
 
