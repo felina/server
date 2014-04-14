@@ -3,6 +3,8 @@ var http = require('http');
 var _ = require('underscore');
 var target_config = require('../../config/job_server.json');
 
+var SOCKET_TIMEOUT_MILLIS = 30000;
+
 function init(callback) {
     // Check that the config has all required values set.
     var port = parseInt(target_config.port);
@@ -69,14 +71,14 @@ function jsPOST(path, data, callback) {
         }
     });
 
+    post_req.setTimeout(SOCKET_TIMEOUT_MILLIS, function() {
+        console.log('Job server request timed out.');
+        return callback('Job server timed out.');
+    });
+
     post_req.on('error', function(err) {
         console.log(err);
         return callback(err);
-    });
-
-    post_req.on('timeout', function() {
-        console.log('Job server request timed out.');
-        return callback('Job server timed out.');
     });
 
     post_req.write(post_data);
@@ -118,14 +120,14 @@ function jsGET(path, callback) {
         }
     });
 
+    get_req.setTimeout(SOCKET_TIMEOUT_MILLIS, function() {
+        console.log('Job server request timed out.');
+        return callback('Job server timed out.');
+    });
+
     get_req.on('error', function(err) {
         console.log(err);
         return callback(err);
-    });
-
-    get_req.on('timeout', function() {
-        console.log('Job server request timed out.');
-        return callback('Job server timed out.');
     });
 }
 
