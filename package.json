@@ -30,7 +30,8 @@
     "nodemailer": "~0.6.1",
     "async": "~0.2.10",
     "express-zip": "~1.0.1",
-    "mktemp": "~0.3.4"
+    "mktemp": "~0.3.4",
+    "zipstream": "~0.2.1"
   },
   "devDependencies": {
     "grunt": "~0.4.2",
