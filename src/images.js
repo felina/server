@@ -6,6 +6,8 @@ var _ = require('underscore');
 var errors = require('./error.js');
 var users = require('./user.js');
 var express = require('express');
+var archiver = require('archiver');
+var lazystream = require('lazystream');
 
 aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
@@ -18,6 +20,9 @@ var S3_URL = 'http://' + PUBLIC_BUCKET + '.s3-website-eu-west-1.amazonaws.com/';
 
 var PRIVATE_EXPIRY = 120; // Number of seconds to keep a private image URL valid for
 
+// Number of download threads to run simultaneously when creating a zip.
+var IMAGE_DOWNLOADS_LIMIT = 1;
+
 // Defines the MIME types we accept as image uploads.
 var VALID_MIME_TYPES = [
     'image/jpeg',
@@ -26,6 +31,60 @@ var VALID_MIME_TYPES = [
     // 'image/tiff' // TIFF is not universally supported by major browsers
 ];
 
+function getImageStream(img) {
+    var params = {
+        'Bucket': (img.private) ? PRIVATE_BUCKET : PUBLIC_BUCKET,
+        'Key': img.imageid
+    };
+    var rs = null;
+    var s3req = s3.getObject(params);
+
+    s3req.on('error', function(err) {
+        console.log('Error getting image stream: ' + JSON.stringify(params));
+        console.log(err);
+    });
+    // TODO: This crashes if any error occurs (including not found!), despite listening for the event!
+    rs = s3req.createReadStream();
+    return rs;
+}
+
+function proxyImage(id, priv, stream) {
+    try {
+        getImageStream({'imageid': id, 'private': priv}).pipe(stream);
+    } catch (err) {
+        console.log(err);
+        stream.end();
+    }
+}
+
+// Use user id as output filename. Restrict to one export job per user at a time.
+// TODO: Collect images and notify user when done, instead of waiting.
+function collectImages(uid, images, done) {
+    var outfile = fs.createWriteStream('/tmp/' + uid + '.zip');
+    var archive = archiver('zip');
+
+    archive.on('error', function(err) {
+        console.log(err);
+        done(err);
+    });
+
+    outfile.on('close', function() {
+        console.log('Zip for ' + uid + ' completed with size ' + archive.pointer());
+        done(null, uid + '.zip');
+    });
+
+    // Feed the zip into the tmp file.
+    archive.pipe(outfile);
+
+    _.each(images, function(img) {
+        console.log(img);
+        var imgStream = new lazystream.Readable(getImageStream, img);
+        archive.append(imgStream, { 'name': img.imageid });
+    });
+
+    archive.finalize();
+}
+
 function fileType(filePath) {
     for (var i = filePath.length; i > 0; i--) {
         if (filePath[i] === '.') {
@@ -33,14 +92,6 @@ function fileType(filePath) {
         }
     }
     return null;
-}
-
-function proxyImage(id, priv, res) {
-    var params = {
-        'Bucket': (priv) ? PRIVATE_BUCKET : PUBLIC_BUCKET,
-        'Key': id
-    };
-    s3.getObject(params).createReadStream().pipe(res);
 }
 
 function setAccess(id, priv, callback) {
@@ -273,6 +324,22 @@ function imageRoutes(app, auth, db) {
                        }
                    });
     }); // End image upload endpoint.
+
+    app.get('/export', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
+        db.getUserImages(req.user, null, function(err, images) {
+            if (err) {
+                return res.send(new errors.APIErrResp(2, 'Failed to gather image listing.'));
+            } else {
+                return collectImages(req.user.id, images, function(e, file) {
+                    if (e) {
+                        return res.send(new errors.APIErrResp(3, 'Failed to collect images for download.'));
+                    } else {
+                        return res.sendfile(file, {'root':'/tmp/'});
+                    }
+                });
+            }
+        });
+    });
 
 }
 
