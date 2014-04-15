@@ -6,9 +6,8 @@ var _ = require('underscore');
 var errors = require('./error.js');
 var users = require('./user.js');
 var express = require('express');
-var exzip = require('express-zip');
-var mktemp = require('mktemp');
-var zipstream = require('zipstream');
+var archiver = require('archiver');
+var lazystream = require('lazystream');
 
 aws.config.loadFromPath('./config/aws.json');
 var s3 = new aws.S3();
@@ -32,60 +31,58 @@ var VALID_MIME_TYPES = [
     // 'image/tiff' // TIFF is not universally supported by major browsers
 ];
 
-function getImageStream(id, priv) {
+function getImageStream(img) {
     var params = {
-        'Bucket': (priv) ? PRIVATE_BUCKET : PUBLIC_BUCKET,
-        'Key': id
+        'Bucket': (img.private) ? PRIVATE_BUCKET : PUBLIC_BUCKET,
+        'Key': img.imageid
     };
-    return s3.getObject(params).createReadStream();
+    var rs = null;
+    var s3req = s3.getObject(params);
+
+    s3req.on('error', function(err) {
+        console.log('Error getting image stream: ' + JSON.stringify(params));
+        console.log(err);
+    });
+    // TODO: This crashes if any error occurs (including not found!), despite listening for the event!
+    rs = s3req.createReadStream();
+    return rs;
 }
 
 function proxyImage(id, priv, stream) {
     try {
-        getImageStream(id, priv).pipe(stream);
+        getImageStream({'imageid': id, 'private': priv}).pipe(stream);
     } catch (err) {
         console.log(err);
         stream.end();
     }
 }
 
-function collectImagesR(images, zip, done) {
-    if (images.length > 0) {
-        var head = _.head(images);
-        //try {
-        console.log('Collecting image: ' + JSON.stringify(head));
-            var img = getImageStream(head.imageid, head.priv);
-        console.log(img);
-        console.log(zip);
-            zip.addFile(img, { 'name': head.imageid }, function() {
-                console.log(images.length);
-                collectImagesR(_.tail(images), zip);
-            });
-        //} catch (err) {
-        //    console.log('b');
-        //    console.log(err);
-        //    done(err);
-        //}
-    } else {
-        zip.finalize(function(written) {
-            console.log('Finished zip of size: ' + written);
-            done(null, written);
-        });
-    }
-}
-
 // Use user id as output filename. Restrict to one export job per user at a time.
+// TODO: Collect images and notify user when done, instead of waiting.
 function collectImages(uid, images, done) {
     var outfile = fs.createWriteStream('/tmp/' + uid + '.zip');
-    var options = {
-        'level': 1
-    };
-    var zip = zipstream.createZip(options);
+    var archive = archiver('zip');
+
+    archive.on('error', function(err) {
+        console.log(err);
+        done(err);
+    });
+
+    outfile.on('close', function() {
+        console.log('Zip for ' + uid + ' completed with size ' + archive.pointer());
+        done(null, uid + '.zip');
+    });
 
     // Feed the zip into the tmp file.
-    zip.pipe(outfile);
+    archive.pipe(outfile);
 
-    return collectImagesR(images, zip, done);
+    _.each(images, function(img) {
+        console.log(img);
+        var imgStream = new lazystream.Readable(getImageStream, img);
+        archive.append(imgStream, { 'name': img.imageid });
+    });
+
+    archive.finalize();
 }
 
 function fileType(filePath) {
@@ -333,11 +330,11 @@ function imageRoutes(app, auth, db) {
             if (err) {
                 return res.send(new errors.APIErrResp(2, 'Failed to gather image listing.'));
             } else {
-                return collectImages(req.user.id, images, function(e, dir) {
+                return collectImages(req.user.id, images, function(e, file) {
                     if (e) {
                         return res.send(new errors.APIErrResp(3, 'Failed to collect images for download.'));
                     } else {
-                        return res.send(dir);
+                        return res.sendfile(file, {'root':'/tmp/'});
                     }
                 });
             }
