@@ -8,6 +8,16 @@ dbCFG.timezone = '+0000';
 
 var connPool = mysql.createPool(dbCFG);
 
+/**
+ * Generic error-only callback
+ * @callback errorCallback
+ * @param {Error} err - The error that occurred, if present.
+ */
+
+/**
+ * Runs a test to check database credentials and state.
+ * @param {errorCallback} callback - The callback that handles the test outcome.
+ */
 function init(callback) {
     // Test connection parameters.
     connPool.getConnection(function(connErr, conn) {
@@ -26,6 +36,18 @@ function init(callback) {
     });
 }
 
+/**
+ * Zip listing callback.
+ * @callback zipListCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {Object[]} list - The list of all records found for the given user.
+ */
+
+/**
+ * Retrieves a list of executable zips uploaded by a user.
+ * @param {user.User} user - The user to fetch zips from.
+ * @param {zipListCallback} callback - The callback that handles the result of trying to fetch the list of zips.
+ */
 function zipsForUser(user, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -40,13 +62,24 @@ function zipsForUser(user, callback) {
             if (err) {
                 return callback(err, null);
             } else {
-                // If res.length > 0, an image with this hash exists already
                 return callback(null, res);
             }
         });
     });
 }
 
+/**
+ * Zip exists callback.
+ * @callback zipExistsCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {boolean} exists - Whether a zip exists with the given id.
+ */
+
+/**
+ * Retrieves a list of executable zips uploaded by a user.
+ * @param {string} zipHash - The id of the zip to look for.
+ * @param {zipExistsCallback} callback - The callback that handles the result of the check for the zip.
+ */
 function zipExists(zipHash, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -69,14 +102,17 @@ function zipExists(zipHash, callback) {
     });
 }
 
+/**
+ * Tries to add a new zip for a given user.
+ * @param {user.User} user - The user who should be given ownership of the zip.
+ * @param {string} zipHash - The id of the zip.
+ * @param {string} name - The display name/description of the zip.
+ * @param {string} filename - The filename of the zip.
+ * @param {errorCallback} callback - The callback that handles the result of trying to add a new zip.
+ */
 function addNewZip(user, zipHash, name, filename, callback) {
     var query = "INSERT INTO `executables` (exeid, name, filename, ownerid) VALUE (?,?,?,?)";
     var sub = [zipHash, name, filename, user.id];
-    // if(user.privilege === users.PrivilegeLevel.SUBUSER.i) {
-    //     sub.push(user.supervisor);
-    // } else {
-    //     sub.push(user.id);
-    // }
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
@@ -98,6 +134,18 @@ function addNewZip(user, zipHash, name, filename, callback) {
     });
 }
 
+/**
+ * Subuser listing callback.
+ * @callback subuserListCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {Object[]} list - The list of all subusers found for the given user.
+ */
+
+/**
+ * Retrieves a list of executable zips uploaded by a user.
+ * @param {number} id - The user id to find subusers of.
+ * @param {subuserListCallback} callback - The callback that handles the result of trying to fetch the list of subusers.
+ */
 function getSubusers(id, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -124,6 +172,25 @@ function getSubusers(id, callback) {
     });
 }
 
+/**
+ * @typedef ImageAccess
+ * @type {object}
+ * @property {number} ownerid - The ID of the image owner.
+ * @property {boolean} private - Whether the image has been marked as private or not.
+ */
+
+/**
+ * Image access details callback.
+ * @callback imageAccessCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {ImageAccess} acc - The image access properties object.
+ */
+
+/**
+ * Retrieves the access control properties for a given image.
+ * @param {string} id - The id of the image to lookup.
+ * @param {imageAccessCallback} callback - The callback that handles the access properties of the image.
+ */
 function getImageOwner(id, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -151,6 +218,11 @@ function getImageOwner(id, callback) {
     });
 }
 
+/**
+ * Attempts to delete an image.
+ * @param {string} id - The image id to delete.
+ * @param {errorCallback} callback - The callback that handles the result of trying to delete the image.
+ */
 function deleteImage(id, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -175,7 +247,18 @@ function deleteImage(id, callback) {
     });
 }
 
-// checks if the token is expired
+/**
+ * Subuser token expiry callback.
+ * @callback tokenExpiryCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {boolean} withinExpiry - Whether the token is currently valid or not.
+ */
+
+/**
+ * Checks whether a given subuser's token has expired.
+ * @param {number} id - The user id to find subusers of.
+ * @param {tokenExpiryCallback} callback - The callback that handles the result of checking a token's validity.
+ */
 function tokenExpiry(email, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -202,7 +285,18 @@ function tokenExpiry(email, callback) {
     });
 }
 
+/**
+ * Image exists callback.
+ * @callback imageExistsCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {boolean} exists - Whether an image exists with the given id.
+ */
 
+/**
+ * Checks if the given image exists.
+ * @param {string} hash - The id of the image to look for.
+ * @param {imageExistsCallback} callback - The callback that handles the result of the check for the image.
+ */
 function imageExists(hash, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -225,6 +319,22 @@ function imageExists(hash, callback) {
     });
 }
 
+/**
+ * Subuser update callback.
+ * @callback updateSubuserCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {boolean} exists - Whether the update succeeded or not.
+ */
+
+/**
+ * Tries to update a given subuser.
+ * @param {number} id - The user id of the supervisor.
+ * @param {string} email - The email of the subuser.
+ * @param {string} [name] - The name to assign to the subuser.
+ * @param {boolean} [refresh] - If present and true, the subuser's token validity will be reset
+ * @param {number} [projectid] - The project id the subuser should be assigned to.
+ * @param {updateSubuserCallback} callback - The callback that handles the result of trying to add a new zip.
+ */
 function updateSubuser(id, email, name, refresh, projectid, callback) {
     var query = "UPDATE `users` SET";
     var sub = [];
@@ -282,6 +392,16 @@ function updateSubuser(id, email, name, refresh, projectid, callback) {
     });
 }
 
+/**
+ * Tries to update a given user.
+ * @param {string} [name] - The name to assign to the user.
+ * @param {string} email - The email of the user to update.
+ * @param {string} [usertype] - The usertype to give the user.
+ * @param {string} [profile_image] - The hash of the user's gravatar.
+ * @param {number} [supervisor] - The id of the supervisor to give this user. Should only be set with a usertype of subuser!
+ * @param {number} [token_expiry] - Whether to set the token expiry or not. Valid only for subusers!
+ * @param {updateSubuserCallback} callback - The callback that handles the result of trying to update the subuser.
+ */
 function updateUser(name, email, usertype, profile_image, supervisor, token_expiry, callback) {
     var query = "UPDATE `users` SET";
     var sub = [];
@@ -357,6 +477,7 @@ function updateUser(name, email, usertype, profile_image, supervisor, token_expi
     });
 }
 
+// TODO: No longer required?
 function getJobImageCount(jobid, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -389,6 +510,18 @@ function getJobImageCount(jobid, callback) {
     });
 }
 
+/**
+ * Project listing callback.
+ * @callback projectListCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {string[]} projects - The set of project names.
+ */
+
+/**
+ * Retrieves a list of projects.
+ * @param {boolean} showAll - If false, the list of projects will be filtered to contain only active projects.
+ * @param {projectListCallback} callback - The callback that handles the result of trying to fetch the list of projects.
+ */
 function getProjects(showAll, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -416,6 +549,27 @@ function getProjects(showAll, callback) {
     });
 }
 
+/**
+ * @typedef ProjectField
+ * @type {object}
+ * @property {string} name - The name of the field.
+ * @property {string} type - The type of the field. One of 'string', 'number', 'enum', 'apoly', 'apoint', 'arect'.
+ * @property {boolean} required - Whether the field is required or optional.
+ * @property {string[]} enumvals - The list of allowed values for an enum field. Null for all other types.
+ */
+ 
+/**
+ * Field listing callback.
+ * @callback fieldListCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {ProjectField[]} projects - The set of fields.
+ */
+
+/**
+ * Retrieves a list of fields define for a given project.
+ * @param {number} showAll - If false, the list of projects will be filtered to contain only active projects.
+ * @param {fieldListCallback} callback - The callback that handles the result of trying to fetch the list of projects.
+ */
 function getFields(project, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -453,6 +607,13 @@ function getFields(project, callback) {
     });
 }
 
+/**
+ * Tries to add enum values for a given enum field. For internal use only.
+ * @param {mysql.Connection} conn - The database connection to use.
+ * @param {number} project - The id of the project.
+ * @param {Object[]} fieldList - The list of fields used to setup the project. Must contain all defined fields of type enum for the given project.
+ * @param {errorCallback} callback - The callback that handles the result of trying to insert the new enum values.
+ */
 function setupEnums(conn, project, fieldList, callback) {
     var query = "SELECT `fieldid`, `name` FROM `project_fields` WHERE `projectid` = ? AND `type` = 'enum'";
     var sub = [ project ];
@@ -493,6 +654,12 @@ function setupEnums(conn, project, fieldList, callback) {
     });
 }
 
+/**
+ * Tries to add fields to a project.
+ * @param {number} project - The id of the project.
+ * @param {Object[]} fieldList - The list of fields used to setup the project. Must contain all defined fields of type enum for the given project.
+ * @param {errorCallback} callback - The callback that handles the result of trying to insert the new enum values.
+ */
 function setFields(project, fieldList, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -528,6 +695,27 @@ function setFields(project, fieldList, callback) {
     });
 }
 
+/**
+ * @typedef Project
+ * @type {object}
+ * @property {number} projectid - The ID of the project.
+ * @property {string} name - The name of the project.
+ * @property {string} desc - A longer description of a project.
+ * @property {boolean} active - If true, the project is open to contributions.
+ */
+
+/**
+ * Project creation/retrieval callback.
+ * @callback projectCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {Project} proj - The affected project.
+ */
+
+/**
+ * Retrieves a project from it's id.
+ * @param {number} id - The id of the project to lookup.
+ * @param {projectCallback} callback - The callback that handles the found project.
+ */
 function getProject(id, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -558,6 +746,11 @@ function getProject(id, callback) {
     });
 }
 
+/**
+ * Tries to create a project.
+ * @param {Project} project - The project to create. The ID will be ignored.
+ * @param {projectCallback} callback - The callback that handles the newly created project. The project object will have it's id set.
+ */
 function createProject(proj, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -580,6 +773,12 @@ function createProject(proj, callback) {
     });
 }
 
+/**
+ * Converts WKT representation to the desired object representation.
+ * @param {string} WKT - The WKT representation of a geometry. As returned by MySQL's AsText() function.
+ * @param {boolean} [location=false] - If true, the WKT will be represented as a point on the globe.
+ * @returns {Object} The object representation of the supplied WKT.
+ */
 function geomWKTToPoints(WKT, location) {
     if (location) {
         // Locations should hold points only, and use lat/lon instead of x/y
@@ -620,6 +819,12 @@ function geomWKTToPoints(WKT, location) {
     }
 }
 
+/**
+ * Converts WKT representation to the desired object representation.
+ * @param {Object[]} region - A list of x/y (or lat/lon) points. The final point of a polygon should match the first.
+ * @param {boolean} [location=false] - If true, the region will be interpreted as a point on the globe.
+ * @returns {Object} The WKT representation of the given region.
+ */
 function pointsToGeomWKT(region, location) {
     if (location) {
         // Locations should hold points only, and use lat/lon instead of x/y
@@ -642,6 +847,11 @@ function pointsToGeomWKT(region, location) {
     }
 }
 
+/**
+ * Takes an annotations object and filters it into a list of only valid annotations.
+ * @param {Object} annotations - An annotations object, mapping field names to annotations or false values. As produced by the field parser in metadata upload.
+ * @returns {Object} A list of annotation objects, with their associated keys saved as title properties. False values will be filtered.
+ */
 function condenseAnnotations(annotations) {
     // To make query generation simpler, we will create a condensed array of only valid regions.
     var cond = [];
@@ -659,8 +869,20 @@ function condenseAnnotations(annotations) {
     }
     return cond;
 }
+ 
+/**
+ * Metadata set callback.
+ * @callback metadataSetCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {Object} result - An object detailing the result of the insertion.
+ */
 
-// Adds annotation to an image.
+/**
+ * Adds annotations to the given image.
+ * @param {string} iid - The id of the image to attach the annotations to.
+ * @param {Object} annotations - An annotations object mapping field names to region definitions. As provided by the metadata upload parser.
+ * @param {metadataSetCallback} callback - The callback that handles the result of trying to fetch the list of projects.
+ */
 function addImageAnno(iid, annotations, callback) {
     var anno = condenseAnnotations(annotations);
 
@@ -726,6 +948,20 @@ function addImageAnno(iid, annotations, callback) {
     }
 }
 
+/**
+ * Metadata set callback.
+ * @callback metadataSetCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {Object} result - An object detailing the result of the insertion.
+ */
+
+/**
+ * Recursive metadata update function. For internal use only!
+ * @param {number} uid - The id of the user adding the metadata.
+ * @param {Object} mdObj - An object mapping image ids to metadata objects. As created by the metadata upload parser.
+ * @param {metadataSetCallback} callback - The callback that handles the result of trying to fetch the list of projects.
+ * @param {boolean[]} rSet - The record of success/failure for all previous metadata updates.
+ */
 function updateMetaR(uid, mdObj, callback, rSet) {
     var topID = null;
     var mdLength = 0;
@@ -848,11 +1084,18 @@ function updateMetaR(uid, mdObj, callback, rSet) {
     }
 }
 
-// Updates image metadata TODO: Check privileges!
+// TODO: Check privileges!
+/**
+ * Metadata update helper function. Wraps {@link updateMetaR}.
+ * @param {number} uid - The id of the user adding the metadata.
+ * @param {Object} mdObj - An object mapping image ids to metadata objects. As created by the metadata upload parser.
+ * @param {metadataSetCallback} callback - The callback that handles the result of trying to fetch the list of projects.
+ */
 function addImageMeta(uid, mdArr, callback) {
     return updateMetaR(uid, mdArr, callback, []);
 }
 
+//TODO: Merge with getImageOwner
 // Checks eligibility to load an image.
 function checkImagePerm(uid, id, callback) {
     var query = "SELECT (`ownerid`=? OR NOT `private`) AS 'open', `private` FROM `images` WHERE `imageid`=?";
@@ -880,6 +1123,27 @@ function checkImagePerm(uid, id, callback) {
     });
 }
 
+/**
+ * @typedef ImageMeta
+ * @type {object}
+ * @property {Date} datetime - The time and date the picture was taken.
+ * @property {Object} location - A lat/lon pair detailing where the image was taken.
+ * @property {boolean} private - Whether the image should be viewable by other users or not.
+ */
+
+/**
+ * Basic image metadata callback.
+ * @callback imageMetaCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {ImageMeta|boolean} meta - The basic image metadata, or boolean false if the image was not found or access was denied.
+ */
+
+/**
+ * Retrieves the basic metadata for an image, checking that the user is allowed access.
+ * @param {number} uid - The id of the user attempting to fetch this metadata.
+ * @param {string} iid - The id of the image to lookup.
+ * @param {imageMetaCallback} callback - The callback that handles the basic image metadata.
+ */
 function getMetaBasic(uid, iid, callback) {
     var query = "SELECT `datetime`, AsText(`location`) AS 'location', `private` FROM `images` WHERE `imageid`=? AND (`ownerid`=? OR NOT `private`)";
     var sub = [iid, uid];
@@ -910,6 +1174,26 @@ function getMetaBasic(uid, iid, callback) {
     });
 }
 
+/**
+ * @typedef ImageFields
+ * @type {object}
+ * @property {string} name - The name of the field.
+ * @property {string} type - The type of the field.
+ * @property {string} val - The string representation of the typed value.
+ */
+
+/**
+ * Image metadata fields callback.
+ * @callback imageFieldsCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {ImageFields} fields - All metadata fields set on the given image.
+ */
+
+/**
+ * Retrieves all metadata fields set on an image.
+ * @param {string} iid - The id of the image to lookup.
+ * @param {imageFieldsCallback} callback - The callback that handles the basic image metadata.
+ */
 function getImageFields(iid, callback) {
     var query = "SELECT `pf`.`name`, `pf`.`type`, `stringval` AS 'val' " +
         "FROM `project_fields` AS `pf` " +
@@ -955,6 +1239,25 @@ function getImageFields(iid, callback) {
     });
 }
 
+/**
+ * @typedef ImageAnnotations
+ * @type {object}
+ * @property {string} name - The name of the field.
+ * @property {Object} region - The object representation of the region, as provided by {@link geomWKTToPoints}.
+ */
+
+/**
+ * Image annotation retrieval callback.
+ * @callback imageAnnoCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {ImageAnnotations} fields - All annotations set on the given image.
+ */
+
+/**
+ * Retrieves all annotations set on an image.
+ * @param {string} iid - The id of the image to lookup.
+ * @param {imageAnnoCallback} callback - The callback that handles the image annotations.
+ */
 function getAnnotations(iid, callback) {
     var query = "SELECT `project_fields`.`name`, AsText(`region`) AS 'region' " +
         "FROM `image_meta_annotations` " +
@@ -985,7 +1288,29 @@ function getAnnotations(iid, callback) {
     });
 }
 
-// Returns a list of all images uploaded by a user.
+/**
+ * @typedef Image
+ * @type {object}
+ * @property {string} imageid - The id of the image.
+ * @property {Date} datetime - The time and date the picture was taken.
+ * @property {Object} loc - A lat/lon pair detailing where the image was taken.
+ * @property {boolean} private - Whether the image should be viewable by other users or not.
+ * @property {string} uploader - The email of the uploader of the image.
+ */
+
+/**
+ * Image list callback.
+ * @callback imagesCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {Image[]} images - The list of images associated with the user.
+ */
+
+/**
+ * Retrieves the basic metadata for an image, checking that the user is allowed access.
+ * @param {user.User} user - The user to fetch images from.
+ * @param {number} [uploader] - The email of the uploader to filter on, if provided.
+ * @param {imagesCallback} callback - The callback that handles the image list.
+ */
 function getUserImages(user, uploader, callback) {
     var query = "SELECT `imageid`, `datetime`, AsText(`location`) AS 'loc', `private`, `email` AS 'uploader' FROM `images` INNER JOIN `users` ON `userid`=`uploaderid` WHERE `ownerid`=?";
     var sub = [user.id];
@@ -1013,7 +1338,13 @@ function getUserImages(user, uploader, callback) {
     });
 }
 
-// Adds a new image to the database.
+/**
+ * Tries to add a new image for a given user.
+ * @param {user.User} user - The user who should be given ownership of the zip.
+ * @param {number} project - The id of the project the image should be attached to.
+ * @param {string} imageHash - The hash of the image, to use as the id.
+ * @param {errorCallback} callback - The callback that handles the result of trying to add a new image.
+ */
 function addNewImage(user, project, imageHash, callback) {
     var query = "INSERT INTO `images` (imageid, projectid, uploaderid, ownerid) VALUE (?,?,?,?)";
     var sub = [imageHash, project, user.id];
@@ -1043,8 +1374,18 @@ function addNewImage(user, project, imageHash, callback) {
     });
 }
 
-// Attempts to deserialize a user, passing it to the done callback.
-// done(err, user)
+/**
+ * User callback.
+ * @callback userCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {user.User} user - The affected user.
+ */
+
+/**
+ * Retrieves a user from it's id.
+ * @param {number} id - The id of the user to lookup.
+ * @param {userCallback} callback - The callback that handles the found user.
+ */
 function getUser(id, done) {
     var query = "SELECT `email`, `name`, `usertype`, `gravatar`, `supervisor`, `assigned_project`" +
         "FROM `users` " +
@@ -1082,7 +1423,13 @@ function getUser(id, done) {
     });
 }
 
-// Associates an external auth account with a user.
+/**
+ * Tries to add a new external authorization account to a given user.
+ * @param {string} id - The unique id of the external account.
+ * @param {string} provider - A string that identifies the service providing the external account - e.g. "facebook"
+ * @param {user.User} loginUser - The standard user who should be authorized by this external account.
+ * @param {userCallback} done - The callback that handles the result of associating the account.
+ */
 function extAssocUser(id, provider, loginUser, done) {
     var query = "INSERT INTO `ext_auth` VALUE (?,?,?)";
     var sub = [loginUser.id, provider, id];
@@ -1107,7 +1454,13 @@ function extAssocUser(id, provider, loginUser, done) {
     });
 }
 
-// Attempts to get a user (initialise login) via an external provider
+/**
+ * Retrieves a user from an external authorization attempt. If the user is already logged in, the external account will be associated with their current user, if possible.
+ * @param {string} id - The external account id to login with.
+ * @param {string} provider - A string that identifies the service providing the external account - e.g. "facebook"
+ * @param {user.User} [loginUser] - The currently logged in user, if they are logged in.
+ * @param {userCallback} callback - The callback that handles the found or updated user.
+ */
 function extGetUser(id, provider, loginUser, done) {
     var query = "SELECT `users`.`userid`, `email`, `name`, `usertype`, `gravatar` " +
         "FROM `users` " +
@@ -1166,6 +1519,11 @@ function extGetUser(id, provider, loginUser, done) {
     });
 }
 
+/**
+ * Adds a password hash to an account to allow email/password authentication.
+ * @param {number} id - The user id to associate the password with.
+ * @param {string} auth - The string representation of the bcrypt hash of the password.
+ */
 function setUserHash(id, auth) {
     var query = "INSERT INTO `local_auth` VALUE (?,?)";
     var sub = [id, auth];
@@ -1187,7 +1545,13 @@ function setUserHash(id, auth) {
     });
 }
 
-//change user password-hash
+/**
+ * Updates a password on an account and updates the user's token expiry.
+ * @param {string} email - The email of the user to update.
+ * @param {string} auth - The string representation of the bcrypt hash of the password.
+ * @param {number} token_expiry - Whether to set a new expiry or not. See {@link updateUser}.
+ * @param {updateSubuserCallback} callback - The callback that handles the update result.
+ */
 function updateUserHash(email, auth, token_expiry, callback) {
     var query = "UPDATE `local_auth` SET `hash`=? WHERE `userid` IN (SELECT `userid` FROM `users` WHERE `email`=?)";
     var sub = [ auth, email ];
@@ -1214,8 +1578,13 @@ function updateUserHash(email, auth, token_expiry, callback) {
     });
 }
 
-// Adds a new user to users/local auth. TODO: Use a user object.
-// callback(err, id)
+/**
+ * Tries to add a new user with a usertype of 'user'.
+ * @param {user.User} user - The user to create. The id and usertype properties will be ignored.
+ * @param {string} phash - The string representation of the bcrypt hash of the user's password.
+ * @param {string} vhash - The validation hash the user must return to verify their email.
+ * @param {userCallback} callback - The callback that handles the result of trying to add a new user.
+ */
 function addNewUser(user, phash, vhash, callback) {
     var query = "INSERT INTO `users` (userid, email, name, usertype, gravatar, validation_hash) VALUE (null,?,?,?,?,?)";
     var sub = [user.email, user.name, "user", user.gravatar, vhash];
@@ -1240,6 +1609,12 @@ function addNewUser(user, phash, vhash, callback) {
     });
 }
 
+/**
+ * Tries to add a new subuser.
+ * @param {user.User} user - The user to create. The id and usertype properties will be ignored.
+ * @param {string} phash - The string representation of the bcrypt hash of the user's password.
+ * @param {userCallback} callback - The callback that handles the result of trying to add a new user.
+ */
 function addNewSub(user, phash, callback) {
     var query = "INSERT INTO `users` (userid, email, name, usertype, supervisor, token_expiry, assigned_project) VALUE (null,?,?,?,?,(NOW()+INTERVAL 1 HOUR),?)";
     var sub = [user.email, user.name, users.privilegeFromInt(user.privilege), user.supervisor, user.projectid];
@@ -1264,6 +1639,18 @@ function addNewSub(user, phash, callback) {
     });
 }
 
+/**
+ * Validation callback.
+ * @callback validationCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {boolean} Correct - Whether the validation hash matched the one we sent.
+ */
+
+/**
+ * Validates a user's email via the validation hash.
+ * @param {string} vhash - The validation hash to verify.
+ * @param {validationCallback} callback - The callback that handles the outcome of the validation.
+ */
 function validateEmail(vhash, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -1290,6 +1677,20 @@ function validateEmail(vhash, callback) {
 
 // Looks up a users bcrypt hash from their registered email, compare pass, and give results to callback.
 // callback(err, hash, user)
+
+/**
+ * User and password hash callback.
+ * @callback userHashCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {string} hash - The strign representation of the user's password hash.
+ * @param {user.User} user - The user object.
+ */
+
+/**
+ * Retrieves the user object and password hash corresponding to the given email.
+ * @param {string} email - The email of the user to lookup.
+ * @param {userHashCallback} callback - The callback that handles the password hash comparison and user object.
+ */
 function getUserHash(email, callback) {
     var query = "SELECT `users`.`userid`, `name`, `email`, `hash`, `usertype`, `gravatar`, `supervisor`, `assigned_project` " +
         "FROM `users` " +
@@ -1323,6 +1724,7 @@ function getUserHash(email, callback) {
     });
 }
 
+// Export all public members.
 module.exports = {
     init: init,
     zipsForUser:zipsForUser,
