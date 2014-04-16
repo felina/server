@@ -18,6 +18,12 @@ module.exports = function(grunt) {
         dest: 'dist/<%= pkg.name %>.js'
       }
     },
+    jsdoc: {
+      dist: {
+        src: ['src/*.js', 'src/**/*.js'],
+        dest: 'doc'
+      }
+    },
     uglify: {
       options: {
         banner: '<%= banner %>'
@@ -80,6 +86,6 @@ module.exports = function(grunt) {
 
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-mocha-test');
-
-  grunt.registerTask('default', ['jshint', 'mochaTest']);
+  grunt.loadNpmTasks('grunt-jsdoc');
+  grunt.registerTask('default', ['jshint', 'mochaTest', 'jsdoc']);
 };
