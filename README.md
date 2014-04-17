@@ -27,7 +27,7 @@ You should then update config.json with your AWS settings, and db_settings with 
 ## Running
 
 ```bash
-node src/index.js
+node src/main.js
 ```
 
 ## Testing

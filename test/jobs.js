@@ -1,6 +1,6 @@
 var assert = require('assert');
 var http = require('http');
-var app = require('../src/index.js');
+var app = require('../src/main.js');
 var testSettings = require('testConfig.json');
 var port = 5000;
 var sessionCookie = null;

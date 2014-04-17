@@ -149,7 +149,7 @@ def kill_existing_server():
         [x for x in iter(lambda: o.stdout.read(1), '')]).split('\n')
     for line in lines:
         line = line.split()
-        if 'src/index.js' in line:
+        if 'src/main.js' in line:
             os.system('kill -9 ' + line[0])
 
 
@@ -157,7 +157,7 @@ def start_server():
     kill_existing_server()
     start = time.time()
     process = subprocess.Popen(
-        'node src/index.js', stdout=subprocess.PIPE, shell=True)
+        'node src/main.js', stdout=subprocess.PIPE, shell=True)
     output = ''
     for c in iter(lambda: process.stdout.read(1), ''):
         if time.time() - start > 10:
