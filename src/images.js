@@ -1,3 +1,7 @@
+/** 
+ * @module images 
+ */
+
 var fs = require('fs');
 var md5 = require('MD5');
 var aws = require('aws-sdk');
@@ -10,20 +14,36 @@ var archiver = require('archiver');
 var lazystream = require('lazystream');
 
 aws.config.loadFromPath('./config/aws.json');
+
+/**
+ * Global S3 client object, with configuration pre-loaded.
+ */
 var s3 = new aws.S3();
 
+/**
+ * The S3 bucket name to use for private image storage.
+ */
 var PRIVATE_BUCKET = 'citizen.science.image.storage';
+/**
+ * The S3 bucket name to use for public image storage.
+ * This bucket should be set to make all objects publically viewable, and the S3 web server should be enabled (recommended).
+ */
 var PUBLIC_BUCKET  = 'citizen.science.image.storage.public';
 
-//var S3_URL = 'https://' + PUBLIC_BUCKET + '.s3.amazonaws.com/'; // Raw bucket URL
+/**
+ * The URL stem to use when serving public images. Must not require authentication!
+ */
 var S3_URL = 'http://' + PUBLIC_BUCKET + '.s3-website-eu-west-1.amazonaws.com/'; // S3 web server URL (preferred)
+//var S3_URL = 'https://' + PUBLIC_BUCKET + '.s3.amazonaws.com/'; // Raw bucket URL - use if https is required or web server disabled.
 
-var PRIVATE_EXPIRY = 120; // Number of seconds to keep a private image URL valid for
+/**
+ * Number of seconds to keep a private image URL valid for.
+ */
+var PRIVATE_EXPIRY = 120;
 
-// Number of download threads to run simultaneously when creating a zip.
-var IMAGE_DOWNLOADS_LIMIT = 1;
-
-// Defines the MIME types we accept as image uploads.
+/**
+ * Defines the MIME types to accept as image uploads.
+ */
 var VALID_MIME_TYPES = [
     'image/jpeg',
     'image/png',
@@ -31,6 +51,18 @@ var VALID_MIME_TYPES = [
     // 'image/tiff' // TIFF is not universally supported by major browsers
 ];
 
+/**
+ * @typedef Image
+ * @type {object}
+ * @property {string} imageid - The id of the image.
+ * @property {boolean} private - Whether the image is private.
+ */
+
+/**
+ * Gets an s3 object as a Node stream.
+ * @param {Image} img - The image to stream.
+ * @returns {stream.Readable} A readable stream of the image data.
+ */
 function getImageStream(img) {
     var params = {
         'Bucket': (img.private) ? PRIVATE_BUCKET : PUBLIC_BUCKET,
@@ -48,6 +80,12 @@ function getImageStream(img) {
     return rs;
 }
 
+/**
+ * Proxies an image from S3 to a given writeable stream.
+ * @param {string} imageid - The id of the image.
+ * @param {boolean} priv - Whether the image is private.
+ * @param {stream.Writeable} stream - The stream to pipe into (e.g. an express request or file stream).
+ */
 function proxyImage(id, priv, stream) {
     try {
         getImageStream({'imageid': id, 'private': priv}).pipe(stream);
@@ -57,8 +95,20 @@ function proxyImage(id, priv, stream) {
     }
 }
 
-// Use user id as output filename. Restrict to one export job per user at a time.
+/**
+ * Image archive callback.
+ * @callback imageArchiveCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {string} filename - The name of the zip file.
+ */
+
 // TODO: Collect images and notify user when done, instead of waiting.
+/**
+ * Downloads and archives a list of images into a zip. The user's id is used to create the filename, and only one job per user may be running at a time.
+ * @param {number} uid - The id of the user to create the archive for.
+ * @param {Image[]} images - The list of images to add to the zip.
+ * @param {imageArchiveCallback} done - The callback that handles the output of the archive operation.
+ */
 function collectImages(uid, images, done) {
     var outfile = fs.createWriteStream('/tmp/' + uid + '.zip');
     var archive = archiver('zip');
@@ -85,6 +135,11 @@ function collectImages(uid, images, done) {
     archive.finalize();
 }
 
+/**
+ * Gets the extension from a filename.
+ * @param {string} filePath - The file's path.
+ * @returns {string|null} The extension of the file, or null if not present.
+ */
 function fileType(filePath) {
     for (var i = filePath.length; i > 0; i--) {
         if (filePath[i] === '.') {
@@ -94,6 +149,13 @@ function fileType(filePath) {
     return null;
 }
 
+/**
+ * Sets the access level on the image by moving it to the corresponding bucket. Will silently fail if the image is not found in the opposite bucket.
+ * @static
+ * @param {string} id - The id of the image.
+ * @param {boolean} priv - The access level to set the image to.
+ * @param {errorCallback} callback - The callback that handles any unhandled erros when moving the image.
+ */
 function setAccess(id, priv, callback) {
     var params, dparams;
     if (priv) {
@@ -143,6 +205,22 @@ function setAccess(id, priv, callback) {
     });
 }
 
+/**
+ * @typedef ImageUpload
+ * @type {object}
+ * @property {string} felinaHash - The hash of the image to use as it's id.
+ * @property {string} type - The MIME type of the image.
+ * @property {Buffer} fileContents - The contents of the image file.
+ */
+
+/**
+ * Uploads an image file to S3, and inserts it into the database using {@link addNewImage}.
+ * @param {user.User} user - The user to associate the image with.
+ * @param {ImageUpload} iInfo - The image to be uploaded.
+ * @param {number} pid - The id of the project to associate the image with.
+ * @param {object} db - The db object.
+ * @param {errorCallback} callback - The callback detailing whether the upload was successful or not.
+ */
 function uploadImage(user, iInfo, pid, db, callback) {
     console.log('Trying to upload: ' + iInfo.felinaHash);
     var params = {
@@ -169,20 +247,43 @@ function uploadImage(user, iInfo, pid, db, callback) {
     });
 }
 
+/**
+ * Registers Express routes related to image handling. These are API endpoints.
+ * @param {Express} app - The Express application object.
+ * @param {object} auth - The auth module.
+ * @param {object} db - The db module.
+ */
 function imageRoutes(app, auth, db) {
-    // Endpoint to get list of images
-    app.get('/images', auth.enforceLogin, function(req, res) {
+    /**
+     * @typedef ImageListAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the list was retrieved, regardless of any images being present.
+     * @property {Image[]} [images] - The list of images found.
+     * @property {APIError} [err] - The error that caused the request to fail.
+     */
+
+    /**
+     * API endpoint to get a list of images belonging to a user, optionally filtered by uploader.
+     * @hbcsapi {GET} images - This is an API endpoint.
+     * @name images
+     * @function
+     * @param {string} [uploader] - The email of the uploader to filter by.
+     * @returns {ImageListAPIResponse} The API response supplying the list.
+     */
+    // Register the images endpoint to `GET /images`
+    app.get('/images', auth.enforceLogin, function imagesEndpoint(db, req, res) {
         db.getUserImages(req.user, req.query.uploader, function(err, result) {
-            if (err) {
-                res.send(new errors.APIErrResp(2, 'Could not load image list.'));
-            } else {
-                res.send({
-                    'res': true,
-                    'images': result
-                });
-            }
+        if (err) {
+            res.send(new errors.APIErrResp(2, 'Could not load image list.'));
+        } else {
+            res.send({
+                'res': true,
+                'images': result
+            });
+        }
         });
     });
+    
 
     app.del('/img', function(req, res) {
         var id = req.query.id;
