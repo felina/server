@@ -1,3 +1,7 @@
+/**
+ * @module jobs
+ */
+
 var fs = require('fs');
 var _ = require('underscore');
 var aws = require('aws-sdk');
@@ -7,11 +11,34 @@ var async = require('async');
 var express = require('express');
 var jsapi = require('./windows_api/api.js');
 
+// Load the AWS configuration file.
 aws.config.loadFromPath('./config/aws.json');
+
+/**
+ * Global S3 client object, with configuration pre-loaded.
+ */
 var s3 = new aws.S3();
 
+/**
+ * The S3 bucket name to use for executable storage.
+ */
 var PRIVATE_BUCKET = 'citizen.science.executable.storage';
 
+/**
+ * @typedef ZipUpload
+ * @type {object}
+ * @property {string} zipHash - The hash of the zip to use as it's id.
+ * @property {string} type - The MIME type of the archive.
+ * @property {Buffer} fileContents - The contents of the archive file.
+ */
+
+/**
+ * Uploads a zip file to S3 and insert it into the database using {@link addNewZip}.
+ * @param {user.User} user - The user to associate the zip withh.
+ * @param {ZipUpload} iInfo - The archive to be uploaded.
+ * @param {object} db - The db object.
+ * @param {errorCallback} callback - The callback detailing whether upload was successful.
+ */
 function uploadZip(user, iInfo, db, callback) {
     console.log('Trying to upload: ' + iInfo.zipHash);
     var params = {
@@ -38,8 +65,15 @@ function uploadZip(user, iInfo, db, callback) {
     });
 }
 
+/**
+ * Registers Express routes related to job handling. These are API endpoints.
+ * @static
+ * @param {Express} app - The Express application object.
+ * @param {object} auth - The auth module.
+ * @param {object} db - The db module.
+ */
 function jobRoutes(app, auth, db) {
-    // Job start req
+    // TODO: This method needs to be re-written. (placeholder)
     app.post('/start', auth.enforceLogin, function(req, res) {
         // Get the image IDs for processing
         var executable = req.body.executable;
@@ -53,7 +87,12 @@ function jobRoutes(app, auth, db) {
         }
     });
 
-    // Job progress check
+    /**
+     * API endpoint to get the current progress or state of a job.
+     * @hbcsapi {GET} progress - This is an API endpoint.
+     * @param {number} jobID - The id of the job to lookup.
+     * @returns {number} progress - The percentage completion.
+     */
     app.get('/progress', auth.enforceLogin, function(req, res) {
         var jobID = parseInt(req.query.jobID);
 
@@ -73,7 +112,20 @@ function jobRoutes(app, auth, db) {
         }
     });
 
-    // Job results
+    /**
+     * @typedef ResultsAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the results were retrieved from the job server.
+     * @property {APIError} [err] - The error that caused the request to fail.
+     * @property {object} The results of the job. The formatting will be job dependent.
+     */
+
+    /**
+     * API endpoint to get the results of a job.
+     * @hbcsapi {GET} results - This is an API endpoint.
+     * @param {number} jobID - The id of the job to lookup.
+     * @returns {ResultsAPIResponse} The response that provides the results of the job.
+     */
     app.get('/results', auth.enforceLogin, function(req, res) {
         var jobID = parseInt(req.query.jobID);
 
@@ -117,6 +169,19 @@ function jobRoutes(app, auth, db) {
         });
     });
 
+    /**
+     * @typedef ExecutableListAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the list was retrieved, regardless of any executables being found.
+     * @property {APIError} [err] - The error that caused the request to fail.
+     * @property {object[]} [execs] - The list of executables uploaded, along with any properties set on them.
+     */
+
+    /**
+     * API endpoint to retrieve the list of executables uploaded by a user.
+     * @hbcsapi {GET} exec - This is an API endpoint.
+     * @returns {ExecutableListAPIResponse} The API response providing the list of executables..
+     */
     app.get('/exec', [auth.enforceLogin, express.multipart()], function(req, res) {
 
         db.zipsForUser(req.user, function(fErr, result) {
@@ -133,6 +198,22 @@ function jobRoutes(app, auth, db) {
         });
     });
 
+    /**
+     * @typedef ExecUploadAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the operation succeeded.
+     * @property {APIError} [err] - The error that caused the request to fail.
+     * @property {string[]} [ids] - A list of all the ids generated for each of the uploaded archives. The list will be ordered according to their order in the request body.
+     */
+
+    /**
+     * API endpoint to upload an archive. This endpoint is irregular in that it accepts multipart form-encoded data, instead of JSON.
+     * @hbcsapi {POST} img - This is an API endpoint.
+     * @param {form-data} file - The body of the file to upload. In case of multiple file uploads, this can be any unique string.
+     * @param {string} filename - The filename of the zip.
+     * @param {string} name - The name of the executable.
+     * @returns {ExecUploadAPIResponse} The API response providing the ids assigned to the archives, if successful.
+     */
     app.post('/exec', [auth.enforceLogin, express.multipart()], function(req, res) {
         async.map(Object.keys(req.files), function(fKey, done) {
             // console.log(req.files);
@@ -191,6 +272,7 @@ function jobRoutes(app, auth, db) {
     });
 }
 
+// Export public members.
 module.exports = {
     jobRoutes: jobRoutes
 };
