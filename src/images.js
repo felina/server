@@ -249,6 +249,7 @@ function uploadImage(user, iInfo, pid, db, callback) {
 
 /**
  * Registers Express routes related to image handling. These are API endpoints.
+ * @static
  * @param {Express} app - The Express application object.
  * @param {object} auth - The auth module.
  * @param {object} db - The db module.
@@ -265,12 +266,9 @@ function imageRoutes(app, auth, db) {
     /**
      * API endpoint to get a list of images belonging to a user, optionally filtered by uploader.
      * @hbcsapi {GET} images - This is an API endpoint.
-     * @name images
-     * @function
      * @param {string} [uploader] - The email of the uploader to filter by.
      * @returns {ImageListAPIResponse} The API response supplying the list.
      */
-    // Register the images endpoint to `GET /images`
     app.get('/images', auth.enforceLogin, function imagesEndpoint(db, req, res) {
         db.getUserImages(req.user, req.query.uploader, function(err, result) {
         if (err) {
@@ -283,8 +281,20 @@ function imageRoutes(app, auth, db) {
         }
         });
     });
-    
 
+    /**
+     * @typedef BasicAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the operation succeeded.
+     * @property {APIError} [err] - The error that caused the request to fail.
+     */
+
+    /**
+     * API endpoint to delete an image.
+     * @hbcsapi {DELETE} img - This is an API endpoint.
+     * @param {string} id - The image id to delete.
+     * @returns {BasicAPIResponse} The API response indicating the outcome.
+     */
     app.del('/img', function(req, res) {
         var id = req.query.id;
         
@@ -328,6 +338,12 @@ function imageRoutes(app, auth, db) {
         res.redirect('/img?id=' + req.params.id);
     });
 
+    /**
+     * API endpoint to get an image.
+     * @hbcsapi {GET} img - This is an API endpoint.
+     * @param {string} id - The image id to get.
+     * @returns {Redirect} The request will be redirected to the image URL.
+     */
     app.get('/img', function(req, res) {
         var uid = req.user ? req.user.id : -1;
         db.checkImagePerm(uid, req.query.id, function(err, priv) {
@@ -350,8 +366,22 @@ function imageRoutes(app, auth, db) {
         });
     });
 
-    // Image/s upload endpoint
-    // Uses express.multipart - this is deprecated and bad! TODO: Replace me!
+
+    /**
+     * @typedef ImageUploadAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the operation succeeded.
+     * @property {APIError} [err] - The error that caused the request to fail.
+     * @property {string[]} [ids] - A list of all the ids generated for each of the uploaded images. The list will be ordered according to their order in the request body.
+     */
+
+    /**
+     * API endpoint to upload an image. This endpoint is irregular in that it accepts multipart form-encoded data, instead of JSON.
+     * @hbcsapi {POST} img - This is an API endpoint.
+     * @param {form-data} file - The body of the file to upload. In case of multiple file uploads, this can be any unique string.
+     * @param {number} file_project - The id of the project to associate 'file' with. In the case of multiple files, this parameter should match the file parameter, with the suffix '_project'.
+     * @returns {ImageUploadAPIResponse} The API response providing the ids assigned to the images, if successful.
+     */
     app.post('/img', [auth.enforceLogin, express.multipart()], function(req, res) {
         // Don't return here, temp file cleanup at end!
         async.map(Object.keys(req.files),
@@ -426,6 +456,11 @@ function imageRoutes(app, auth, db) {
                    });
     }); // End image upload endpoint.
 
+    /**
+     * API endpoint to export all of a user's images as a zip.
+     * @hbcsapi {GET} export - This is an API endpoint.
+     * @returns {File|APIErrResp} The resulting file to be downloaded, or a JSON encoded API error response.
+     */
     app.get('/export', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
         db.getUserImages(req.user, null, function(err, images) {
             if (err) {
@@ -444,6 +479,7 @@ function imageRoutes(app, auth, db) {
 
 }
 
+// Export public members.
 module.exports = {
     setAccess: setAccess,
     imageRoutes: imageRoutes
