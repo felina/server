@@ -1,5 +1,8 @@
 #! /usr/bin/env node
- 
+
+/**
+ * The version of the API we are implementing.
+ */ 
 var API_VERSION = '0.1.0';
 //testaddition
 var express = require('express');
@@ -13,7 +16,7 @@ var projects = require('./projects.js');
 var user = require('./user.js');
 var jobAPI = require('./windows_api/api.js');
 
-// Check db settings
+// Call the init function on the database to check configuration.
 db.init(function(err) {
     if (err) {
 	console.log(err);
@@ -34,7 +37,9 @@ auth.authSetup(passport);
 // Init express application
 var app = express();
 
-// Forgotten headers?
+/**
+ * Express middleware to enable support for CORS.
+ */
 var allowCrossDomain = function(req, res, next) {
     res.set('Access-Control-Allow-Credentials', 'true');
     //res.set('Access-Control-Allow-Origin', 'http://localhost:9000');
@@ -50,22 +55,45 @@ var allowCrossDomain = function(req, res, next) {
     }
 };
 
+// Configure Express to use the various middleware we require.
 app.configure(function() {
+    // Enable CORS.
     app.use(allowCrossDomain);
+    // Enable the request logger, with dev formatting.
     app.use(express.logger('dev'));
+    // Enable serving of static files from the static folder.
     app.use(express.static(__dirname + '/../static'));
+    // Enable the parsing of cookies for session support.
     app.use(express.cookieParser());
+    // Enable JSON parsing for all request bodies.
     app.use(express.json());
+    // Enable the parsing of X-www-form-urlencoded request bodies.
+    // TODO: Move to specific locations, as this is rarely used
     app.use(express.urlencoded());
+    // Enable Express session management.
     app.use(express.session({
         secret: 'I should be something else'
     }));
+    // Enable Passport based authentication.
     app.use(passport.initialize());
+    // Enable persistent login sessions.
     app.use(passport.session());
+    // Enable the dynamic request router.
     app.use(app.router);
 });
 
-// Give API version on root.
+/**
+ * @typedef VersionAPIResponse
+ * @type {object}
+ * @property {boolean} res - Always true.
+ * @property {string} version - The API version this server is providing.
+ */
+
+/**
+ * API endpoint to expose the API version.
+ * @hbcsapi {GET} '/' - This is an API endpoint.
+ * @returns {VersionAPIResponse} The API response detailing the API version.
+ */
 app.get('/', function(req, res) {
     return res.send({
         res: true,
@@ -91,9 +119,13 @@ jobs.jobRoutes(app, auth, db);
 // Import user routes
 user.userRoutes(app, auth, db);
 
-// Start listening
+/**
+ * The port the server will listen on.
+ * This will be taken from the PORT environment variable if possible, else it will default to 5000.
+ */
 var port = process.env.PORT || 5000;
 
+// Start the server.
 app.listen(port, function() {
     return console.log("Listening on " + port);
 });
