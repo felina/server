@@ -1,8 +1,12 @@
 #! /usr/bin/env node
 
 /**
+ * @module main
+ */
+
+/**
  * The version of the API we are implementing.
- */ 
+ */
 var API_VERSION = '0.1.0';
 //testaddition
 var express = require('express');

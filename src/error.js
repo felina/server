@@ -1,4 +1,8 @@
 /**
+ * @module errors
+ */
+
+/**
  * Represents an error as represented in the API.
  * @constructor
  * @param {number} code - An integer representing the error.

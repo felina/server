@@ -1,11 +1,21 @@
+/**
+ * @module db
+ */
+
 var mysql = require('mysql');
 var users = require('./user.js');
 var _ = require('underscore');
 
-// Load config and set timezone to UTC so that node-mysql doesn't convert DATETIME values for us
+/**
+ * The configuration to use to connect to MySQL.
+ */
 var dbCFG = require('../config/db_settings.json');
+// Set timezone to UTC so that node-mysql doesn't convert DATETIME values for us
 dbCFG.timezone = '+0000';
 
+/**
+ * The MySQL connection pool.
+ */
 var connPool = mysql.createPool(dbCFG);
 
 /**
