@@ -44,7 +44,7 @@ function enforceLogin(req, res, next) {
  * Function to create Express middleware based upon an options object, that will enforce various access restrictions.
  * @static
  * @param {EnforceLoginOptions} options - The options that specify the restrictions this middleware will enforce.
- * @returns {functions} The Express middlewares to add to the route definition.
+ * @returns {function[]} The Express middlewares to add to the route definition.
  */
 function enforceLoginCustom(options, req, res, next) {
     if (options === null || typeof options === 'undefined') {
@@ -173,8 +173,8 @@ function authRoutes(app) {
     app.get('/logincheck', enforceLogin, function(req, res) {
         // Response to not logged in users will be provided by the middleware.
         res.send({
-            'res':true
-            'user':req.user
+            'res': true,
+            'user': req.user
         });
     });
 }
