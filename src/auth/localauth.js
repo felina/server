@@ -1,17 +1,36 @@
+/**
+ * @module localauth
+ */
+
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var db = require('../db.js');
 var users = require('../user.js');
 var errors = require('../error.js');
 var nodemailer = require('nodemailer');
-var smtp_config = require('../../config/smtp.json');
 var crypto = require('crypto');
 var bcrypt = require('bcrypt-nodejs');
+
+/**
+ * Configuration to use for sending emails.
+ */
+var smtp_config = require('../../config/smtp.json');
+
+/**
+ * Email client to use.
+`*/
 var transport = nodemailer.createTransport("SMTP", smtp_config);
-var host= (process.env.HOST||'nl.ks07.co.uk')+':'+(process.env.PORT || 5000);
+
+/**
+ * The host of this API server.
+ * @TODO Refactor this elsewhere
+ */
+var host = (process.env.HOST||'nl.ks07.co.uk')+':'+(process.env.PORT || 5000);
+
+// TODO: Remove me!
 var dbCFG = require('../../config/db_settings.json'); 
 
-
+// TODO: I'm the same method from user.js. Remove me!
 function getValidationHash() {
     var md5 = crypto.createHash('md5');
     var str = '';
@@ -23,6 +42,7 @@ function getValidationHash() {
     return md5.digest('hex');
 }
 
+// Possible duplicate in user.js? TODO: Remove me?
 function newToken(email, password, callback) {
     bcrypt.hash(password, null, null, function(err, hash) {
         if (err) {
@@ -43,7 +63,15 @@ function newToken(email, password, callback) {
     });
 }
 
+/**
+ * Registers a new user with email/password authentication. Will send an email verification to the user's email address.
+ * @static
+ * @param {user.User} user - The user to create. The id and privilege level will be overwritten.
+ * @param {string} password - The plaintext password to hash and store.
+ * @param {function} callback - TODO: This will probably change depending on suggested changes to db.addNewUser.
+ */
 function register(user, password, callback) {
+    // Asynchronously hash the password with bcrypt.
     bcrypt.hash(password, null, null, function(e, hash) {
         if (e) {
             console.log('Failed to hash password.');
@@ -73,6 +101,13 @@ function register(user, password, callback) {
     });
 }
 
+
+/**
+ * Registers a new subuser with email/password authentication. Will send an email verification to the user's email address.
+ * @param {user.User} user - The subuser to create. The id and privilege level will be overwritten. Subuser properties must be set.
+ * @param {string} password - The plaintext password to hash and store.
+ * @param {function} callback - TODO: This will probably change depending on suggested changes to db.addNewUser.
+ */
 function registerSub(user, password, callback) {
     bcrypt.hash(password, null, null, function(e, hash) {
         if (e) {
@@ -93,6 +128,19 @@ function registerSub(user, password, callback) {
     });
 }
 
+/**
+ * Login callback as defined by Passport-Local. See {@link https://github.com/jaredhanson/passport-local}.
+ * @callback passportLocalVerifyCallback
+ * @param {?Error} err - The error that occurred, if present.
+ * @param {user.User|boolean} user - The user object to assign to the requester's session, or boolean false if login details were incorrect.
+ */
+
+/**
+ * Verifies a login attempt. To be supplied to Passport-Local to implement local login logic.
+ * @param {string} username - The username according to Passport. (The email address in our implementation).
+ * @param {string} password - The paintext password the user has tried to login with.
+ * @param {passportLocalVerifyCallback} done - The callback supplied by Passport-Local.
+ */
 function localVerify(username, password, done) {
     console.log("Verifying user: " + username);
     var passHash = db.getUserHash(username, function(err, user, hash) {
@@ -116,14 +164,35 @@ function localVerify(username, password, done) {
     });
 }
 
-var StrategyOptions = Object.freeze({
+/**
+ * Defines what the keys of the username and password fields Passport-Local accepts should be.
+ */
+var STRATEGY_OPTIONS = Object.freeze({
     usernameField: 'email',
     passwordField: 'pass'
 });
 
-var BcryptLocalStrategy = new LocalStrategy(StrategyOptions, localVerify);
+/**
+ * Instantiation of the Passport LocalStrategy, using the options defined in this module.
+ */
+var BcryptLocalStrategy = new LocalStrategy(STRATEGY_OPTIONS, localVerify);
 
+/**
+ * Registers Express routes related to local (email/password) authentication. These are API endpoints.
+ * @static
+ * @param {Express} app - The Express application object.
+ * @param {auth/auth.enforceLogin} enfoceLogin - The enfoceLogin middleware. TODO: WHY???
+ */
 function authRoutes(app, enforceLogin) {
+    /**
+     * API endpoint to register a new user with email/password authentication.
+     * @hbcsapi {POST} register - This is an API endpoint.
+     * @param {string} email - The new user's email.
+     * @param {string} pass - The plaintext password of the new user.
+     * @param {string} name - The new user's display name.
+     * @param {string} [gravatar] - The hash of the new user's gravatar email.
+     * @returns {UserAPIResponse} The API response that details the newly created user.
+     */
     app.post('/register', function(req, res) {
         if (req.body.email && req.body.pass) {
             var mail = req.body.email;
@@ -168,6 +237,16 @@ function authRoutes(app, enforceLogin) {
         }
     });
 
+    /**
+     * API endpoint to register a new subuser. The password will be randomly generated. The supervisor will be set
+     * to the currently logged in user.
+     * @hbcsapi {POST} subuser - This is an API endpoint.
+     * @param {string} email - The new user's email.
+     * @param {string} name - The new user's display name.
+     * @param {number} projectid - The project id to assign the subuser to.
+     * @param {string} [gravatar] - The hash of the new user's gravatar email.
+     * @returns {UserAPIResponse} The API response that details the newly created user.
+     */
     app.post('/subuser', enforceLogin({'minPL':2}), function(req, res) {
         var mail = req.body.email;
         var name = req.body.name;
@@ -204,7 +283,13 @@ function authRoutes(app, enforceLogin) {
         }
     });
 
-    // Login callback - user auth
+    /**
+     * API endpoint to login the user. Note that this endpoint expects form-encoded data, not JSON.
+     * @hbcsapi {POST} login - This is an API endpoint.
+     * @param {string} email - The user's email.
+     * @param {string} pass - The user's plaintext password.
+     * @returns {UserAPIResponse} The API response detailing the user that has been logged in.
+     */
     app.post('/login', function(req, res, next) {
         passport.authenticate('local', function(err, user, info) {
             if (err) {
@@ -228,7 +313,21 @@ function authRoutes(app, enforceLogin) {
         })(req, res, next);
     });
 
-    // Give the subuser a token 
+    /**
+     * @typedef SubuserTokenAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the token has not yet expired and has not yet been retrieved.
+     * @property {APIError} [err] - The error that occurred, including token expiry.
+     * @property {string} [token] - The auth token/password.
+     */
+
+    /**
+     * API endpoint to retrieve the subuser's authentication details. May only be accessed once during a limited
+     * timespan after the supervisor has enabled this action.
+     * @hbcsapi {GET} token - This is an API endpoint.
+     * @param {string} email - The user's email.
+     * @returns {SubuserTokenAPIResponse} The API response detailing the subuser's auth token.
+     */
     app.get('/token', function(req, res) {
         var email = req.query.email;
         if (email) {
@@ -260,7 +359,12 @@ function authRoutes(app, enforceLogin) {
         }
     });
 
-    // validation callback for email validation
+    /**
+     * API endpoint that verifies a user's email by checking the random token sent to them.
+     * @hbcsapi {GET} validate/:hash - This is an API endpoint.
+     * @param {string} :hash - The verification hash.
+     * @returns {BasicAPIResponse} - The API response that signifies whether the hash matches the one we were expecting.
+     */
     app.get('/validate/:hash', function(req, res) {
         var hash = req.params.hash;
         if (hash.length === 32) {
@@ -270,8 +374,7 @@ function authRoutes(app, enforceLogin) {
                     return res.send(new errors.APIErrResp(1, 'Validation failed'));
                 } else if (info) {
                     return res.send({
-                        'res': true,
-                        'msg': 'Validation successfull'
+                        'res': true
                     });
                 } else {
                     return res.send(new errors.APIErrResp(2, 'Invalid URL.'));
@@ -283,6 +386,7 @@ function authRoutes(app, enforceLogin) {
     });
 }
 
+// Export all public members.
 module.exports = {
     getValidationHash:getValidationHash,
     LocalStrategy:BcryptLocalStrategy,
