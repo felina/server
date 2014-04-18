@@ -176,7 +176,7 @@ function parseAnnotations(an) {
 /**
  * Parses and validates metadata of an image. Delegates to {@link parseAnnotations} to handle annotations.
  * @param {Object.<string, MetadataWrapper>} mdObj - The object mapping image ids to the metadata to assign to them.
- * @returns {boolean|Object.<string, (boolean|MetadataWrapper)[]>} False iff mdObj is not an object. Otherwise, the supplied mdObj, with any adjustments or conversions, and any invalid definitions replaced with false.
+ * @returns {boolean|Object.<string, MetadataWrapper>} False iff mdObj is not an object. Otherwise, the supplied mdObj, with any adjustments or conversions, and any invalid properties replaced with boolean false.
  */
 function parseMetadata(mdObj) {
     if (!_.isObject(mdObj)) {
@@ -263,14 +263,14 @@ function parseMetadata(mdObj) {
 }
 
 /**
- * Metadata update result callback.
+ * Metadata update result combination callback.
  * @callback parseQueryCombineCallback
  * @param {Error|boolean[]} The error, if one occurred, else the list of booleans showing which updates succeeded.
  */
 
 /**
  * Combines the output of the metadata parser stack and the database action. Calls a method for each successful element.
- * @param {boolean|Object.<string, (boolean|MetadataWrapper)[]>} The resultant object from {@link parseMetadata}.
+ * @param {boolean|Object.<string, MetadataWrapper>} The resultant object from {@link parseMetadata}.
  * @param {boolean[]} The record of success/failure for all previous metadata updates, as returned by {@link db.updateMetaR}.
  * @param {function} onSuccess - The function that handles successful updates, and sets an image's access controls.
  * @param {parseQueryCombineCallback} callback - The callback that handles the final success/failure state of each update.
@@ -319,6 +319,21 @@ function metaRoutes(app, auth, db) {
     //   - points : A list containing at least one point object, where a point simply wraps two numbers, x and y.
     // The four properties of a metadata object are all optional. If you do not wish to set one of these properties,
     // the property should be left undefined or set to null.
+    /**
+     * @typedef MetadataSetAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff all the provided metadata objects were successfully parsed and set.
+     * @property {APIError} [err] - Present only when the entire request could not be parsed.
+     * @property {boolean[]} [detail] - The results of each individual update operation.
+     */
+
+    /**
+     * API endpoint to set metadata on images, including adding annotations. Multiple images may be updated
+     * in a single request. In case of erroneous inputs, parts of the request will be ignored.
+     * @hbcsapi {POST} upload/metadata - This is an API endpoint.
+     * @param {Object.<string, MetadataWrapper>} * - The body of the request should map image ids to the metadata to assign.
+     * @returns {MetadataSetAPIResponse} The API response detailing which, if any, of the images successfully updated.
+     */
     app.post('/upload/metadata', auth.enforceLogin, function(req, res) {
         console.log('META UP');
         console.log(JSON.stringify(req.body));
@@ -343,11 +358,20 @@ function metaRoutes(app, auth, db) {
         }
     });
 
-    // Deprecated
-    app.get('/img/:id/meta', function(req, res) {
-        return res.redirect('/meta?id=' + req.params.id);
-    });
+    /**
+     * @typedef MetadataGetAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the user has permission to access the image and the retrieval succeeded.
+     * @property {APIError} [err] - The error that caused the request to fail.
+     * @property {ImageMeta} [meta] - The metadata we have stored for the image.
+     */
 
+    /**
+     * API endpoint to fetch basic metadata stored for an image.
+     * @hbcsapi {GET} meta - This is an API endpoint. 
+     * @param {string} id - The image id to lookup.
+     * @returns {MetadataGetAPIResponse} The API response providing the metadata.
+     */
     app.get('/meta', function(req, res) {
         var uid = req.user ? req.user.id : -1;
         var iid = req.query.id;
@@ -366,11 +390,20 @@ function metaRoutes(app, auth, db) {
         });
     });
 
-    // Deprecated
-    app.get('/img/:id/anno', function(req, res) {
-        return res.redirect('/anno?id=' + req.params.id);
-    });
+    /**
+     * @typedef AnnotationGetAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the user has permission to access the image and the retrieval succeeded.
+     * @property {APIError} [err] - The error that caused the request to fail.
+     * @property {ImageAnnotations} [anno] - All annotations we have stored for the image.
+     */
 
+    /**
+     * API endpoint to fetch annotations stored for an image.
+     * @hbcsapi {GET} anno - This is an API endpoint. 
+     * @param {string} id - The image id to lookup.
+     * @returns {AnnotationGetAPIResponse} The API response providing the annotations.
+     */
     app.get('/anno', function(req, res) {
         var uid = req.user ? req.user.id : -1;
         var iid = req.query.id;
@@ -393,53 +426,39 @@ function metaRoutes(app, auth, db) {
         });
     });
 
+    /**
+     * @typedef FieldGetAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the user has permission to access the image and the retrieval succeeded.
+     * @property {APIError} [err] - The error that caused the request to fail.
+     * @property {ImageFields} [meta] - The project specific metadata we have stored for the image.
+     */
+
+    /**
+     * API endpoint to fetch extended project specific metadata stored for an image.
+     * @hbcsapi {GET} fields - This is an API endpoint. 
+     * @param {string} id - The image id to lookup.
+     * @returns {FieldGetAPIResponse} The API response providing the project-specific metadata.
+     */
     app.get('/fields', function(req, res) {
         var uid = req.user ? req.user.id : -1;
         var iid = req.query.id;
 
         db.checkImagePerm(uid, iid, function(err, bool) {
             if (bool) {
-                db.getImageFields(iid, function(err, anno) {
+                db.getImageFields(iid, function(err, fields) {
                     if (err) {
                         res.send(new errors.APIErrResp(2, 'Failed to retrieve metadata.'));
                     } else {
                         res.send({
                             'res': true,
-                            'fields': anno
+                            'fields': fields
                         });
                     }
                 });
             } else {
                 res.send(new errors.APIErrResp(1, 'You do not have permission to access this image.'));
             }
-        });
-    });
-
-    // To be replaced by /project/fields
-    app.get('/features', function(req, res) {
-        res.send({
-            res: true,
-            features: [{
-                name: 'tail',
-                required: false,
-                shape: 'poly'
-            }, {
-                name: 'eyes',
-                required: true,
-                shape: 'rect'
-            }, {
-                name: 'feet',
-                required: true,
-                shape: 'rect'
-            }, {
-                name: 'neck',
-                required: false,
-                shape: 'poly'
-            }, {
-                name: 'nose',
-                required: true,
-                shape: 'any'
-            }]
         });
     });
 }
