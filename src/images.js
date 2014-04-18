@@ -284,7 +284,7 @@ function imageRoutes(app, auth, db) {
      * @param {string} [uploader] - The email of the uploader to filter by.
      * @returns {ImageListAPIResponse} The API response supplying the list.
      */
-    app.get('/images', auth.enforceLogin, function imagesEndpoint(db, req, res) {
+    app.get('/images', auth.enforceLogin, function(req, res) {
         db.getUserImages(req.user, req.query.uploader, function(err, result) {
         if (err) {
             res.send(new errors.APIErrResp(2, 'Could not load image list.'));
@@ -357,13 +357,16 @@ function imageRoutes(app, auth, db) {
      * API endpoint to get an image.
      * @hbcsapi {GET} img - This is an API endpoint.
      * @param {string} id - The image id to get.
+     * @param {boolean} [src=false] - If false, the thumbnail will be returned, if it is available.
      * @returns {Redirect} The request will be redirected to the image URL.
      */
     app.get('/img', function(req, res) {
         var uid = req.user ? req.user.id : -1;
+        var src = req.query.src;
         db.checkImagePerm(uid, req.query.id, function(err, priv) {
             if (priv === 1 || priv === true) {
-                // proxyImage(req.query.id, priv, res); // Proxy image via the API server. (Much) slower but more secure.
+                // proxyImage(req.query.id, priv, res, !src); // Proxy image via the API server. (Much) slower but more secure.
+                // TODO: Support thumbnails for private images
                 var params = {
                     'Bucket': PRIVATE_BUCKET,
                     'Key': req.query.id,
@@ -372,8 +375,8 @@ function imageRoutes(app, auth, db) {
                 // Use a signed URL to serve directly from S3. Note that anyone with the URL can access the image until it expires!
                 res.redirect(s3.getSignedUrl('getObject', params));
             } else if (priv === 0 || priv === false) {
-                // Image is public, redirect to the public URL.
-                res.redirect(S3_URL + req.query.id);
+                // Image is public, redirect to the public URL. Add the prefix if we don't want the source image.
+                res.redirect(S3_URL + (src ? '' : THUMB_PFIX)  + req.query.id);
             } else {
                 // res.redirect('/Padlock.png'); // Local copy of access denied image
                 res.redirect(S3_URL + 'padlock.png'); // S3 copy of image
