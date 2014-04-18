@@ -24,6 +24,23 @@ This will connect to a server on localhost as root by default. Edit the script i
 
 You should then update config.json with your AWS settings, and db_settings with your MySQL connection settings.
 
+## S3 Configuration
+You will need to enable various settings in your AWS S3 buckets. The public image bucket in particular will require you to enable the static webserver and add the following redirect rule:
+
+```xml
+  <RoutingRules>
+    <RoutingRule>
+    <Condition>
+      <HttpErrorCodeReturnedEquals>404</HttpErrorCodeReturnedEquals>
+      <KeyPrefixEquals>thm_</KeyPrefixEquals>
+    </Condition>
+    <Redirect>
+      <ReplaceKeyPrefixWith></ReplaceKeyPrefixWith>
+    </Redirect>
+    </RoutingRule>
+  </RoutingRules>
+```
+
 ## Running
 
 ```bash
