@@ -572,13 +572,13 @@ function getProjects(showAll, callback) {
  * Field listing callback.
  * @callback fieldListCallback
  * @param {Error} err - The error that occurred, if present.
- * @param {ProjectField[]} projects - The set of fields.
+ * @param {ProjectField[]} fields - The set of field definitions.
  */
 
 /**
- * Retrieves a list of fields define for a given project.
- * @param {number} showAll - If false, the list of projects will be filtered to contain only active projects.
- * @param {fieldListCallback} callback - The callback that handles the result of trying to fetch the list of projects.
+ * Retrieves a list of fields defined for a given project.
+ * @param {number} project - The id of the project to lookup.
+ * @param {fieldListCallback} callback - The callback that handles the result of trying to fetch the list of project specific field definitions.
  */
 function getFields(project, callback) {
     connPool.getConnection(function(connErr, conn) {

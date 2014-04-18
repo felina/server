@@ -1,9 +1,29 @@
+/**
+ * @module projects
+ */
+
 var _ = require('underscore');
 var errors = require('./error.js');
 
+/**
+ * The maximum length of a project name.
+ */
 var NAME_LENGTH = 45;
+
+/**
+ * The maximum length of a project description.
+ */
 var DESC_LENGTH = 255;
 
+/**
+ * Represents a project (also known as a 'species') in the system. The id will be set to false in case of
+ * erroneous parameters. The object should be discarded if this is the case.
+ * @constructor
+ * @param {number} id - The id of the project.
+ * @param {string} name - The display name of the project.
+ * @param {string} desc - A short description of the project, to display.
+ * @param {boolean} active - Whether the project should be considered active, open to contributions and visible.
+ */
 function Project(id, name, desc, active) {
     if (typeof id !== 'number') {
         this.id = false;
@@ -26,10 +46,26 @@ function Project(id, name, desc, active) {
     this.active = active;
 }
 
+/**
+ * The maximum length of a field name.
+ */
 var FIELD_NAME_LENGTH = 45;
+
+/**
+ * The supported types of a field.
+ */
 var FIELD_TYPES = ['enum', 'string', 'number'];
+
+/**
+ * The supported types of an annotation, as represented internally.
+ */
 var ANNO_TYPES = ['apoly', 'arect', 'apoint'];
 
+/**
+ * Converts an annotation type to it's display name (shape).
+ * @param {string} type - The internal type of an annotation. See {@link ANNO_TYPES}.
+ * @returns {string} The shape representation of the type. Defaults to generic poly in case of unrecognised input.
+ */
 function typeToShape(type) {
     switch(type) {
     case 'arect':
@@ -42,6 +78,11 @@ function typeToShape(type) {
     }
 }
 
+/**
+ * Converts the display name of an annotation to it's type name.
+ * @param {string} shape - The display name of the type.
+ * @returns {string} The type name of the shape. Defaults to generic poly in case of unrecognised input.
+ */
 function shapeToType(shape) {
     switch(shape) {
     case 'rect':
@@ -55,10 +96,24 @@ function shapeToType(shape) {
     }
 }
 
+/**
+ * @typedef FieldParseError
+ * @type {object}
+ * @property {string} [part=''] - The section the first error was found in, if present.
+ * @property {number} [i=-1] - The index of the erroneous field within the supplied part, if present.
+ */
+
+/**
+ * Parses and validates field definitions.
+ * @param {object[]} fieldList - The list of field definitions for a project.
+ * @param {object[]} annoList - The list of annotation definitions for a project.
+ * @returns {FieldParseError} The details of the first error found in the definitions, if any exist.
+ */
 function parseFields(fieldList, annoList) {
     var errIdx = -1;
     var errList = '';
 
+    // Check every field definition, breaking out of the loop if an error is found.
     fieldList.every(function(f, i) {
         if (_.isObject(f)) {
             // Array item is an object (or list), check it's properties.
@@ -133,9 +188,28 @@ function parseFields(fieldList, annoList) {
     };  
 }
 
+/** Registers Express routes related to project handling. These are API endpoints.
+ * @static
+ * @param {Express} app - The Express application object.
+ * @param {object} auth - The auth module.
+ * @param {object} db - The db module.
+ */
 function projectRoutes(app, auth, db) {
 
-    // Gets a list of active projects (i.e. species)
+    /**
+     * @typedef ProjectListAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the list of projects was retrieved successfully.
+     * @property {APIError} [err] - The error that caused the request to fail.
+     * @property {string[]} projects - The set of project names.
+     */
+
+    /**
+     * API endpoint to retrieve a list of projects (a.k.a. 'species') defined in the system.
+     * @hbcsapi {GET} projects - This is an API endpoint.
+     * @param {boolean} all - If true, all projects will be retrieved, regardless of their inactivity.
+     * @returns {ProjectListAPIResponse} The API response providing the list of all projects.
+     */
     app.get('/projects', function(req, res) {
         var all = req.query.all;
 
@@ -151,6 +225,22 @@ function projectRoutes(app, auth, db) {
         });
     });
 
+    /**
+     * @typedef ProjectFieldsAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the list of projects was retrieved successfully.
+     * @property {APIError} [err] - The error that caused the request to fail.
+     * @property {ProjectField[]} fields - The set of non-annotation project specific fields.
+     * @property {ProjectField[]} anno - The set of annotation project specific fields.
+     */
+
+    /**
+     * API endpoint to retrieve all project-specific fields defined for a given project. Generic fields and
+     * annotations will be separated for easier import into frontends.
+     * @hbcsapi {GET} project/fields - This is an API endpoint.
+     * @param {number} project - The id of the project to lookup.
+     * @returns {ProjectFieldsAPIResponse} The API response providing the list of all project specific fields.
+     */
     app.get('/project/fields', function(req, res) {
         var id = parseInt(req.query.project);
         if (_.isNaN(id) || id < 0)  {
@@ -188,6 +278,14 @@ function projectRoutes(app, auth, db) {
         });
     });
 
+    /**
+     * API endpoint to define new project specific fields on a specified project.
+     * @hbcsapi {POST} project/fields - This is an API endpoint.
+     * @param {number} id - The id of the project to add fields to.
+     * @param {ProjectField[]} fields - The non-annotation project specific fields to add.
+     * @param {ProjectField[]} anno - The annotation fields to add.
+     * @returns {BasicAPIResponse} The API response detailing whether the request was successful or not.
+     */
     app.post('/project/fields', auth.enforceLogin, function(req, res) {
         var id = parseInt(req.body.id);
         if (_.isNaN(id)) {
@@ -218,6 +316,21 @@ function projectRoutes(app, auth, db) {
         });
     });
 
+    /**
+     * @typedef ProjectAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the request was successful.
+     * @property {APIError} [err] - The error the caused the request to fail.
+     * @property {Project} [proj] - The project affected by the request.
+     */
+
+    /**
+     * API endpoint to create a new project.
+     * @hbcsapi {POST} project/new - This is an API endpoint.
+     * @param {string} name - The display name of the project to create.
+     * @param {string} desc - A short description of the project.
+     * @returns {ProjectAPIResponse} The API response detailing the resultant project, with it's id property set.
+     */
     app.post('/project/new', auth.enforceLogin, function(req, res) {
         var proj = new Project(-1, req.body.name, req.body.desc, false);
         if (proj.id === false) {
@@ -241,6 +354,13 @@ function projectRoutes(app, auth, db) {
         });
     });
 
+    /**
+     * API endpoint to retrieve details on a project. Projects may be retrieved by id or by name.
+     * @hbcsapi {GET} project/info - This is an API endpoint.
+     * @param {number} [id] - The id of the project to lookup.
+     * @param {string} [name] - The name of the project to lookup. Ignored if id is provided and is valid.
+     * @returns {ProjectAPIResponse} The API response that provides the project information, if found.
+     */
     app.get('/project/info', function(req, res) {
         var id = parseInt(req.query.id);
         var pname = req.query.name;
@@ -274,7 +394,10 @@ function projectRoutes(app, auth, db) {
             }
         });
     });
-
 }
 
-module.exports = {Project:Project, projectRoutes:projectRoutes};
+// Export all public members.
+module.exports = {
+    Project:Project,
+    projectRoutes:projectRoutes
+};
