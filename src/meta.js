@@ -1,18 +1,51 @@
+/**
+ * @module meta
+ */
+
 var _ = require('underscore');
 var errors = require('./error.js');
 var images = require('./images.js');
 var async = require('async');
-//
+
+/**
+ * Utility function to check if a variable is null or undefined.
+ * @param {*} x - Any value
+ * @returns {boolean} Whether x is undefined or null.
+ */
 function isUnset(x) {
     return _.isUndefined(x) || _.isNull(x);
 }
 
+/**
+ * Represents a point as cartesian coordinates.
+ * @constructor
+ * @param {number} x - The x coordinate.
+ * @param {number} y - The y coordinate.
+ */
 function Point(x, y) {
     this.x = x;
     this.y = y;
 }
 
-// Takes a position, length, width and converts to standard poly representation.
+/**
+ * @typedef Size
+ * @type {object}
+ * @property {number} width - The width of the object.
+ * @property {number} height - The height of the object.
+ */
+
+/**
+ * @typedef Rectangle
+ * @type {object}
+ * @property {Point} pos - The position of the NW corner of the rectangle.
+ * @property {Size} size - The dimensions of the rectangle.
+ */
+
+/**
+ * Takes the position and dimensions of a rectangle and converts to standard poly representation.
+ * @param {Rectangle} rect - The rectangle to convert.
+ * @returns {boolean|Point[]} The list of vertices, or false if the rectangle is invalid.
+ */
 function parseRectangle(rect) {
     if (_.isObject(rect.pos) && _.isObject(rect.size)) {
         var x = parseInt(rect.pos.x);
@@ -38,6 +71,12 @@ function parseRectangle(rect) {
     }
 }
 
+/**
+ * Parses and validates a region from an annotation. The system sanitises polygons by ensuring 
+ * the final point matches the initial point.
+ * @param {Point[]} reg - The list of points that form the region.
+ * @returns {boolean} True iff all points in the region were valid.
+ */
 function parseRegion(reg) {
     // We should have already checked the size of this array.
     for (var i = 0; i < reg.length; i++) {
@@ -58,7 +97,20 @@ function parseRegion(reg) {
     return true;
 }
 
-// Assuming simplified format from image-annotator/#1
+/**
+ * @typedef Annotation
+ * @type {object}
+ * @property {string} type - String representation of the annotation type (i.e. rect, poly or point).
+ * @property {Point[]} [points] - The points that form the shape. Will be added in case of types that use alternative an alternative format (i.e. rect).
+ * @property {Point} [pos] - The position of the NW corner of the rectangle. Type 'rect' only.
+ * @property {Size} [size] - The dimensions of the rectangle. Type 'rect' only.
+ */
+
+/**
+ * Parses and validates an annotation. If the annotation is a rectangle, it will be converted to poly form by {@link parseRectangle}.
+ * @param {Annotation} an - An annotation of an image.
+ * @returns {boolean} True iff the annotation was valid, including the inner region.
+ */
 function parseAnno(an) {
     // Type must be valid and must match the points list.
     switch (an.type) {
@@ -82,13 +134,22 @@ function parseAnno(an) {
     }
 }
 
+/**
+ * @typedef AnnotationWrapper
+ * @type {object}
+ * @property {Annotation[]} shapes - A list of annotations for this key. Currently only a length of one is supported.
+ */
+
+/**
+ * Parses and validates a set of annotations. Calls {@link parseAnnotation} for validation.
+ * @param {Object.<string, AnnotationWrapper>} an - An object mapping string field names to annotation objects.
+ * @returns {Object.<string, boolean>} An object mapping the field names to the result of parsing each annotation value.
+ */
 function parseAnnotations(an) {
-    var val;
-    // An empty array is valid, so we just return.
     for (var key in an) {
         // Discard any inherited properties
         if (an.hasOwnProperty(key)) {
-            val = an[key];
+            var val = an[key];
 
             // Anno must be an object with an array 'shapes'
             if (_.isObject(val) && _.isArray(val.shapes)) {
@@ -105,13 +166,27 @@ function parseAnnotations(an) {
     }
 }
 
+/**
+ * @typedef MetadataWrapper
+ * @type {object}
+ * @property {ImageMeta} metadata - The basic metadata of the image. 
+ * @property {Object.<string, AnnotationWrapper>} an - An object mapping string field names to annotation objects.
+ */
+
+/**
+ * Parses and validates metadata of an image. Delegates to {@link parseAnnotations} to handle annotations.
+ * @param {Object.<string, MetadataWrapper>} mdObj - The object mapping image ids to the metadata to assign to them.
+ * @returns {boolean|Object.<string, (boolean|MetadataWrapper)[]>} False iff mdObj is not an object. Otherwise, the supplied mdObj, with any adjustments or conversions, and any invalid definitions replaced with false.
+ */
 function parseMetadata(mdObj) {
     if (!_.isObject(mdObj)) {
         console.log('Metadata not an object.');
         return false;
     } else {
+        // Loop through all image ids, skipping any external properties.
         for (var id in mdObj) {
             if (mdObj.hasOwnProperty(id)) {
+                // Check that the id is valid.
                 if (typeof id === 'string' && id.length === 32) {
                     var md = mdObj[id];
                     // Check if title has been sent
@@ -187,6 +262,19 @@ function parseMetadata(mdObj) {
     return mdObj;
 }
 
+/**
+ * Metadata update result callback.
+ * @callback parseQueryCombineCallback
+ * @param {Error|boolean[]} The error, if one occurred, else the list of booleans showing which updates succeeded.
+ */
+
+/**
+ * Combines the output of the metadata parser stack and the database action. Calls a method for each successful element.
+ * @param {boolean|Object.<string, (boolean|MetadataWrapper)[]>} The resultant object from {@link parseMetadata}.
+ * @param {boolean[]} The record of success/failure for all previous metadata updates, as returned by {@link db.updateMetaR}.
+ * @param {function} onSuccess - The function that handles successful updates, and sets an image's access controls.
+ * @param {parseQueryCombineCallback} callback - The callback that handles the final success/failure state of each update.
+ */
 function parseQueryCombine(parsed, qRes, onSuccess, callback) {
     var ret = _.map(qRes, function(val, i) {
         return (val[1] === false) ? false : _.pairs(parsed)[i];
@@ -210,6 +298,13 @@ function parseQueryCombine(parsed, qRes, onSuccess, callback) {
                });
 }
 
+/**
+ * Registers Express routes related to metadata handling. These are API endpoints.
+ * @static
+ * @param {Express} app - The Express application object.
+ * @param {object} auth - The auth module.
+ * @param {object} db - The db module.
+ */
 function metaRoutes(app, auth, db) {
 
     // Takes an array of metadata objects (JSON). A metadata object must contain a 32 character id string,
@@ -349,6 +444,7 @@ function metaRoutes(app, auth, db) {
     });
 }
 
+// Export all public members.
 module.exports = {
     metaRoutes: metaRoutes
 };
