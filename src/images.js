@@ -37,6 +37,11 @@ var S3_URL = 'http://' + PUBLIC_BUCKET + '.s3-website-eu-west-1.amazonaws.com/';
 //var S3_URL = 'https://' + PUBLIC_BUCKET + '.s3.amazonaws.com/'; // Raw bucket URL - use if https is required or web server disabled.
 
 /**
+ * The prefix to add to an image to get it's thumbnail.
+ */
+var THUMB_PFIX = 'thm_';
+
+/**
  * Number of seconds to keep a private image URL valid for.
  */
 var PRIVATE_EXPIRY = 120;
@@ -61,12 +66,17 @@ var VALID_MIME_TYPES = [
 /**
  * Gets an s3 object as a Node stream.
  * @param {Image} img - The image to stream.
+ * @param {boolean} [thumb=false] - If true, fetch the thumbnail.
  * @returns {stream.Readable} A readable stream of the image data.
  */
-function getImageStream(img) {
+function getImageStream(img, thumb) {
+    // If thumb not provided, default to false.
+    if (thumb !== true) {
+        thumb = false;
+    }
     var params = {
         'Bucket': (img.private) ? PRIVATE_BUCKET : PUBLIC_BUCKET,
-        'Key': img.imageid
+        'Key': (thumb ? THUMB_PFIX : '') + img.imageid
     };
     var rs = null;
     var s3req = s3.getObject(params);
@@ -85,10 +95,15 @@ function getImageStream(img) {
  * @param {string} imageid - The id of the image.
  * @param {boolean} priv - Whether the image is private.
  * @param {stream.Writeable} stream - The stream to pipe into (e.g. an express request or file stream).
+ * @param {boolean} [thumb=false] - If true, proxy the thumbnail.
  */
-function proxyImage(id, priv, stream) {
+function proxyImage(id, priv, stream, thumb) {
+    // If thumb not provided, default to false.
+    if (thumb !== true) {
+        thumb = false;
+    }
     try {
-        getImageStream({'imageid': id, 'private': priv}).pipe(stream);
+        getImageStream({'imageid': id, 'private': priv}, thumb).pipe(stream);
     } catch (err) {
         console.log(err);
         stream.end();
