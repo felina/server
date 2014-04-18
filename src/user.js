@@ -1,9 +1,17 @@
+/**
+ * @module user
+ */
+
 var crypto = require('crypto');
 var bcrypt = require('bcrypt-nodejs');
 var validator = require('email-validator');
 var errors = require('./error.js');
 var _ = require('underscore');
 
+/**
+ * Enum type detailing user types and their corresponding numeric and string representations.
+ * @static
+ */
 var PrivilegeLevel = Object.freeze({
     SUBUSER: {
         i: 0,
@@ -23,8 +31,15 @@ var PrivilegeLevel = Object.freeze({
     }
 });
 
+/**
+ * List representation of PrivilegeLevels, for convenience.
+ */
 var PLs = [PrivilegeLevel.SUBUSER, PrivilegeLevel.USER, PrivilegeLevel.RESEARCHER, PrivilegeLevel.ADMIN];
 
+/**
+ * Generates a random hexadecimal string.
+ * @returns {string} A random hexadecimal string.
+ */
 function getRandomHash() {
     var md5 = crypto.createHash('md5');
     var str = '';
@@ -36,6 +51,13 @@ function getRandomHash() {
     return md5.digest('hex');
 }
 
+/**
+ * Updates a user's account with a new password.
+ * @param {string} email - The email that identifies the user.
+ * @param {string} password - The plaintext password to hash and store.
+ * @param {object} db - The db object.
+ * @param {updateSubuserCallback} callback - The callback that handles the update result.
+ */
 function newToken(email, password, db, callback) {
     bcrypt.hash(password, null, null, function(err, hash) {
         if (err) {
@@ -55,6 +77,12 @@ function newToken(email, password, db, callback) {
     });
 }
 
+/**
+ * Converts a privilege level string into it's integer value.
+ * @static
+ * @param {string} dbs - The string representation of the privilege level.
+ * @returns {number} The numeric representation of the privilege level.
+ */
 function privilegeFromString(dbs) {
     var res = false;
     PLs.forEach(function(lvl) {
@@ -65,6 +93,12 @@ function privilegeFromString(dbs) {
     return res;
 }
 
+/**
+ * Converts a privilege level integer value into it's string representation.
+ * @static
+ * @param {number} i - The numeric representation of the privilege level.
+ * @returns {string} The string representation of the privilege level.
+ */
 function privilegeFromInt(i) {
     var res = false;
     PLs.forEach(function(lvl) {
@@ -75,6 +109,18 @@ function privilegeFromInt(i) {
     return res;
 }
 
+/**
+ * Represents a user of the service. If any of the required attributes are erroneous, the id will be 
+ * set to false to indicate the error state. The object should be discarded in this case.
+ * @constructor
+ * @param {number} id - The id of the user.
+ * @param {string} name - The display name of the user.
+ * @param {string} email - The email of the user.
+ * @param {number} privilege - The numeric representation of the user's privilege level.
+ * @param {string} [gravatar] - The gravatar id - a 32 character hash of the gravatar email.
+ * @param {string} [supervisor] - The id of the user's supervisor. Subusers only.
+ * @param {number} [projectid] - The id of the project the user will be contributing to. Subusers only.
+ */
 function User(id, name, email, privilege, gravatar, supervisor, projectid) {
     if (typeof id !== 'number') {
         this.id = false;
@@ -120,15 +166,20 @@ function User(id, name, email, privilege, gravatar, supervisor, projectid) {
     }
     if (typeof gravatar !== 'string' || gravatar.length !== 32) {
         this.gravatar = null;
+    } else {
+        this.gravatar = gravatar;
     }
 
     this.id = id;
     this.name = name;
     this.email = email;
     this.privilege = privilege;
-    this.gravatar = gravatar;
 }
 
+/**
+ * Retrieves a URL for the user's profile image. This will be a gravtar URL, or a default placeholder.
+ * @returns {string} The URL of the image to display.
+ */
 User.prototype.profileURL = function() {
     if (this.gravatar === null) {
         // TODO: Get the host programmatically or via config
@@ -138,6 +189,10 @@ User.prototype.profileURL = function() {
     }
 };
 
+/**
+ * Converts a user to JSON. Overrides the default implementation.
+ * @returns {string} The JSON representation of the user.
+ */
 User.prototype.toJSON = function() {
     var json = {
         'id': this.id,
@@ -155,6 +210,10 @@ User.prototype.toJSON = function() {
     return json;
 };
 
+/**
+ * Checks if the user is a researcher.
+ * @returns {boolean} Whether the user is a researcher.
+ */
 User.prototype.isResearcher = function() {
     if (this.privilege === PrivilegeLevel.RESEARCHER) {
         return true;
@@ -162,6 +221,10 @@ User.prototype.isResearcher = function() {
     return false;
 };
 
+/**
+ * Checks if the user is a subuser.
+ * @returns {boolean} Whether the user is a subuser.
+ */
 User.prototype.isSubuser = function() {
     if (this.privilege === PrivilegeLevel.SUBUSER) {
         return true;
@@ -169,6 +232,10 @@ User.prototype.isSubuser = function() {
     return false;
 };
 
+/**
+ * Checks if the user is an admin.
+ * @returns {boolean} Whether the user is an admin.
+ */
 User.prototype.isAdmin = function() {
     if (this.privilege === PrivilegeLevel.ADMIN.i) {
         return true;
@@ -176,13 +243,34 @@ User.prototype.isAdmin = function() {
     return false;
 };
 
+/**
+ * Represents a researcher in the system.
+ * @constructor
+ * @augments User
+ * @param {object} groups - The groups the researcher is part of.
+ */
 function Researcher(name, email, groups) {
     User.call(this, name, email, 2);
     this.groups = groups;
 }
 
+/**
+ * Registers Express routes related to user handling. These are API endpoints.
+ * @static
+ * @param {Express} app - The Express application object.
+ * @param {object} auth - The auth module.
+ * @param {object} db - The db module.
+ */
 function userRoutes(app, auth, db) {
-    // For updating fields e.g. email, gravatar, privilege level...
+    /**
+     * API endpoint to update a user. Various parameters are only valid dependent on the target user
+     * and the privilege level of the requester.
+     * @hbcsapi {PATCH} user - This is an API endpoint.
+     * @param {string} email - The email of the user to update.
+     * @param {string} [name] - The new name to give the user. Only valid on self.
+     * @param {number} [privilege] - The new privilege level to give the user. Only valid if requested by a researcher.
+     * @returns {BasicAPIResponse} The API response signifying success or failure.
+     */
     app.patch('/user', auth.enforceLogin, function(req, res) {
         console.log(JSON.stringify(req.body));
         console.log(JSON.stringify(req.user));
@@ -235,10 +323,18 @@ function userRoutes(app, auth, db) {
         }
     }); 
 
-    // update subusers details
+    /**
+     * API endpoint to update a subuser.
+     * @hbcsapi {POST} updatesub - This is an API endpoint.
+     * @param {string} email - The email of the user to update.
+     * @param {string} [name] - The new name to give the user. Only valid on self.
+     * @param {number} [refresh] - Whether to refresh the user's validation token.
+     * @param {number} [projectid] - The project id to assign the subuser to.
+     * @returns {BasicAPIResponse} - The API response indicating the outcome.
+     */
     app.post('/updatesub', auth.enforceLogin, function(req, res) {
-        var name = req.body.name;
         var email = req.body.email;
+        var name = req.body.name;
         var refresh = parseInt(req.body.refresh);
         var projectid = req.body.projectid;
         var result1 = true;
@@ -266,8 +362,7 @@ function userRoutes(app, auth, db) {
                             } else if(r) {
                                 result1 = false;
                                 return res.send({
-                                    'res': true,
-                                    'msg': 'success'
+                                    'res': true
                                 });
                             } else {
                                 console.log("false");
@@ -276,8 +371,7 @@ function userRoutes(app, auth, db) {
                         });
                     } else {
                         return res.send({
-                            'res': true,
-                            'msg': 'success'
+                            'res': true
                         });
                     }
                 });
@@ -289,8 +383,7 @@ function userRoutes(app, auth, db) {
                     } else if(r) {
                         result1 = false;
                         return res.send({
-                            'res':true,
-                            'msg': 'success'
+                            'res':true
                         });
                     } else {
                         console.log("false");
@@ -305,8 +398,21 @@ function userRoutes(app, auth, db) {
         } else {
             res.send(new errors.APIErrResp(3, 'Invalid parameters'));
         }
-    });
+    }); 
 
+    /**
+     * @typedef SubusersAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the operation succeeded, regardless of the number of subusers.
+     * @property {APIError} [err] - The error that cause the request to fail.
+     * @property {object[]} [subusers] - The list of subusers. TODO: specify details
+     */
+
+    /**
+     * API endpoint to get a list of subusers belonging to the account.
+     * @hbcsapi {GET} subuser - This is an API endpoint.
+     * @returns {SubusersAPIResponse} - The API response indicating the outcome.
+     */
     app.get('/subuser', auth.enforceLogin, function(req, res){
         if(req.user.privilege > 1 ) {
             db.getSubusers(req.user.id, function(err, info){
@@ -328,6 +434,7 @@ function userRoutes(app, auth, db) {
 
 }
 
+// Export all public members.
 module.exports = {
     PrivilegeLevel: PrivilegeLevel,
     User: User,

@@ -148,11 +148,11 @@ function addNewZip(user, zipHash, name, filename, callback) {
  * Subuser listing callback.
  * @callback subuserListCallback
  * @param {Error} err - The error that occurred, if present.
- * @param {Object[]} list - The list of all subusers found for the given user.
+ * @param {object[]} list - The list of all subusers found for the given user.
  */
 
 /**
- * Retrieves a list of executable zips uploaded by a user.
+ * Retrieves a list of subusers supervised by a specified user.
  * @param {number} id - The user id to find subusers of.
  * @param {subuserListCallback} callback - The callback that handles the result of trying to fetch the list of subusers.
  */
