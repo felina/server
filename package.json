@@ -30,7 +30,8 @@
     "nodemailer": "~0.6.1",
     "async": "~0.2.10",
     "lazystream": "~0.1.0",
-    "archiver": "~0.8.1"
+    "archiver": "~0.8.1",
+    "gm": "~1.14.2"
   },
   "devDependencies": {
     "grunt": "~0.4.2",
