@@ -210,47 +210,28 @@ function fileType(filePath) {
 }
 
 /**
- * Sets the access level on the image by moving it to the corresponding bucket. Will silently fail if the image is not found in the opposite bucket.
+ * Moves an object between buckets on S3.
  * @static
- * @param {string} id - The id of the image.
- * @param {boolean} priv - The access level to set the image to.
- * @param {errorCallback} callback - The callback that handles any unhandled erros when moving the image.
+ * @param {string} srcBucket - The source bucket.
+ * @param {string} destBucket - The destination bucket.
+ * @param {string} key - The key of the file to move.
+ * @param {errorCallback} callback - The callback that handles any errors that occurred when attempting the move.
  */
-function setAccess(id, priv, callback) {
-    var params, dparams;
-    if (priv) {
-        // Currently public, make private.
-        params = {
-            'Bucket': PRIVATE_BUCKET,
-            'CopySource': PUBLIC_BUCKET + '/' + id,
-            'Key': id
-        };
-        dparams = {
-            'Bucket': PUBLIC_BUCKET,
-            'Key': id
-        };
-    } else {
-        params = {
-            'Bucket': PUBLIC_BUCKET,
-            'CopySource': PRIVATE_BUCKET + '/' + id,
-            'Key': id
-        };
-        dparams = {
-            'Bucket': PRIVATE_BUCKET,
-            'Key': id
-        };
-    }
+function moveObject(srcBucket, destBucket, key, callback) {
+    var params = {
+        'Bucket': destBucket,
+        'CopySource': srcBucket + '/' + key,
+        'Key': key
+    };
+    var dparams = {
+        'Bucket': srcBucket,
+        'Key': key
+    };
 
-    s3.copyObject(params, function(err, data) {
+    return s3.copyObject(params, function(err, data) {
         if (err) {
-            if (err.code === 'NoSuchKey') {
-                // The item must already be at the given bucket, unless our db is out of sync!
-                console.log('Ignoring NoSuchKey on setAccess.');
-                return callback(null);
-            } else {
-                console.log(err);
-                return callback(err);
-            }
+            console.log(err);
+            return callback(err);
         } else {
             // The copy succeeded, we must delete the original.
             s3.deleteObject(dparams, function(dErr, dData) {
@@ -258,11 +239,60 @@ function setAccess(id, priv, callback) {
                     console.log(dErr);
                     return callback(dErr);
                 } else {
-                    return callback(null);
+                    return callback();
                 }
             });
         }
     });
+}
+
+/**
+ * Sets the access level on the image by moving it to the corresponding bucket. Will silently fail if the image is not found in the opposite bucket.
+ * @static
+ * @param {string} id - The id of the image.
+ * @param {boolean} priv - The access level to set the image to.
+ * @param {errorCallback} callback - The callback that handles any unhandled errors when moving the image.
+ */
+function setAccess(id, priv, callback) {
+    var src, dest;
+    if (priv) {
+        src = PUBLIC_BUCKET;
+        dest = PRIVATE_BUCKET;
+    } else {
+        src = PRIVATE_BUCKET;
+        dest = PUBLIC_BUCKET;
+    }
+
+    var moveCallback = function(err) {
+        if (err) {
+            if (err.code === 'NoSuchKey') {
+                // If the error was key not found, ignore it, as that should mean the image is already in the destination.
+                console.log('Ignoring NoSuchKey on setAccess.');
+                return callback();
+            } else {
+                console.log(err);
+                return callback(err);
+            }
+        } else {
+            // No error, try to move the thumbnail.
+            return moveObject(src, dest, THUMB_PFIX + id + THUMB_SFIX, function(err) {
+                if (err) {
+                    if (err.code === 'NoSuchKey') {
+                        // If the error was key not found, ignore it, as that should mean the image is already in the destination.
+                        console.log('Ignoring NoSuchKey on thumb setAccess.');
+                        return callback();
+                    } else {
+                        console.log(err);
+                        return callback(err);
+                    }
+                } else {
+                    return callback();
+                }
+            });
+        }
+    };
+
+    return moveObject(src, dest, id, moveCallback);
 }
 
 /**
