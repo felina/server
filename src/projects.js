@@ -218,7 +218,7 @@ function projectRoutes(app, auth, db) {
             all = false;
         }
 
-        db.getProjects(all, function(err, list) {
+        db.getProjects(all, null, function(err, list) {
             if (err) {
                 return res.send(new errors.APIErrResp(2, 'Failed to fetch project list.'));
             } else {
@@ -246,39 +246,60 @@ function projectRoutes(app, auth, db) {
      * @param {number} project - The id of the project to lookup.
      * @returns {ProjectFieldsAPIResponse} The API response providing the list of all project specific fields.
      */
-    app.get('/project/fields', function(req, res) {
+    app.get('/project/fields', auth.enforceLoginCustom({'minPL':1}), function(req, res) {
         var id = parseInt(req.query.project);
         if (_.isNaN(id) || id < 0)  {
             return res.send(new errors.APIErrResp(2, 'Invalid project id.'));
         }
 
-        db.getFields(id, function(err, fieldList) {
-            if (err || !_.isArray(fieldList)) {
-                console.log(err);
+        var all = true;
+        // Restrict field listing for inactive project to researcher and above.
+        if (!req.user || !(req.user.isResearcher() || req.user.isAdmin())) {
+            console.log('woah');
+            console.log(req.user.isResearcher());
+            all = false;
+        }
+
+        return db.getProjects(all, id, function(e, list) {
+            if (e) {
+                console.log(e);
                 return res.send(new errors.APIErrResp(3, 'Failed to retrieve fields.'));
             } else {
-                // Split fields into two categories for easier use by the annotator
-                var meta = [];
-                var anno = fieldList.filter(function(ele) {
-                    // Set required to true/false in all
-                    ele.required = (ele.required !== 0);
+                // We should have gotten a single result, if we are allowed access.
+                if (list.length === 1) {
+                    db.getFields(id, function(err, fieldList) {
+                        if (err || !_.isArray(fieldList)) {
+                            console.log(err);
+                            return res.send(new errors.APIErrResp(3, 'Failed to retrieve fields.'));
+                        } else {
+                            // Split fields into two categories for easier use by the annotator
+                            var meta = [];
+                            var anno = fieldList.filter(function(ele) {
+                                // Set required to true/false in all
+                                ele.required = (ele.required !== 0);
 
-                    if (ANNO_TYPES.indexOf(ele.type) < 0) {
-                        meta.push(ele);
-                        return false;
-                    } else {
-                        // We need to rename type and it's value for the image-annotator
-                        ele.shape = typeToShape(ele.type);
-                        delete ele.type;
-                        return true;
-                    }
-                });
+                                if (ANNO_TYPES.indexOf(ele.type) < 0) {
+                                    meta.push(ele);
+                                    return false;
+                                } else {
+                                    // We need to rename type and it's value for the image-annotator
+                                    ele.shape = typeToShape(ele.type);
+                                    delete ele.type;
+                                    return true;
+                                }
+                            });
 
-                return res.send({
-                    'res': true,
-                    'fields': meta,
-                    'anno': anno
-                });
+                            return res.send({
+                                'res': true,
+                                'fields': meta,
+                                'anno': anno
+                            });
+                        }
+                    });
+                } else {
+                    // This project wasn't found, it either doesn't exist or we aren't authorised.
+                    return res.send(new errors.APIErrResp(4, 'That project does not exist!'));
+                }
             }
         });
     });

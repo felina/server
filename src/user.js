@@ -215,7 +215,7 @@ User.prototype.toJSON = function() {
  * @returns {boolean} Whether the user is a researcher.
  */
 User.prototype.isResearcher = function() {
-    if (this.privilege === PrivilegeLevel.RESEARCHER) {
+    if (this.privilege === PrivilegeLevel.RESEARCHER.i) {
         return true;
     }
     return false;
@@ -226,7 +226,7 @@ User.prototype.isResearcher = function() {
  * @returns {boolean} Whether the user is a subuser.
  */
 User.prototype.isSubuser = function() {
-    if (this.privilege === PrivilegeLevel.SUBUSER) {
+    if (this.privilege === PrivilegeLevel.SUBUSER.i) {
         return true;
     }
     return false;

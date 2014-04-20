@@ -507,17 +507,29 @@ function updateUser(name, email, usertype, profile_image, supervisor, token_expi
 /**
  * Retrieves a list of projects.
  * @param {boolean} showAll - If false, the list of projects will be filtered to contain only active projects.
+ * @param {number} [id] - If provided, return only the project with the given id.
  * @param {projectListCallback} callback - The callback that handles the result of trying to fetch the list of projects.
  */
-function getProjects(showAll, callback) {
+function getProjects(showAll, id, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             return callback(connErr);
         }
 
         var query = "SELECT `name` FROM `projects`";
+        var first = true;
         if (!showAll) {
             query = query + " WHERE active";
+            first = false;
+        }
+        if (_.isNumber(id) && id >= 0) {
+            if (first) {
+                query = query + " WHERE `projectid` = ?";
+            } else {
+                query = query + " AND `projectid` = ?";
+            }
+            query = mysql.format(query, [id]);
+            first = false;
         }
 
         return conn.query(query, function(err, res) {
