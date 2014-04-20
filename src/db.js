@@ -280,23 +280,24 @@ function deleteImage(id, callback) {
  * @param {tokenExpiryCallback} callback - The callback that handles the result of checking a token's validity.
  */
 function tokenExpiry(email, callback) {
-    connPool.getConnection(function(connErr, conn) {
+    return connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             return callback(connErr);
         }
 
-        var query = "SELECT `token_expiry` > NOW() AS Res FROM `users` WHERE `email` = ?";
+        // Do the time comparison MySQL side to avoid timezone conversion issues. Only allow subusers access.
+        var query = "SELECT `token_expiry` > NOW() AS 'res' FROM `users` WHERE `email` = ? AND `usertype` = 'subuser'";
         var sub = [ email ];
 
         query = mysql.format(query, sub);
 
-        conn.query(query, function(err, res) {
+        return conn.query(query, function(err, res) {
             conn.release();
             if (err) {
                 return callback(err, null);
             } else {
                 if (res.length > 0) {
-                    callback(null, res[0].Res);
+                    return callback(null, res[0].res);
                 } else {
                     return callback(null, false);
                 } 

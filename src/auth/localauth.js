@@ -44,19 +44,19 @@ function getValidationHash() {
 
 // Possible duplicate in user.js? TODO: Remove me?
 function newToken(email, password, callback) {
-    bcrypt.hash(password, null, null, function(err, hash) {
+    return bcrypt.hash(password, null, null, function(err, hash) {
         if (err) {
             console.log('Failed to hash password');
             console.log(err);
-            callback(err, null);
+            return callback(err, null);
         } else {
-            db.updateUserHash(email, hash, 1, function(e, r) {
+            return db.updateUserHash(email, hash, 1, function(e, r) {
                 if (e) {
                     console.log('database error');
                     console.log(e);
-                    callback(e, null);
+                    return callback(e, null);
                 } else {
-                    callback(null, r);
+                    return callback(null, r);
                 }
             });
         }
@@ -205,7 +205,7 @@ function authRoutes(app, auth) {
                 // Details of user are invalid.
                 res.send(new errors.APIErrResp(1, 'User details are invalid!'));
             } else {
-                register(user, pass, function(err, id) {
+                return register(user, pass, function(err, id) {
                     if (err) {
                         // Registration failed, notify api.
                         console.log('Registration failed:');
@@ -224,8 +224,8 @@ function authRoutes(app, auth) {
                                 return res.send(new errors.APIErrResp(3, 'Registration success but login failed.'));
                             } else {
                                 return res.send({
-                                    'res':true,
-                                    'user':user
+                                    'res': true,
+                                    'user': user
                                 });
                             }
                         });
@@ -233,7 +233,7 @@ function authRoutes(app, auth) {
                 });
             }
         } else {
-            res.send(new errors.APIErrResp(4, 'Invalid request.'));
+            return res.send(new errors.APIErrResp(4, 'Invalid request.'));
         }
     });
 
@@ -275,8 +275,8 @@ function authRoutes(app, auth) {
                     user.id = id;
                     console.log(['Registered subuser:',id,mail,pass,name,priv,grav,proj].join(" "));                        
                     res.send({
-                        'res':true,
-                        'user':user
+                        'res': true,
+                        'user': user
                     });
                 }
             });
@@ -332,13 +332,13 @@ function authRoutes(app, auth) {
         var email = req.body.email;
         if (email) {
             console.log(email);
-            db.tokenExpiry(email, function(err, info) {
+            return db.tokenExpiry(email, function(err, info) {
                 if (err) {
                     console.log(err);
                     return res.send(new errors.APIErrResp(2, "database error"));
                 } else if (info) {
                     var token = getValidationHash();
-                    newToken(email, token, function(e,r) {
+                    return newToken(email, token, function(e,r) {
                         if (e) {
                             return res.send(new errors.APIErrResp(2, "database error"));
                         } else if (r) {
