@@ -64,15 +64,17 @@ var VALID_MIME_TYPES = [
 ];
 
 /**
- * The minimum image dimensions we will accept for submissions.
+ * The limits that will be enforced when validating uploads.
+ * @type {ValidationRestrictions}
  */
-var IMG_MIN = {
-    'w': 500,
-    'h': 500
+var IMG_LIMITS = {
+    'minDim': 400,
+    'minPx': 512 * 512
 };
 
 /**
  * The dimensions to aim for when thumbnailing an image. These are an upper bound.
+ * @type {Dimensions}
  */
 var THUMB_DIM = {
     'w': 400,
@@ -80,7 +82,7 @@ var THUMB_DIM = {
 };
 
 /**
- * The format (as a "magick" string) to use for thumbnails.
+ * The format (as a "magick" string) to use for thumbnails. See {@link http://www.graphicsmagick.org/formats.html}.
  */
 var THUMB_FORMAT = 'JPEG';
 
@@ -97,7 +99,7 @@ var PAD_THUMBS = false;
 /**
  * Instantiate an image thumbnailer and validator.
  */
-var IMAGE_PROCESSOR = new Thumbnailer(IMG_MIN, THUMB_DIM, '/tmp', '/tmp', THUMB_FORMAT, THUMB_PFIX, THUMB_SFIX, PAD_THUMBS);
+var IMAGE_PROCESSOR = new Thumbnailer(IMG_LIMITS, THUMB_DIM, '/tmp', '/tmp', THUMB_FORMAT, THUMB_PFIX, THUMB_SFIX, PAD_THUMBS);
 
 /**
  * @typedef Image

@@ -13,10 +13,17 @@ var gm = require('gm');
  */
 
 /**
+ * @typedef ValidationRestrictions
+ * @type {object}
+ * @property {number} minPx - The minimum number of pixels in an image to accept.
+ * @property {number} minDim - The minimum pixels in either dimension.
+ */
+
+/**
  * Represents an image processor that creates thumbnails suitable for our frontends.
  * @constructor
  * @alias module:thumbnailer
- * @param {Dimensions} min_s - The minimum size of image accepted by the service.
+ * @param {ValidationRestrictions} vr - The restrictions to enforce when validating images.
  * @param {Dimensions} target_s - The maximum or ideal size of thumbnail to produce.
  * @param {string} in_dir - The directory to read input images from.
  * @param {string} out_dir - The directory to store converted thumbnails in.
@@ -25,14 +32,15 @@ var gm = require('gm');
  * @param {string} [sfix=''] - The suffix to attach to the thumbnail filename, including extension.
  * @param {boolean} [canvas=false] - If true, output thumbnails should be a fixed size, with empty space whited out.
  */
-function Thumbnailer(min_s, target_s, in_dir, out_dir, format, pfix, sfix, canvas) {
+function Thumbnailer(vr, target_s, in_dir, out_dir, format, pfix, sfix, canvas) {
     // Check we're being called with new.
     if (!(this instanceof Thumbnailer)) {
-        return new Thumbnailer(min_s, target_s, in_dir, out_dir, format, pfix, sfix, canvas);
+        console.log('Bad invocation of Thumbnailer constructor.');
+        return new Thumbnailer(vr, target_s, in_dir, out_dir, format, pfix, sfix, canvas);
     }
 
     // Validate size parameters
-    if (!(min_s.w > 0 && min_s.h > 0)) {
+    if (!(vr.minDim > 0 && vr.minPx >= (vr.minDim * vr.minDim))) {
         throw new Error("Invalid minimum size parameters.");
     }
     if (!(target_s.w > 0 && target_s.h > 0)) {
@@ -48,7 +56,7 @@ function Thumbnailer(min_s, target_s, in_dir, out_dir, format, pfix, sfix, canva
             throw fsErr;
         }
     }
-    this.min_s = min_s;
+    this.vr = vr;
     this.target_s = target_s;
     this.in_dir = in_dir;
     this.out_dir = out_dir;
@@ -118,9 +126,8 @@ Thumbnailer.prototype.make = function(stem, src, callback) {
  */
 Thumbnailer.prototype.verify = function(src, callback) {
     var infile = this.in_dir + '/' + src;
-    var min_s = this.min_s;
+    var vr = this.vr;
     var types = this.VALID_TYPES;
-    console.log('away we go');
     return gm(infile).identify('%w\t%h\t%m', function (err, data) {
         if (err) {
             console.log(err);
@@ -134,8 +141,9 @@ Thumbnailer.prototype.verify = function(src, callback) {
             var h = meta[1];
             var format = meta[2];
             var valid =
-                w > min_s.w &&
-                h > min_s.h &&
+                w >= vr.minDim &&
+                h >= vr.minDim &&
+                (w * h) >= vr.minPx &&
                 types.indexOf(format) >= 0;
 
             return callback(valid);
