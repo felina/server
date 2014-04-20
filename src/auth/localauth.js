@@ -290,7 +290,7 @@ function authRoutes(app, enforceLogin) {
      * @param {string} pass - The user's plaintext password.
      * @returns {UserAPIResponse} The API response detailing the user that has been logged in.
      */
-    app.post('/login', function(req, res, next) {
+    app.post('/login', require('express').urlencoded(), function(req, res, next) {
         passport.authenticate('local', function(err, user, info) {
             if (err) {
                 console.log(err);

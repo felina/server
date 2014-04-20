@@ -71,9 +71,6 @@ app.configure(function() {
     app.use(express.cookieParser());
     // Enable JSON parsing for all request bodies.
     app.use(express.json());
-    // Enable the parsing of X-www-form-urlencoded request bodies.
-    // TODO: Move to specific locations, as this is rarely used
-    app.use(express.urlencoded());
     // Enable Express session management.
     app.use(express.session({
         secret: 'I should be something else'

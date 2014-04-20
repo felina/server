@@ -57,7 +57,7 @@ function fbRoutes(app) {
     /**
      * Callback endpoint to complete the authentication process.
      */
-    app.get('/login/facebook/callback', passport.authenticate('facebook', {successRedirect: '/logincheck', failureRedirect: '/logincheck'}));
+    app.get('/login/facebook/callback', [require('express').urlencoded(), passport.authenticate('facebook', {successRedirect: '/logincheck', failureRedirect: '/logincheck'})]);
 }
 
 // Export all public members.
