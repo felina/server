@@ -113,16 +113,29 @@ function zipExists(zipHash, callback) {
 }
 
 /**
- * Tries to add a new zip for a given user.
+ * Transaction accept/deny callback
+ * @callback tcControlCallback
+ * @param {boolean} accept - If true, the transaction will be committed. If false, it will be rolled back.
+ */
+
+/**
+ * Transaction handling zip upload callback.
+ * @callback optionalZipAddCallback
+ * @param {Error} err - The error the occurred, if present.
+ * @param {number} id - The id assigned to the zip.
+ * @param {tcControlCallback} accept - The callback that optionally rolls back the insert, if deemed necessary.
+ */
+
+/**
+ * Tries to add a new zip for a given user. Wraps the insert in a transaction so that the callback can decide whether to undo the operation.
  * @param {user.User} user - The user who should be given ownership of the zip.
- * @param {string} zipHash - The id of the zip.
  * @param {string} name - The display name/description of the zip.
  * @param {string} filename - The filename of the zip.
- * @param {errorCallback} callback - The callback that handles the result of trying to add a new zip.
+ * @param {optionalZipAddCallback} callback - The callback that handles the result of trying to add a new zip.
  */
-function addNewZip(user, zipHash, name, filename, callback) {
-    var query = "INSERT INTO `executables` (exeid, name, filename, ownerid) VALUE (?,?,?,?)";
-    var sub = [zipHash, name, filename, user.id];
+function tcAddNewZip(user, name, filename, callback) {
+    var query = "INSERT INTO `executables` (name, filename, ownerid) VALUE (?,?,?)";
+    var sub = [name, filename, user.id];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
@@ -130,17 +143,48 @@ function addNewZip(user, zipHash, name, filename, callback) {
             return callback('Database error');
         }
 
-        conn.query(query, function(err, res) {
-            if (err) {
-                console.log(err.code);
-                callback(err);
+        // Start a transaction
+        return conn.beginTransaction(function(tcErr) {
+            if (tcErr) {
+                console.log(tcErr);
+                conn.release();
+                return callback(tcErr);
             } else {
-                console.log('Inserted executable into db.');
-                callback(null, zipHash);
+                conn.query(query, function(err, res) {
+                    if (err) {
+                        console.log(err.code);
+                        // There was an error, so we should rollback.
+                        conn.rollback(function() {
+                            callback(err);
+                            return conn.release();
+                        });
+                    } else {
+                        console.log('Inserted executable into db.');
+                        return callback(null, res.insertId, function(accept) {
+                            // The accept callback, the calling code will decide whether to commit.
+                            if (accept) {
+                                conn.commit(function(cmErr) {
+                                    // If we fail at this point, we will just fail silently. The user will
+                                    // be able to retry the upload without issue.
+                                    if (cmErr) {
+                                        conn.rollback(function () {
+                                            console.log(cmErr);
+                                            return conn.release();
+                                        });
+                                    } else {
+                                        return conn.release();
+                                    }
+                                });
+                            } else {
+                                // Rollback the insert, as requested.
+                                conn.rollback(function() {});
+                                return conn.release();
+                            }
+                        });
+                    }
+                });
             }
         });
-
-        conn.release();
     });
 }
 
@@ -1739,7 +1783,7 @@ module.exports = {
     init: init,
     zipsForUser:zipsForUser,
     zipExists:zipExists,
-    addNewZip:addNewZip,
+    tcAddNewZip:tcAddNewZip,
     getImageOwner:getImageOwner,
     deleteImage:deleteImage,
     imageExists:imageExists,

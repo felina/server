@@ -27,37 +27,43 @@ var PRIVATE_BUCKET = 'citizen.science.executable.storage';
 /**
  * @typedef ZipUpload
  * @type {object}
- * @property {string} zipHash - The hash of the zip to use as it's id.
- * @property {string} type - The MIME type of the archive.
+ * @property {string} name - The display name of the zip. Will be tested for uniqueness.
+ * @property {string} filename - The filename of the zip, as uploaded.
  * @property {Buffer} fileContents - The contents of the archive file.
  */
 
 /**
  * Uploads a zip file to S3 and insert it into the database using {@link addNewZip}.
  * @param {user.User} user - The user to associate the zip withh.
- * @param {ZipUpload} iInfo - The archive to be uploaded.
+ * @param {ZipUpload} zInfo - The archive to be uploaded.
  * @param {object} db - The db object.
  * @param {errorCallback} callback - The callback detailing whether upload was successful.
  */
-function uploadZip(user, iInfo, db, callback) {
-    console.log('Trying to upload: ' + iInfo.zipHash);
-    var params = {
-        'Bucket': PRIVATE_BUCKET,
-        'Key': iInfo.zipHash,
-        'ContentType': iInfo.type,
-        'Body': iInfo.fileContents
-    };
+function uploadZip(user, zInfo, db, callback) {
+    console.log('Trying to upload: ' + zInfo.name);
 
-    return s3.putObject(params, function(err, data) {
-        if (err) {
-            console.log(err);
-            return callback(err);
+    return db.tcAddNewZip(user, zInfo.name, zInfo.originalFilename, function(dbErr, id, accept) {
+        if (dbErr) {
+            // In case of a DB error, we don't need to notify the accept callback.
+            console.log(dbErr);
+            return callback(dbErr);
         } else {
-            return db.addNewZip(user, iInfo.zipHash, iInfo.name, iInfo.filename, function(dbErr, id) {
-                if (dbErr) {
-                    console.log(dbErr);
-                    return callback(dbErr);
+            // The insertion succeeded, we now have an id and can put the object.
+            var params = {
+                'Bucket': PRIVATE_BUCKET,
+                'Key': id + '.zip',
+                'ContentType': 'application/zip',
+                'Body': zInfo.fileContents
+            };
+            return s3.putObject(params, function(err, data) {
+                if (err) {
+                    // Uploading the object failed, so tell DB to deny the insertion.
+                    console.log(err);
+                    accept(false);
+                    return callback(err);
                 } else {
+                    // Upload was a success, tell the DB to accept the insertion.
+                    accept(true);
                     return callback(null, id);
                 }
             });
@@ -216,39 +222,11 @@ function jobRoutes(app, auth, db) {
      */
     app.post('/exec', [auth.enforceLogin, express.multipart()], function(req, res) {
         async.map(Object.keys(req.files), function(fKey, done) {
-            // console.log(req.files);
-            var iInfo = req.files[fKey];
-            iInfo['filename'] = fKey;
-            var fd = fs.createReadStream(iInfo.path);
-            // console.log(iInfo.path);
-            
-            var hash = crypto.createHash('md5');
-            hash.setEncoding('hex');
-            fd.on('end', function() {
-                // console.log(done);
-                
-                hash.end();
-                // console.log(hash.read()); // the desired sha1sum
-                iInfo.zipHash = hash.read();
-                // console.log(iInfo.zipHash);
-                iInfo.name = req.body['name'];
-                iInfo.fileContents = fs.readFileSync(iInfo.path);
-
-                return db.zipExists(iInfo.zipHash, function(iErr, exists) {
-                    if (exists === 0) {
-                        // New image, upload!
-                        return uploadZip(req.user, iInfo, db, done); // Will call done() for us
-                    } else {
-                        // Existing image, reject the request.
-                        // console.trace(done);
-                        if (done) {
-                            return done('Zip already exists: ' + iInfo.name);
-                        }
-                    }
-                });
-            });
-            // read all file and pipe it (write it) to the hash object
-            fd.pipe(hash);
+            var zInfo = req.files[fKey];
+            zInfo.name = req.body.name;
+            zInfo.fileContents = fs.readFileSync(zInfo.path);
+            console.log(zInfo);
+            return uploadZip(req.user, zInfo, db, done); // Will call done() for us;
         },
         function(err, idArr) {
             // If anything errored, abort.
