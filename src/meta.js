@@ -373,10 +373,9 @@ function metaRoutes(app, auth, db) {
      * @returns {MetadataGetAPIResponse} The API response providing the metadata.
      */
     app.get('/meta', function(req, res) {
-        var uid = req.user ? req.user.id : -1;
         var iid = req.query.id;
 
-        db.getMetaBasic(uid, iid, function(err, meta) {
+        return db.getMetaBasic(req.user, iid, function(err, meta) {
             if (err) {
                 res.send(new errors.APIErrResp(3, 'Failed to retrieve metadata.'));
             } else if (meta === false) {

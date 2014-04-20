@@ -1153,37 +1153,39 @@ function checkImagePerm(uid, id, callback) {
 
 /**
  * Retrieves the basic metadata for an image, checking that the user is allowed access.
- * @param {number} uid - The id of the user attempting to fetch this metadata.
+ * @param {!user.User} user - The user attempting to fetch this metadata.
  * @param {string} iid - The id of the image to lookup.
  * @param {imageMetaCallback} callback - The callback that handles the basic image metadata.
  */
-function getMetaBasic(uid, iid, callback) {
-    var query = "SELECT `datetime`, AsText(`location`) AS 'location', `private` FROM `images` WHERE `imageid`=? AND (`ownerid`=? OR NOT `private`)";
-    var sub = [iid, uid];
+function getMetaBasic(user, iid, callback) {
+    var uid = user ? user.id : -1;
+    var override = user ? (user.privilege >= users.PrivilegeLevel.RESEARCHER.i) : false;
+    var query = "SELECT `datetime`, AsText(`location`) AS 'location', `private` FROM `images` WHERE `imageid`=? AND (? OR `ownerid`=? OR NOT `private`)";
+    var sub = [iid, override, uid];
     query = mysql.format(query, sub);
-
+    console.log(query);
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
-            return callback('Database error', false);
+            return callback('Database error');
         }
 
-        conn.query(query, function(err, res) {
+        return conn.query(query, function(err, res) {
+            conn.release();
+
             if (err) {
                 console.log(err.code);
-                callback(err, null);
+                return callback(err);
             } else {
                 if (res.length > 0) {
                     if (res[0].location !== null) {
                         res[0].location = geomWKTToPoints(res[0].location, true);
                     }
-                    callback(null, res[0]);
+                    return callback(null, res[0]);
                 } else {
-                    callback(null, false);
+                    return callback(null, false);
                 }
             }
         });
-
-        conn.release();
     });
 }
 
