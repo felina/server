@@ -284,7 +284,7 @@ function authRoutes(app, enforceLogin) {
     });
 
     /**
-     * API endpoint to login the user. Note that this endpoint expects form-encoded data, not JSON.
+     * API endpoint to login the user. Note that this endpoint optionally accepts form-encoded data, as well as JSON.
      * @hbcsapi {POST} login - This is an API endpoint.
      * @param {string} email - The user's email.
      * @param {string} pass - The user's plaintext password.
