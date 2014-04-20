@@ -87,17 +87,17 @@ function zipsForUser(user, callback) {
 
 /**
  * Retrieves a list of executable zips uploaded by a user.
- * @param {string} zipHash - The id of the zip to look for.
+ * @param {number} id - The id of the zip to look for.
  * @param {zipExistsCallback} callback - The callback that handles the result of the check for the zip.
  */
-function zipExists(zipHash, callback) {
+function zipExists(id, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             return callback(connErr);
         }
 
         var query = "SELECT * FROM `executables` WHERE `exeid` = ?";
-        var sub = [ zipHash ];
+        var sub = [ id ];
         query = mysql.format(query, sub);
 
         conn.query(query, function(err, res) {
