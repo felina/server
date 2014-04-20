@@ -439,7 +439,7 @@ function imageRoutes(app, auth, db) {
                 // TODO: Support thumbnails for private images
                 var params = {
                     'Bucket': PRIVATE_BUCKET,
-                    'Key': req.query.id,
+                    'Key': (src ? '' : THUMB_PFIX) + req.query.id,
                     'Expires': PRIVATE_EXPIRY
                 };
                 // Use a signed URL to serve directly from S3. Note that anyone with the URL can access the image until it expires!
