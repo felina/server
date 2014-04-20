@@ -201,24 +201,26 @@ function projectRoutes(app, auth, db) {
      * @type {object}
      * @property {boolean} res - True iff the list of projects was retrieved successfully.
      * @property {APIError} [err] - The error that caused the request to fail.
-     * @property {string[]} projects - The set of project names.
+     * @property {string[]|Project[]} projects - The set of project names, or project objects, if specified.
      */
 
     /**
      * API endpoint to retrieve a list of projects (a.k.a. 'species') defined in the system.
      * @hbcsapi {GET} projects - This is an API endpoint.
-     * @param {boolean} all - If true, all projects will be retrieved, regardless of their inactivity.
+     * @param {boolean} [all=false] - If true, all projects will be retrieved, regardless of their inactivity.
+     * @param {boolean} [details=false] - If true, a list of Project objects will be returned, else a simple list of project names as strings.
      * @returns {ProjectListAPIResponse} The API response providing the list of all projects.
      */
     app.get('/projects', function(req, res) {
         var all = req.query.all;
+        var details = req.query.details;
 
         // Restrict all project listing to researcher and above.
         if (!req.user || !(req.user.isResearcher() || req.user.isAdmin())) {
             all = false;
         }
 
-        db.getProjects(all, null, function(err, list) {
+        db.getProjects(all, null, details, function(err, list) {
             if (err) {
                 return res.send(new errors.APIErrResp(2, 'Failed to fetch project list.'));
             } else {
@@ -260,7 +262,7 @@ function projectRoutes(app, auth, db) {
             all = false;
         }
 
-        return db.getProjects(all, id, function(e, list) {
+        return db.getProjects(all, id, false, function(e, list) {
             if (e) {
                 console.log(e);
                 return res.send(new errors.APIErrResp(3, 'Failed to retrieve fields.'));

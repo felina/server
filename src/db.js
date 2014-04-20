@@ -501,22 +501,29 @@ function updateUser(name, email, usertype, profile_image, supervisor, token_expi
  * Project listing callback.
  * @callback projectListCallback
  * @param {Error} err - The error that occurred, if present.
- * @param {string[]} projects - The set of project names.
+ * @param {string[]|Project[]} projects - The set of project names.
  */
 
 /**
  * Retrieves a list of projects.
  * @param {boolean} showAll - If false, the list of projects will be filtered to contain only active projects.
  * @param {number} [id] - If provided, return only the project with the given id.
+ * @param {boolean} [details] - If true, a list of Project objects will be returned, instead of names.
  * @param {projectListCallback} callback - The callback that handles the result of trying to fetch the list of projects.
  */
-function getProjects(showAll, id, callback) {
+function getProjects(showAll, id, details, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             return callback(connErr);
         }
 
-        var query = "SELECT `name` FROM `projects`";
+        var query;
+        if (details) {
+            query = "SELECT `projectid`, `name`, `desc`, `active` FROM `projects`";
+        } else {
+            query = "SELECT `name` FROM `projects`";
+        }
+
         var first = true;
         if (!showAll) {
             query = query + " WHERE active";
@@ -538,11 +545,15 @@ function getProjects(showAll, id, callback) {
                 console.log(err);
                 return callback(err);
             } else {
-                var names = new Array(res.length);
-                res.forEach(function(ele, i) {
-                    names[i] = ele.name;
-                });
-                return callback(null, names);
+                if (details) {
+                    return callback(null, res);
+                } else {
+                    var names = new Array(res.length);
+                    res.forEach(function(ele, i) {
+                        names[i] = ele.name;
+                    });
+                    return callback(null, names);
+                }
             }
         });
     });
