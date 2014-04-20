@@ -22,7 +22,7 @@ var s3 = new aws.S3();
 /**
  * The S3 bucket name to use for executable storage.
  */
-var PRIVATE_BUCKET = 'citizen.science.executable.storage';
+var EXECUTABLE_BUCKET = 'citizen.science.executable.storage';
 
 /**
  * @typedef ZipUpload
@@ -50,7 +50,7 @@ function uploadZip(user, zInfo, db, callback) {
         } else {
             // The insertion succeeded, we now have an id and can put the object.
             var params = {
-                'Bucket': PRIVATE_BUCKET,
+                'Bucket': EXECUTABLE_BUCKET,
                 'Key': id + '.zip',
                 'ContentType': 'application/zip',
                 'Body': zInfo.fileContents
