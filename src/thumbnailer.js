@@ -79,6 +79,7 @@ Thumbnailer.prototype.VALID_TYPES = [
  */
 Thumbnailer.prototype.make = function(src, callback) {
     var infile = this.in_dir + '/' + src;
+    console.log('wut: ' + infile);
     var cmd = gm(infile)
         .resize(this.target_s.w, this.target_s.h, '>') // Only resize images greater than the size.
         .gravity('Center'); // Center the resized output
@@ -115,6 +116,7 @@ Thumbnailer.prototype.verify = function(src, callback) {
     var infile = this.in_dir + '/' + src;
     var min_s = this.min_s;
     var types = this.VALID_TYPES;
+    console.log('away we go');
     return gm(infile).identify('%w\t%h\t%m', function (err, data) {
         if (err) {
             console.log(err);
@@ -123,6 +125,7 @@ Thumbnailer.prototype.verify = function(src, callback) {
         } else {
             // Split the data.
             var meta = data.split('\t');
+            console.log(data);
             var w = meta[0];
             var h = meta[1];
             var format = meta[2];
