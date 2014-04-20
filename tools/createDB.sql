@@ -267,17 +267,38 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
+-- Table `felina`.`executables`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `felina`.`executables` (
+  `exeid` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(45) NOT NULL,
+  `filename` VARCHAR(45) NOT NULL,
+  `ownerid` INT NOT NULL,
+  PRIMARY KEY (`exeid`),
+  UNIQUE INDEX `name_UNIQUE` (`name` ASC),
+  INDEX `executables_users_rel_idx` (`ownerid` ASC),
+  CONSTRAINT `executables_users_rel`
+    FOREIGN KEY (`ownerid`)
+    REFERENCES `felina`.`users` (`userid`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
 -- Table `felina`.`jobs`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `felina`.`jobs` (
   `jobid` INT NOT NULL AUTO_INCREMENT,
   `projectid` INT NOT NULL,
   `name` VARCHAR(45) NOT NULL,
+  `exeid` INT NOT NULL,
   `ownerid` INT NULL,
-  `exe_pack` VARCHAR(45) NULL,
+  `command` VARCHAR(255) NOT NULL,
   PRIMARY KEY (`jobid`),
   INDEX `project_jobs_rel_idx` (`projectid` ASC),
   INDEX `users_jobs_rel_idx` (`ownerid` ASC),
+  INDEX `executables_jobs_rel_idx` (`exeid` ASC),
   CONSTRAINT `project_jobs_rel`
     FOREIGN KEY (`projectid`)
     REFERENCES `felina`.`projects` (`projectid`)
@@ -287,6 +308,11 @@ CREATE TABLE IF NOT EXISTS `felina`.`jobs` (
     FOREIGN KEY (`ownerid`)
     REFERENCES `felina`.`users` (`userid`)
     ON DELETE SET NULL
+    ON UPDATE CASCADE,
+  CONSTRAINT `executables_jobs_rel`
+    FOREIGN KEY (`exeid`)
+    REFERENCES `felina`.`executables` (`exeid`)
+    ON DELETE RESTRICT
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
@@ -314,25 +340,6 @@ CREATE TABLE IF NOT EXISTS `felina`.`job_images` (
   CONSTRAINT `images_jimages_relb`
     FOREIGN KEY (`imageb`)
     REFERENCES `felina`.`images` (`imageid`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE)
-ENGINE = InnoDB;
-
-
--- -----------------------------------------------------
--- Table `felina`.`executables`
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `felina`.`executables` (
-  `exeid` CHAR(32) NOT NULL,
-  `name` VARCHAR(45) NOT NULL,
-  `filename` VARCHAR(45) NOT NULL,
-  `ownerid` INT NOT NULL,
-  PRIMARY KEY (`exeid`),
-  UNIQUE INDEX `name_UNIQUE` (`name` ASC),
-  INDEX `executables_users_rel_idx` (`ownerid` ASC),
-  CONSTRAINT `executables_users_rel`
-    FOREIGN KEY (`ownerid`)
-    REFERENCES `felina`.`users` (`userid`)
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
