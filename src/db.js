@@ -1594,29 +1594,42 @@ function updateUserHash(email, auth, token_expiry, callback) {
 /**
  * Tries to add a new user with a usertype of 'user'.
  * @param {user.User} user - The user to create. The id and usertype properties will be ignored.
- * @param {string} phash - The string representation of the bcrypt hash of the user's password.
- * @param {string} vhash - The validation hash the user must return to verify their email.
+ * @param {string} [phash] - The string representation of the bcrypt hash of the user's password.
+ * @param {string} [vhash] - The validation hash the user must return to verify their email.
  * @param {userCallback} callback - The callback that handles the result of trying to add a new user.
  */
 function addNewUser(user, phash, vhash, callback) {
+    if (!_.isString(vhash)) {
+        // vhash not supplied, force it to null
+        console.log('Creating user without email validation.');
+        vhash = null;
+    }
+
     var query = "INSERT INTO `users` (userid, email, name, usertype, gravatar, validation_hash) VALUE (null,?,?,?,?,?)";
     var sub = [user.email, user.name, "user", user.gravatar, vhash];
     query = mysql.format(query, sub);
 
-    connPool.getConnection(function(connErr, conn) {
+    return connPool.getConnection(function(connErr, conn) {
         if (connErr) {
-            return callback('Database error', null);
+            return callback('Database error');
         }
 
-        conn.query(query, function(err, res) {
+        return conn.query(query, function(err, res) {
             conn.release();
 
             if (err) {
                 console.log(err.code);
-                callback(err, null);
+                return callback(err);
             } else {
-                setUserHash(res.insertId, phash);
-                callback(null, res.insertId);
+                // Update the user object with it's new id.
+                user.id = res.insertId;
+
+                if (phash) {
+                    // Only set the hash if one has been set.
+                    setUserHash(res.insertId, phash);
+                }
+
+                return callback(null, user);
             }
         });
     });

@@ -72,29 +72,29 @@ function newToken(email, password, callback) {
  */
 function register(user, password, callback) {
     // Asynchronously hash the password with bcrypt.
-    bcrypt.hash(password, null, null, function(e, hash) {
+    return bcrypt.hash(password, null, null, function(e, hash) {
         if (e) {
             console.log('Failed to hash password.');
             console.log(e);
-            callback(e, null);
+            return callback(e);
         } else {
             var vhash = getValidationHash();
-            db.addNewUser(user, hash, vhash, function(err, id){
+            return db.addNewUser(user, hash, vhash, function(err, u){
                 if(err) {
                     console.log('database enter user fail');
                     console.log(err);
-                    callback(err, null);
+                    return callback(err);
                 } else {
                     // if (dbCFG.database !== 'felinaTest') {
-                        var mailOptions = {
-                            from: smtp_config.auth.email,
-                            to: user.email,
-                            subject: "Validate email for Felina",
-                            text: 'Copy and paste this link in your browser to validate: '+host+'/validate/'+vhash
-                        };
-                        transport.sendMail(mailOptions);
+                    var mailOptions = {
+                        from: smtp_config.auth.email,
+                        to: u.email,
+                        subject: "Validate email for Felina",
+                        text: 'Copy and paste this link in your browser to validate: '+host+'/validate/'+vhash
+                    };
+                    transport.sendMail(mailOptions);
                     // }
-                    return callback(null, id);
+                    return callback(null, u);
                 }
             });
         }
@@ -148,10 +148,9 @@ function localVerify(username, password, done) {
             console.log(err);
             return done(err, null);
         } else if (user === null || hash === null) {
-            return done(null, false);//, JSON.stringify({res:false, err:{code:1, msg: 'Unregistered user.'}}));
-            // return done(JSON.stringify({res:false, err:{code:1, msg: 'Unregistered user.'}}), false);//, JSON.stringify({res:false, err:{code:1, msg: 'Unregistered user.'}}));
+            return done(null, false);
         } else {
-            bcrypt.compare(password, hash, function(hErr, correct) {
+            return bcrypt.compare(password, hash, function(hErr, correct) {
                 if (hErr) {
                     return done(hErr, null);
                 } else if (correct) {
@@ -203,18 +202,18 @@ function authRoutes(app, auth) {
             var user = new users.User(-1, name, mail, priv, grav);
             if (user.id === false) {
                 // Details of user are invalid.
-                res.send(new errors.APIErrResp(1, 'User details are invalid!'));
+                return res.send(new errors.APIErrResp(1, 'User details are invalid!'));
             } else {
-                return register(user, pass, function(err, id) {
+                return register(user, pass, function(err, newU) {
                     if (err) {
                         // Registration failed, notify api.
                         console.log('Registration failed:');
                         console.log(err);
                         return res.send(new errors.APIErrResp(2, 'Registration failed.'));
                     } else {
-                        // Update id from DB insertion.
-                        user.id = id;
-                        console.log(['Registered user:',id,mail,name,priv,grav].join(" "));
+                        // Make sure we don't accidentally refer to an old object.
+                        user = newU;
+                        console.log(['Registered user:',user.id,mail,name,priv,grav].join(" "));
                         // Login the newly registered user.
                         return req.login(user, function(err) {
                             if (err) {
