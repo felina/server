@@ -213,6 +213,11 @@ function projectRoutes(app, auth, db) {
     app.get('/projects', function(req, res) {
         var all = req.query.all;
 
+        // Restrict all project listing to researcher and above.
+        if (!req.user || !(req.user.isResearcher() || req.user.isAdmin())) {
+            all = false;
+        }
+
         db.getProjects(all, function(err, list) {
             if (err) {
                 return res.send(new errors.APIErrResp(2, 'Failed to fetch project list.'));
