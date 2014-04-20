@@ -181,19 +181,19 @@ var BcryptLocalStrategy = new LocalStrategy(STRATEGY_OPTIONS, localVerify);
  * Registers Express routes related to local (email/password) authentication. These are API endpoints.
  * @static
  * @param {Express} app - The Express application object.
- * @param {auth/auth.enforceLogin} enfoceLogin - The enfoceLogin middleware. TODO: WHY???
+ * @param {object} auth - The auth module.
  */
-function authRoutes(app, enforceLogin) {
+function authRoutes(app, auth) {
     /**
      * API endpoint to register a new user with email/password authentication.
-     * @hbcsapi {POST} register - This is an API endpoint.
+     * @hbcsapi {POST} user - This is an API endpoint.
      * @param {string} email - The new user's email.
      * @param {string} pass - The plaintext password of the new user.
      * @param {string} name - The new user's display name.
      * @param {string} [gravatar] - The hash of the new user's gravatar email.
      * @returns {UserAPIResponse} The API response that details the newly created user.
      */
-    app.post('/register', function(req, res) {
+    app.post('/user', function(req, res) {
         if (req.body.email && req.body.pass) {
             var mail = req.body.email;
             var name = req.body.name;
@@ -247,7 +247,7 @@ function authRoutes(app, enforceLogin) {
      * @param {string} [gravatar] - The hash of the new user's gravatar email.
      * @returns {UserAPIResponse} The API response that details the newly created user.
      */
-    app.post('/subuser', enforceLogin({'minPL':2}), function(req, res) {
+    app.post('/subuser', auth.enforceLogin({'minPL':2}), function(req, res) {
         var mail = req.body.email;
         var name = req.body.name;
         var pass = getValidationHash();
@@ -324,12 +324,12 @@ function authRoutes(app, enforceLogin) {
     /**
      * API endpoint to retrieve the subuser's authentication details. May only be accessed once during a limited
      * timespan after the supervisor has enabled this action.
-     * @hbcsapi {GET} token - This is an API endpoint.
+     * @hbcsapi {POST} token - This is an API endpoint.
      * @param {string} email - The user's email.
      * @returns {SubuserTokenAPIResponse} The API response detailing the subuser's auth token.
      */
-    app.get('/token', function(req, res) {
-        var email = req.query.email;
+    app.post('/token', function(req, res) {
+        var email = req.body.email;
         if (email) {
             console.log(email);
             db.tokenExpiry(email, function(err, info) {
