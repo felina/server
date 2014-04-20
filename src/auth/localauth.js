@@ -182,7 +182,7 @@ var BcryptLocalStrategy = new LocalStrategy(STRATEGY_OPTIONS, localVerify);
  * @param {Express} app - The Express application object.
  * @param {object} auth - The auth module.
  */
-function authRoutes(app, auth) {
+function authRoutes(app, enforceLogin) {
     /**
      * API endpoint to register a new user with email/password authentication.
      * @hbcsapi {POST} user - This is an API endpoint.
@@ -246,7 +246,7 @@ function authRoutes(app, auth) {
      * @param {string} [gravatar] - The hash of the new user's gravatar email.
      * @returns {UserAPIResponse} The API response that details the newly created user.
      */
-    app.post('/subuser', auth.enforceLogin({'minPL':2}), function(req, res) {
+    app.post('/subuser', enforceLogin({'minPL':2}), function(req, res) {
         var mail = req.body.email;
         var name = req.body.name;
         var pass = getValidationHash();
