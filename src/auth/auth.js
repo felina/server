@@ -143,10 +143,10 @@ function authRoutes(app) {
 
     /**
      * API endpoint to logout the current user.
-     * @hbcsapi {GET} logout
+     * @hbcsapi {POST} logout
      * @returns {BasicAPIResponse} The API response detailing the outcome of the logout operation.
      */
-    app.get('/logout', function(req, res) {
+    app.post('/logout', function(req, res) {
         if (req.user) {
             req.logout();
             req.session.destroy(function (err) {
@@ -170,7 +170,7 @@ function authRoutes(app) {
      * @hbcsapi {GET} logincheck
      * @returns {UserAPIResponse} The API response providing the currently logged in user's information.
      */
-    app.get('/logincheck', enforceLogin, function(req, res) {
+    app.get('/user', enforceLogin, function(req, res) {
         // Response to not logged in users will be provided by the middleware.
         res.send({
             'res': true,
