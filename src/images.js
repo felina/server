@@ -472,116 +472,117 @@ function imageRoutes(app, auth, db) {
      */
     app.post('/img', [auth.enforceLogin, express.multipart()], function(req, res) {
         // Don't return here, temp file cleanup at end!
-        async.map(Object.keys(req.files),
-                  function(fKey, done) {
-                      var iInfo = req.files[fKey];
-                      
-                      // The body must contain a corresponding value that gives the project id.                 
-                      var project = false;
-                      if(req.user.privilege === users.PrivilegeLevel.SUBUSER.i){
-                          project = req.user.projectid;
-                      } else {
-                          project = parseInt(req.body[fKey + '_project']);
-                      }
-                      if (_.isNaN(project)) {
-                          return done('Must supply a valid project id for each image.');
-                      }
-                      // Attempt to hash the file. If any file has an unwanted type, abort the request.
-                      if (VALID_MIME_TYPES.indexOf(iInfo.type) < 0) {
-                          // Invalid mime type, reject request.
-                          return done('Invalid file type: ' + iInfo.type + " name: " + iInfo.name);
-                      }
+        async.map(
+            Object.keys(req.files),
+            function(fKey, done) {
+                var iInfo = req.files[fKey];
+                
+                // The body must contain a corresponding value that gives the project id.                 
+                var project = false;
+                if(req.user.privilege === users.PrivilegeLevel.SUBUSER.i){
+                    project = req.user.projectid;
+                } else {
+                    project = parseInt(req.body[fKey + '_project']);
+                }
+                if (_.isNaN(project)) {
+                    return done('Must supply a valid project id for each image.');
+                }
+                // Attempt to hash the file. If any file has an unwanted type, abort the request.
+                if (VALID_MIME_TYPES.indexOf(iInfo.type) < 0) {
+                    // Invalid mime type, reject request.
+                    return done('Invalid file type: ' + iInfo.type + " name: " + iInfo.name);
+                }
 
-                      // Validate the file first
-                      console.log(path.basename(iInfo.path));
-                      return IMAGE_PROCESSOR.verify(path.basename(iInfo.path), function(okay) {
-                          if (okay) {
-                              // TODO: Can we avoid loading everything into memory?
-                              iInfo.fileContents = fs.readFileSync(iInfo.path); // semi sketchy decoding
-                              console.log('LENGTHS:' + iInfo.fileContents.length + ' - ' + iInfo.size);
-                              var elementsToHash = "";
-                              for (var j = 0; j < iInfo.fileContents.length; j += iInfo.fileContents.length / 100) {
-                                  elementsToHash += iInfo.fileContents[Math.floor(j)];
-                              }
-                              iInfo.felinaHash = md5(elementsToHash);
+                // Validate the file first
+                console.log(path.basename(iInfo.path));
+                return IMAGE_PROCESSOR.verify(path.basename(iInfo.path), function(okay) {
+                    if (okay) {
+                        // TODO: Can we avoid loading everything into memory?
+                        iInfo.fileContents = fs.readFileSync(iInfo.path); // semi sketchy decoding
+                        console.log('LENGTHS:' + iInfo.fileContents.length + ' - ' + iInfo.size);
+                        var elementsToHash = "";
+                        for (var j = 0; j < iInfo.fileContents.length; j += iInfo.fileContents.length / 100) {
+                            elementsToHash += iInfo.fileContents[Math.floor(j)];
+                        }
+                        iInfo.felinaHash = md5(elementsToHash);
 
-                              return db.imageExists(iInfo.felinaHash, function(iErr, exists) {
-                                  if (exists === 0) {
-                                      // New image, upload!
-                                      console.log('Uploading new image.');
-                                      return uploadImage(req.user, iInfo, project, db, done); // Will call done() for us
-                                  } else {
-                                      // Existing image, reject the request.
-                                      return done('Image already exists: ' + iInfo.name);
-                                  }
-                              });
-                          } else {
-                              // Upload was not a valid image file!
-                              console.log('Refused image upload after validation.');
-                              return done('File was not a valid image.');
-                          }
-                      });
-                  },
-                  function(err, idArr) {
-                      console.log('End block');
-                      // If anything errored, abort.
-                      if (err) {
-                          // TODO: be more clear if any images were uploaded or not.
-                          if (err.code === 'ER_NO_REFERENCED_ROW_') {
-                              // We haven't met an FK constraint, this should be down to a bad project id.
-                              res.send(new errors.APIErrResp(3, 'Invalid project.'), 400);
-                          } else {
-                              console.log(err);
-                              res.send(new errors.APIErrResp(2, err), 400);
-                          }
-                      } else {
-                          // All images should have uploaded succesfully.
-                          res.send({
-                              'res': true,
-                              'ids': idArr
-                          });
-                      }
+                        return db.imageExists(iInfo.felinaHash, function(iErr, exists) {
+                            if (exists === 0) {
+                                // New image, upload!
+                                console.log('Uploading new image.');
+                                return uploadImage(req.user, iInfo, project, db, done); // Will call done() for us
+                            } else {
+                                // Existing image, reject the request.
+                                return done('Image already exists: ' + iInfo.name);
+                            }
+                        });
+                    } else {
+                        // Upload was not a valid image file!
+                        console.log('Refused image upload after validation.');
+                        return done('File was not a valid image.');
+                    }
+                });
+            },
+            function(err, idArr) {
+                console.log('End block');
+                // If anything errored, abort.
+                if (err) {
+                    // TODO: be more clear if any images were uploaded or not.
+                    if (err.code === 'ER_NO_REFERENCED_ROW_') {
+                        // We haven't met an FK constraint, this should be down to a bad project id.
+                        res.send(new errors.APIErrResp(3, 'Invalid project.'), 400);
+                    } else {
+                        console.log(err);
+                        res.send(new errors.APIErrResp(2, err), 400);
+                    }
+                } else {
+                    // All images should have uploaded succesfully.
+                    res.send({
+                        'res': true,
+                        'ids': idArr
+                    });
+                }
 
-                      // Cleanup all temporary files used by upload, and generate thumbnails. Do this after we've responded.
-                      async.each(Object.keys(req.files),
-                                 function(fKey, done) {
-                                     var info = req.files[fKey];
-                                     if (!info.felinaHash) {
-                                         // Not a valid image, but still needs unlink'ing.
-                                         console.log('Deleting invalid: ' + info.path);
-                                         return fs.unlink(info.path, done);
-                                     }
-                                     console.log('Thumbnailing: ' + info.path);
-                                     return IMAGE_PROCESSOR.make(info.felinaHash, path.basename(info.path), function(err, thm) {
-                                         // Delete the source image regardless of outcome.
-                                         console.log('Deleting: ' + info.path);
-                                         return fs.unlink(info.path, function(sdErr) {
-                                             if (err) {
-                                                 // If the thumbnail operation failed, quit now.
-                                                 return done(err);
-                                             }
-                                             if (sdErr) {
-                                                 console.log(sdErr);
-                                             }
+                // Cleanup all temporary files used by upload, and generate thumbnails. Do this after we've responded.
+                async.each(Object.keys(req.files),
+                           function(fKey, done) {
+                               var info = req.files[fKey];
+                               if (!info.felinaHash) {
+                                   // Not a valid image, but still needs unlink'ing.
+                                   console.log('Deleting invalid: ' + info.path);
+                                   return fs.unlink(info.path, done);
+                               }
+                               console.log('Thumbnailing: ' + info.path);
+                               return IMAGE_PROCESSOR.make(info.felinaHash, path.basename(info.path), function(err, thm) {
+                                   // Delete the source image regardless of outcome.
+                                   console.log('Deleting: ' + info.path);
+                                   return fs.unlink(info.path, function(sdErr) {
+                                       if (err) {
+                                           // If the thumbnail operation failed, quit now.
+                                           return done(err);
+                                       }
+                                       if (sdErr) {
+                                           console.log(sdErr);
+                                       }
 
-                                             console.log('Storing thumbnail: ' + thm);
-                                             return uploadThumb(thm, function(upErr) {
-                                                 if (upErr) {
-                                                     // Regardless of error we should delete the thumbnail, else they might build up.
-                                                     console.log(upErr);
-                                                 }
-                                                 console.log('Deleting: ' + thm);
-                                                 return fs.unlink(thm, done);
-                                             });
-                                         });
-                                     });
-                                 },
-                                 function(e) {
-                                     if (e) {
-                                         console.log(e);
-                                     }
-                                 });
-                  });
+                                       console.log('Storing thumbnail: ' + thm);
+                                       return uploadThumb(thm, function(upErr) {
+                                           if (upErr) {
+                                               // Regardless of error we should delete the thumbnail, else they might build up.
+                                               console.log(upErr);
+                                           }
+                                           console.log('Deleting: ' + thm);
+                                           return fs.unlink(thm, done);
+                                       });
+                                   });
+                               });
+                           },
+                           function(e) {
+                               if (e) {
+                                   console.log(e);
+                               }
+                           });
+            });
     }); // End image upload endpoint.
 
     /**
