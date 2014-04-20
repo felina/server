@@ -275,7 +275,7 @@ CREATE TABLE IF NOT EXISTS `felina`.`executables` (
   `filename` VARCHAR(45) NOT NULL,
   `ownerid` INT NOT NULL,
   PRIMARY KEY (`exeid`),
-  UNIQUE INDEX `name_UNIQUE` (`name` ASC),
+  UNIQUE INDEX `name_user_UNIQUE` (`ownerid` ASC, `name` ASC),
   INDEX `executables_users_rel_idx` (`ownerid` ASC),
   CONSTRAINT `executables_users_rel`
     FOREIGN KEY (`ownerid`)
