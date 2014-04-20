@@ -497,39 +497,6 @@ function updateUser(name, email, usertype, profile_image, supervisor, token_expi
     });
 }
 
-// TODO: No longer required?
-function getJobImageCount(jobid, callback) {
-    connPool.getConnection(function(connErr, conn) {
-        if (connErr) {
-            return callback(connErr);
-        }
-
-        var query = "SELECT * FROM " +
-            "( SELECT COUNT(*) AS `processed` " +
-            "  FROM `job_images` " +
-            "  WHERE `jobid` = ? " +
-            ") AS `a`" +
-            "," +
-            "( SELECT (COUNT(*) * (COUNT(*) - 1))/2 AS `total` " +
-            "  FROM `jobs` " +
-            "  INNER JOIN `images` USING (`projectid`) " +
-            "  WHERE `jobid` = ? " +
-            ") AS `b`";
-        var sub = [ jobid, jobid ];
-        query = mysql.format(query, sub);
-
-        return conn.query(query, function(err, res) {
-            conn.release();
-            if (err) {
-                console.log(err);
-                return callback(err);
-            } else {
-                return callback(null, res);
-            }
-        });
-    });
-}
-
 /**
  * Project listing callback.
  * @callback projectListCallback
@@ -1752,7 +1719,6 @@ module.exports = {
     getImageOwner:getImageOwner,
     deleteImage:deleteImage,
     imageExists:imageExists,
-    getJobImageCount:getJobImageCount,
     getImageFields:getImageFields,
     getProjects:getProjects,
     getFields:getFields,
