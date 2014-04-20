@@ -450,7 +450,7 @@ function imageRoutes(app, auth, db) {
                 // Image is public, redirect to the public URL. Add the prefix if we don't want the source image.
                 res.redirect(S3_URL + (src ? '' : THUMB_PFIX)  + req.query.id);
             } else {
-                // res.redirect('/Padlock.png'); // Local copy of access denied image
+                // res.redirect('/static/padlock.png'); // Local copy of access denied image
                 res.redirect(S3_URL + 'padlock.png'); // S3 copy of image
             }
         });

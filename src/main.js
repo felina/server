@@ -66,7 +66,7 @@ app.configure(function() {
     // Enable the request logger, with dev formatting.
     app.use(express.logger('dev'));
     // Enable serving of static files from the static folder.
-    app.use(express.static(__dirname + '/../static'));
+    app.use('/static', express.static(__dirname + '/../static'));
     // Enable the parsing of cookies for session support.
     app.use(express.cookieParser());
     // Enable JSON parsing for all request bodies.
