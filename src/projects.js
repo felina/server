@@ -334,22 +334,24 @@ function projectRoutes(app, auth, db) {
     app.post('/project/new', auth.enforceLogin, function(req, res) {
         var proj = new Project(-1, req.body.name, req.body.desc, false);
         if (proj.id === false) {
-            return res.send({'res': false, 'err': new errors.APIError(2, 'Invalid project data.')});
+            return res.send(new errors.APIErrResp(2, 'Invalid project data.'));
         }
 
-        db.createProject(proj, function(err, id) {
+        return db.createProject(proj, function(err, p) {
+            proj = p; // Ensure these both refer to the same object.
             if (err) {
                 if (err.code === 'ER_DUP_ENTRY') {
                     console.log('Tried to create duplicate project.');
-                    return res.send({'res': false, 'err': new errors.APIError(3, 'A project with this name already exists.')});
+                    return res.send(new errors.APIErrResp(3, 'A project with this name already exists.'));
                 } else {
                     console.log(err);
-                    return res.send({'res': false, 'err': new errors.APIError(4, 'Failed to create project.')});
+                    return res.send(new errors.APIErrResp(4, 'Failed to create project.'));
                 }
             } else {
-                console.log('New project: ' + id);
-                proj.id = id;
-                return res.send({'res': true, 'project': proj});
+                return res.send({
+                    'res': true,
+                    'project': p
+                });
             }
         });
     });

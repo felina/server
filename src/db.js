@@ -754,7 +754,9 @@ function createProject(proj, callback) {
                 console.log(err);
                 return callback(err);
             } else {
-                return callback(null, res.insertId);
+                // Update the project object with it's new id.
+                proj.projectid = res.insertId;
+                return callback(null, proj);
             }
         });
     });
