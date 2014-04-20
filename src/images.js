@@ -44,6 +44,11 @@ var S3_URL = 'http://' + PUBLIC_BUCKET + '.s3-website-eu-west-1.amazonaws.com/';
 var THUMB_PFIX = 'thm_';
 
 /**
+ * The suffix to add to an image to get it's thumbnail, including extension.
+ */
+var THUMB_SFIX = ''; // Keep this blank for now, as it will cause issues with S3 redirects.
+
+/**
  * Number of seconds to keep a private image URL valid for.
  */
 var PRIVATE_EXPIRY = 120;
@@ -85,9 +90,14 @@ var THUMB_FORMAT = 'JPEG';
 var THUMB_MIME = "image/jpeg";
 
 /**
+ * Whether thumbnails should be padded with a white border to the target size.
+ */
+var PAD_THUMBS = false;
+
+/**
  * Instantiate an image thumbnailer and validator.
  */
-var IMAGE_PROCESSOR = new Thumbnailer(IMG_MIN, THUMB_DIM, '/tmp', '/tmp', THUMB_FORMAT, THUMB_PFIX, false);
+var IMAGE_PROCESSOR = new Thumbnailer(IMG_MIN, THUMB_DIM, '/tmp', '/tmp', THUMB_FORMAT, THUMB_PFIX, THUMB_SFIX, PAD_THUMBS);
 
 /**
  * @typedef Image
@@ -298,10 +308,10 @@ function uploadImage(user, iInfo, pid, db, callback) {
 
 /**
  * Uploads a thumbnail to S3.
- * @param {ImageUpload} info - The image to be uploaded.
+ * @param {string} thumb - The path to the thumbnail to upload.
  * @param {errorCallback} callback - The callback detailing whether the upload was successful or not.
  */
-function uploadThumb(key, thumb, callback) {
+function uploadThumb(thumb, callback) {
     var thumbBuffer;
     try {
         thumbBuffer = fs.readFileSync(thumb);
@@ -312,7 +322,7 @@ function uploadThumb(key, thumb, callback) {
 
     var params = {
         'Bucket': PRIVATE_BUCKET,
-        'Key': THUMB_PFIX + key,
+        'Key': path.basename(thumb),
         'ContentType': THUMB_MIME,
         'Body': thumbBuffer
     };
@@ -542,7 +552,7 @@ function imageRoutes(app, auth, db) {
                                          return fs.unlink(info.path, done);
                                      }
                                      console.log('Thumbnailing: ' + info.path);
-                                     return IMAGE_PROCESSOR.make(info.felinaHash, info.path, function(err, thm) {
+                                     return IMAGE_PROCESSOR.make(info.felinaHash, path.basename(info.path), function(err, thm) {
                                          // Delete the source image regardless of outcome.
                                          console.log('Deleting: ' + info.path);
                                          return fs.unlink(info.path, function(sdErr) {

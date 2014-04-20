@@ -21,13 +21,14 @@ var gm = require('gm');
  * @param {string} in_dir - The directory to read input images from.
  * @param {string} out_dir - The directory to store converted thumbnails in.
  * @param {string} format - The image format to use for thumbnails.
- * @param {string} pfix - The string to prefix thumbnail filenames with.
- * @param {boolean} canvas - If true, output thumbnails should be a fixed size, with empty space whited out.
+ * @param {string} [pfix=''] - The string to prefix thumbnail filenames with.
+ * @param {string} [sfix=''] - The suffix to attach to the thumbnail filename, including extension.
+ * @param {boolean} [canvas=false] - If true, output thumbnails should be a fixed size, with empty space whited out.
  */
-function Thumbnailer(min_s, target_s, in_dir, out_dir, format, pfix, canvas) {
+function Thumbnailer(min_s, target_s, in_dir, out_dir, format, pfix, sfix, canvas) {
     // Check we're being called with new.
     if (!(this instanceof Thumbnailer)) {
-        return new Thumbnailer(min_s, target_s, in_dir, out_dir, format, pfix, canvas);
+        return new Thumbnailer(min_s, target_s, in_dir, out_dir, format, pfix, sfix, canvas);
     }
 
     // Validate size parameters
@@ -53,6 +54,7 @@ function Thumbnailer(min_s, target_s, in_dir, out_dir, format, pfix, canvas) {
     this.out_dir = out_dir;
     this.format = format;
     this.pfix = pfix;
+    this.sfix = sfix;
     this.canvas = !!canvas;
 }
 
@@ -74,22 +76,24 @@ Thumbnailer.prototype.VALID_TYPES = [
 
 /**
  * Makes a thumbnail for an image, unless one already exists.
+ * @param {string} stem - The unique part of the output filename.
  * @param {string} src - The source image.
  * @param {thumbnailCreationCallback} callback - The callback that uses the newly created thumbnail.
  */
-Thumbnailer.prototype.make = function(src, callback) {
+Thumbnailer.prototype.make = function(stem, src, callback) {
+    console.log(arguments);
     var infile = this.in_dir + '/' + src;
     console.log('wut: ' + infile);
     var cmd = gm(infile)
         .resize(this.target_s.w, this.target_s.h, '>') // Only resize images greater than the size.
         .gravity('Center'); // Center the resized output
-    
+
     if (this.canvas) {
         // Pad the output with a white background if the aspect ratio doesn't match.
         cmd = cmd.extent(this.target_s.w, this.target_s.h);
     }
 
-    var outfile = this.out_dir + '/' + this.pfix + src;
+    var outfile = this.out_dir + '/' + (this.pfix ? this.pfix : '') + stem + (this.sfix ? this.sfix : '');
     return cmd.write(outfile, function(err) {
         if (err) {
             console.log(err);
