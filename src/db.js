@@ -79,40 +79,6 @@ function zipsForUser(user, callback) {
 }
 
 /**
- * Zip exists callback.
- * @callback zipExistsCallback
- * @param {Error} err - The error that occurred, if present.
- * @param {boolean} exists - Whether a zip exists with the given id.
- */
-
-/**
- * Retrieves a list of executable zips uploaded by a user.
- * @param {number} id - The id of the zip to look for.
- * @param {zipExistsCallback} callback - The callback that handles the result of the check for the zip.
- */
-function zipExists(id, callback) {
-    connPool.getConnection(function(connErr, conn) {
-        if (connErr) {
-            return callback(connErr);
-        }
-
-        var query = "SELECT * FROM `executables` WHERE `exeid` = ?";
-        var sub = [ id ];
-        query = mysql.format(query, sub);
-
-        conn.query(query, function(err, res) {
-            conn.release();
-            if (err) {
-                return callback(err, null);
-            } else {
-                // If res.length > 0, an image with this hash exists already
-                return callback(null, res.length);
-            }
-        });
-    });
-}
-
-/**
  * Transaction accept/deny callback
  * @callback tcControlCallback
  * @param {boolean} accept - If true, the transaction will be committed. If false, it will be rolled back.
@@ -1782,7 +1748,6 @@ function getUserHash(email, callback) {
 module.exports = {
     init: init,
     zipsForUser:zipsForUser,
-    zipExists:zipExists,
     tcAddNewZip:tcAddNewZip,
     getImageOwner:getImageOwner,
     deleteImage:deleteImage,
