@@ -962,22 +962,18 @@ function addImageAnno(iid, annotations, callback) {
 }
 
 /**
- * Metadata set callback.
- * @callback metadataSetCallback
- * @param {Error} err - The error that occurred, if present.
- * @param {Object} result - An object detailing the result of the insertion.
- */
-
-/**
  * Recursive metadata update function. For internal use only!
- * @param {number} uid - The id of the user adding the metadata.
+ * @param {user.User} user - The user adding the metadata.
  * @param {Object} mdObj - An object mapping image ids to metadata objects. As created by the metadata upload parser.
  * @param {metadataSetCallback} callback - The callback that handles the result of trying to fetch the list of projects.
  * @param {boolean[]} rSet - The record of success/failure for all previous metadata updates.
  */
-function updateMetaR(uid, mdObj, callback, rSet) {
+function updateMetaR(user, mdObj, callback, rSet) {
     var topID = null;
     var mdLength = 0;
+    var uid = user.id;
+    // Allow researchers and above to edit metadata freely.
+    var override = (user.privilege >= users.PrivilegeLevel.RESEARCHER.i);
 
     for (var id in mdObj) {
         if (mdObj.hasOwnProperty(id)) {
@@ -996,9 +992,6 @@ function updateMetaR(uid, mdObj, callback, rSet) {
     var first = true;
     var md = mdObj[id];
     delete mdObj[id];
-    console.log('REMOVING: ' + id);
-    console.log(mdObj);
-    console.log(md);
     var query = "UPDATE `images` SET";
     var sub = [];
 
@@ -1008,8 +1001,6 @@ function updateMetaR(uid, mdObj, callback, rSet) {
         return updateMetaR(uid, mdObj, callback, rSet);
     }
 
-    console.log('WHY AM I HERE?');
-        
     if (md.metadata.title) {
         // Add me
     }
@@ -1039,8 +1030,8 @@ function updateMetaR(uid, mdObj, callback, rSet) {
         first = false;
     }
 
-    query += " WHERE `imageid`=? AND `ownerid`=?";
-    sub.push(id, uid);
+    query += " WHERE `imageid`=? AND (? OR `ownerid`=?)";
+    sub.push(id, override, uid);
 
     if (!first) {
         // Not first, so we are updating at least one value.
@@ -1100,12 +1091,12 @@ function updateMetaR(uid, mdObj, callback, rSet) {
 // TODO: Check privileges!
 /**
  * Metadata update helper function. Wraps {@link updateMetaR}.
- * @param {number} uid - The id of the user adding the metadata.
+ * @param {user.User} user - The user adding the metadata.
  * @param {Object} mdObj - An object mapping image ids to metadata objects. As created by the metadata upload parser.
  * @param {metadataSetCallback} callback - The callback that handles the result of trying to fetch the list of projects.
  */
-function addImageMeta(uid, mdArr, callback) {
-    return updateMetaR(uid, mdArr, callback, []);
+function addImageMeta(user, mdArr, callback) {
+    return updateMetaR(user, mdArr, callback, []);
 }
 
 //TODO: Merge with getImageOwner
