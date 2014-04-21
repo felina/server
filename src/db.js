@@ -1366,17 +1366,16 @@ function addNewImage(user, project, imageHash, callback) {
             return callback('Database error');
         }
 
-        conn.query(query, function(err, res) {
+        return conn.query(query, function(err, res) {
+            conn.release();
+
             if (err) {
                 console.log(err.code);
-                callback(err);
+                return callback(err);
             } else {
-                console.log('Inserted image into db.');
-                callback(null, imageHash);
+                return callback();
             }
         });
-
-        conn.release();
     });
 }
 

@@ -325,14 +325,8 @@ function uploadImage(user, iInfo, pid, db, callback) {
             console.log(err);
             return callback(err);
         } else {
-            return db.addNewImage(user, pid, iInfo.felinaHash, function(dbErr, id) {
-                if (dbErr) {
-                    console.log(dbErr);
-                    return callback(dbErr);
-                } else {
-                    return callback(null, id);
-                }
-            });
+            // DB method will call our callback for us.
+            return db.addNewImage(user, pid, iInfo.felinaHash, callback);
         }
     });
 }
@@ -542,7 +536,9 @@ function imageRoutes(app, auth, db) {
                             if (exists === 0) {
                                 // New image, upload!
                                 console.log('Uploading new image.');
-                                return uploadImage(req.user, iInfo, project, db, done); // Will call done() for us
+                                return uploadImage(req.user, iInfo, project, db, function(err) {
+                                    return done(err, iInfo.felinaHash);
+                                });
                             } else {
                                 // Existing image, reject the request.
                                 return done('Image already exists: ' + iInfo.name);
