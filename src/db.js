@@ -268,16 +268,16 @@ function deleteImage(id, callback) {
 }
 
 /**
- * Subuser token expiry callback.
- * @callback tokenExpiryCallback
- * @param {Error} err - The error that occurred, if present.
- * @param {boolean} withinExpiry - Whether the token is currently valid or not.
+ * Generic boolean callback.
+ * @callback booleanCallback
+ * @param {Error} [err] - The error that occurred, if present.
+ * @param {boolean} bool - Whether the outcome was considered a success.
  */
 
 /**
  * Checks whether a given subuser's token has expired.
  * @param {number} id - The user id to find subusers of.
- * @param {tokenExpiryCallback} callback - The callback that handles the result of checking a token's validity.
+ * @param {booleanCallback} callback - The callback that handles the result of checking a token's validity. True if valid.
  */
 function tokenExpiry(email, callback) {
     return connPool.getConnection(function(connErr, conn) {
@@ -307,16 +307,9 @@ function tokenExpiry(email, callback) {
 }
 
 /**
- * Image exists callback.
- * @callback imageExistsCallback
- * @param {Error} err - The error that occurred, if present.
- * @param {boolean} exists - Whether an image exists with the given id.
- */
-
-/**
  * Checks if the given image exists.
  * @param {string} hash - The id of the image to look for.
- * @param {imageExistsCallback} callback - The callback that handles the result of the check for the image.
+ * @param {booleanCallback} callback - The callback that handles the result of the check for the image.
  */
 function imageExists(hash, callback) {
     connPool.getConnection(function(connErr, conn) {
@@ -341,20 +334,13 @@ function imageExists(hash, callback) {
 }
 
 /**
- * Subuser update callback.
- * @callback updateSubuserCallback
- * @param {Error} err - The error that occurred, if present.
- * @param {boolean} exists - Whether the update succeeded or not.
- */
-
-/**
  * Tries to update a given subuser.
  * @param {number} id - The user id of the supervisor.
  * @param {string} email - The email of the subuser.
  * @param {string} [name] - The name to assign to the subuser.
  * @param {boolean} [refresh] - If present and true, the subuser's token validity will be reset
  * @param {number} [projectid] - The project id the subuser should be assigned to.
- * @param {updateSubuserCallback} callback - The callback that handles the result of trying to add a new zip.
+ * @param {booleanCallback} callback - The callback that handles the result of trying to update a subuser.
  */
 function updateSubuser(id, email, name, refresh, projectid, callback) {
     var query = "UPDATE `users` SET";
@@ -421,7 +407,7 @@ function updateSubuser(id, email, name, refresh, projectid, callback) {
  * @param {string} [profile_image] - The hash of the user's gravatar.
  * @param {number} [supervisor] - The id of the supervisor to give this user. Should only be set with a usertype of subuser!
  * @param {number} [token_expiry] - Whether to set the token expiry or not. Valid only for subusers!
- * @param {updateSubuserCallback} callback - The callback that handles the result of trying to update the subuser.
+ * @param {booleanCallback} callback - The callback that handles the result of trying to update the user.
  */
 function updateUser(name, email, usertype, profile_image, supervisor, token_expiry, callback) {
     var query = "UPDATE `users` SET";
@@ -1555,7 +1541,7 @@ function setUserHash(id, auth) {
  * @param {string} email - The email of the user to update.
  * @param {string} auth - The string representation of the bcrypt hash of the password.
  * @param {number} token_expiry - Whether to set a new expiry or not. See {@link updateUser}.
- * @param {updateSubuserCallback} callback - The callback that handles the update result.
+ * @param {booleanCallback} callback - The callback that handles the update result.
  */
 function updateUserHash(email, auth, token_expiry, callback) {
     var query = "UPDATE `local_auth` SET `hash`=? WHERE `userid` IN (SELECT `userid` FROM `users` WHERE `email`=?)";
@@ -1656,25 +1642,17 @@ function addNewSub(user, phash, callback) {
         });
     });
 }
-
-/**
- * Validation callback.
- * @callback validationCallback
- * @param {Error} err - The error that occurred, if present.
- * @param {boolean} Correct - Whether the validation hash matched the one we sent.
- */
-
 /**
  * Validates a user's email via the validation hash.
  * @param {string} email - The email we are verifying.
  * @param {string} vhash - The validation hash to verify.
- * @param {validationCallback} callback - The callback that handles the outcome of the validation.
+ * @param {booleanCallback} callback - The callback that handles the outcome of the validation.
  */
 function validateEmail(email, vhash, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             console.log(connErr);
-            return callback('Database error', null);
+            return callback('Database error');
         }
 
         var query = "UPDATE `users` SET `validation_hash` = NULL WHERE `email` = ? AND `validation_hash` = ?";
@@ -1686,7 +1664,7 @@ function validateEmail(email, vhash, callback) {
 
             if (err) {
                 console.log(err.code);
-                return callback(err, null);
+                return callback(err);
             } else {
                 return callback(null, (res.changedRows === 1));
             }
@@ -1694,14 +1672,11 @@ function validateEmail(email, vhash, callback) {
     });
 }
 
-// Looks up a users bcrypt hash from their registered email, compare pass, and give results to callback.
-// callback(err, hash, user)
-
 /**
  * User and password hash callback.
  * @callback userHashCallback
  * @param {Error} err - The error that occurred, if present.
- * @param {string} hash - The strign representation of the user's password hash.
+ * @param {string} hash - The string representation of the user's password hash.
  * @param {user.User} user - The user object.
  */
 
