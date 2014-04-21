@@ -90,7 +90,7 @@ function register(user, password, callback) {
                         from: smtp_config.auth.email,
                         to: u.email,
                         subject: "Validate email for Felina",
-                        text: 'Copy and paste this link in your browser to validate: '+host+'/validate/'+vhash
+                        text: 'Copy and paste this link in your browser to validate: '+host+'/validate/'+encodeURIComponent(u.email)+'/'+encodeURIComponent(vhash)
                     };
                     transport.sendMail(mailOptions);
                     // }
@@ -361,13 +361,15 @@ function authRoutes(app, enforceLogin) {
     /**
      * API endpoint that verifies a user's email by checking the random token sent to them.
      * @hbcsapi {GET} validate/:hash - This is an API endpoint.
+     * @param {string} :email - The email to verify.
      * @param {string} :hash - The verification hash.
      * @returns {BasicAPIResponse} - The API response that signifies whether the hash matches the one we were expecting.
      */
-    app.get('/validate/:hash', function(req, res) {
+    app.get('/validate/:email/:hash', function(req, res) {
+        var email = req.params.email;
         var hash = req.params.hash;
         if (hash.length === 32) {
-            db.validateEmail(hash, function(err, info){
+            return db.validateEmail(email, hash, function(err, info){
                 if (err) {
                     console.log(err);
                     return res.send(new errors.APIErrResp(1, 'Validation failed'));

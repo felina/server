@@ -1666,28 +1666,29 @@ function addNewSub(user, phash, callback) {
 
 /**
  * Validates a user's email via the validation hash.
+ * @param {string} email - The email we are verifying.
  * @param {string} vhash - The validation hash to verify.
  * @param {validationCallback} callback - The callback that handles the outcome of the validation.
  */
-function validateEmail(vhash, callback) {
+function validateEmail(email, vhash, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             console.log(connErr);
             return callback('Database error', null);
         }
 
-        var query = "UPDATE `users` SET `validation_hash`=NULL WHERE `validation_hash`=?";
-        var sub = [ vhash ];
+        var query = "UPDATE `users` SET `validation_hash` = NULL WHERE `email` = ? AND `validation_hash` = ?";
+        var sub = [ email, vhash ];
         query = mysql.format(query, sub);
 
-        conn.query(query, function(err, res) {
+        return conn.query(query, function(err, res) {
             conn.release();
 
             if (err) {
                 console.log(err.code);
-                callback(err, null);
+                return callback(err, null);
             } else {
-                callback(null, (res.changedRows === 1));
+                return callback(null, (res.changedRows === 1));
             }
         });
     });
