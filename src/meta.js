@@ -331,11 +331,11 @@ function metaRoutes(app, auth, db) {
     /**
      * API endpoint to set metadata on images, including adding annotations. Multiple images may be updated
      * in a single request. In case of erroneous inputs, parts of the request will be ignored.
-     * @hbcsapi {POST} upload/metadata - This is an API endpoint.
+     * @hbcsapi {POST} meta - This is an API endpoint.
      * @param {Object.<string, MetadataWrapper>} * - The body of the request should map image ids to the metadata to assign.
      * @returns {MetadataSetAPIResponse} The API response detailing which, if any, of the images successfully updated.
      */
-    app.post('/upload/metadata', auth.enforceLoginCustom({'minPL':users.PrivilegeLevel.USER.i}), function(req, res) {
+    app.post('/meta', auth.enforceLoginCustom({'minPL':users.PrivilegeLevel.USER.i}), function(req, res) {
         // Check that we've been sent an array
         if (parseMetadata(req.body) === false) {
             res.send(new errors.APIErrResp(2, 'Invalid request.'));
