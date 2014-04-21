@@ -33,7 +33,6 @@ CREATE TABLE IF NOT EXISTS `felina`.`users` (
   `assigned_project` INT NULL,
   PRIMARY KEY (`userid`),
   UNIQUE INDEX `email_UNIQUE` (`email` ASC),
-  UNIQUE INDEX `validation_hash_UNIQUE` (`validation_hash` ASC),
   INDEX `users_users_rel_idx` (`supervisor` ASC),
   INDEX `project_users_rel_idx` (`assigned_project` ASC),
   CONSTRAINT `users_users_rel`
