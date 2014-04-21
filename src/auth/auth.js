@@ -9,8 +9,6 @@ var users = require('../user.js');
 var db = require('../db.js');
 var errors = require('../error.js');
 
-// Middleware to enforce login.
-// stackoverflow.com/questions/18739725/
 /**
  * Express middleware to only allow access to the resource to a logged in user.
  * @static
@@ -46,19 +44,14 @@ function enforceLogin(req, res, next) {
  * @param {EnforceLoginOptions} options - The options that specify the restrictions this middleware will enforce.
  * @returns {function[]} The Express middlewares to add to the route definition.
  */
-function enforceLoginCustom(options, req, res, next) {
-    if (options === null || typeof options === 'undefined') {
-        // options hasn't been supplied, fall back to standard behaviour
-        return enforceLogin;
-    } else if (req !== null && typeof req !== 'undefined') {
-        // req has been set, it looks like this is being used as middleware without having set options!
-        // fall back to default behaviour
-        console.trace('Improper usage of enforceLogin, attempting default behaviour!');
-        return enforceLogin(req, res, next);
-    }
-
+function enforceLoginCustom(options) {
     // The other middlewares we might use expect the user to be logged in.
     var middlewares = [ enforceLogin ];
+
+    if (options === null || typeof options === 'undefined') {
+        // options hasn't been supplied, fall back to standard behaviour
+        return middlewares;
+    }
 
     if (_.isArray(options.ips)) {
         middlewares.push(function(req, res, next) {
