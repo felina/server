@@ -406,7 +406,7 @@ function imageRoutes(app, auth, db) {
      * @param {string} :iid - The image id to delete.
      * @returns {BasicAPIResponse} The API response indicating the outcome.
      */
-    app.del('/images/:iid', function(req, res) {
+    app.del('/images/:iid', auth.enforceLogin, function(req, res) {
         var iid = req.params.iid;
         
         if (typeof iid !== 'string' || iid.length !== 32) {
@@ -460,7 +460,6 @@ function imageRoutes(app, auth, db) {
         return db.checkImagePerm(uid, iid, function(err, priv) {
             if (priv === 1 || priv === true) {
                 // proxyImage(iid, priv, res, !src); // Proxy image via the API server. (Much) slower but more secure.
-                // TODO: Support thumbnails for private images
                 var params = {
                     'Bucket': PRIVATE_BUCKET,
                     'Key': (src ? '' : THUMB_PFIX) + iid,
