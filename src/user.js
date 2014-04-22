@@ -249,18 +249,17 @@ function userRoutes(app, auth, db) {
     /**
      * API endpoint to update a user. Various parameters are only valid dependent on the target user
      * and the privilege level of the requester.
-     * @hbcsapi {PATCH} user - This is an API endpoint.
-     * @param {string} email - The email of the user to update.
+     * @hbcsapi {PATCH} /users/:uid - This is an API endpoint.
+     * @param {string} :uid - The email of the user to update. TODO: Take a numeric id.
      * @param {string} [name] - The new name to give the user. Only valid on self.
+     
      * @param {number} [privilege] - The new privilege level to give the user. Only valid if requested by a researcher.
      * @returns {BasicAPIResponse} The API response signifying success or failure.
      */
-    app.patch('/user', auth.enforceLogin, function(req, res) {
-        console.log(JSON.stringify(req.body));
-        console.log(JSON.stringify(req.user));
-        if (req.body.email) {
-            var email = req.body.email;
-            if (req.body.email === req.user.email) {
+    app.patch('/users/:uid', auth.enforceLogin, function(req, res) {
+        if (req.params.uid) {
+            var email = req.params.uid;
+            if (email === req.user.email) {
                 var name = req.body.name;
                 if (typeof name !== "string" || name.length <= 1) {
                     return res.send(new errors.APIErrResp(2, 'Invalid name'));
@@ -283,12 +282,12 @@ function userRoutes(app, auth, db) {
                 if (!_.isNaN(level) && (level === 1 || level === 2)) {
                     var privilege = privilegeFromInt(level);
                     console.log('priv: ' + privilege);
-                    db.updateUser(null, email, privilege, null, null, null, function(err, info){
+                    return db.updateUser(null, email, privilege, null, null, null, function(err, info){
                         if(err) {
                             console.log(err);
-                            res.send(new errors.APIErrResp(3, 'Update failed'));
+                            return res.send(new errors.APIErrResp(3, 'Update failed'));
                         } else if(info) {
-                            res.send({
+                            return res.send({
                                 'res': true,
                                 'msg': 'success'
                             });
@@ -297,13 +296,13 @@ function userRoutes(app, auth, db) {
                         }
                     });
                 } else {
-                    res.send(new errors.APIErrResp(6, 'Invalid privilege'));
+                    return res.send(new errors.APIErrResp(6, 'Invalid privilege'));
                 }
             } else {
-                res.send(new errors.APIErrResp(1, 'Insufficient Privilege'));
+                return res.send(new errors.APIErrResp(1, 'Insufficient Privilege'));
             }
         } else {
-            res.send(new errors.APIErrResp(5, 'Invalid email'));
+            return res.send(new errors.APIErrResp(5, 'Invalid email'));
         }
     }); 
 
