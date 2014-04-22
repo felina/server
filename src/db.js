@@ -805,13 +805,49 @@ function checkProjectAccess(user, pid, callback) {
     });
 }
 
+/**
+ * Gives or revokes a user's access to a project.
+ * @param {user.User} user - The user to give access.
+ * @param {number} pid - The id of the project.
+ * @param {boolean} give - If true, the user will be given access. If false, access will be revoked.
+ * @param {errorCallback} callback - The callback that handles the error state, if present.
+ */
+function setProjectAccess(user, pid, give, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback(connErr);
+        }
+
+        var query;
+        if (give) {
+            query = 'INSERT INTO `project_rights` (`projectid`,`userid`,`access_level`) VALUE (?,?,1)';
+        } else {
+            query = 'DELETE FROM `project_rights` WHERE `projectid` = ? AND `userid` = ?';
+        }
+
+        var sub = [ pid, user.id ];
+        query = mysql.format(query, sub);
+
+        conn.query(query, function(err, res) {
+            conn.release();
+            if (err) {
+                console.log(err);
+                return callback(err);
+            } else {
+                return callback();
+            }
+        });
+    });
+}
+    
 
 /**
  * Tries to create a project.
+ * @param {user.User} user - The user who should be set as the owner of the project.
  * @param {Project} project - The project to create. The ID will be ignored.
  * @param {projectCallback} callback - The callback that handles the newly created project. The project object will have it's id set.
  */
-function createProject(proj, callback) {
+function createProject(user, proj, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             return callback(connErr);
@@ -821,7 +857,7 @@ function createProject(proj, callback) {
         var sub = [ proj.name, proj.desc, proj.active ];
         query = mysql.format(query, sub);
 
-        conn.query(query, function(err, res) {
+        return conn.query(query, function(err, res) {
             conn.release();
             if (err) {
                 console.log(err);
@@ -829,7 +865,14 @@ function createProject(proj, callback) {
             } else {
                 // Update the project object with it's new id.
                 proj.projectid = res.insertId;
-                return callback(null, proj);
+                return setProjectAccess(user, proj.projectid, true, function(aErr) {
+                    if (aErr) {
+                        console.log('Warning, setAccess failed on project create. Project orphaned!');
+                        return callback(aErr, proj);
+                    } else {
+                        return callback(null, proj);
+                    }
+                });
             }
         });
     });

@@ -401,18 +401,18 @@ function projectRoutes(app, auth, db) {
 
     /**
      * API endpoint to create a new project.
-     * @hbcsapi {POST} project/new - This is an API endpoint.
+     * @hbcsapi {POST} projects - This is an API endpoint.
      * @param {string} name - The display name of the project to create.
      * @param {string} desc - A short description of the project.
      * @returns {ProjectAPIResponse} The API response detailing the resultant project, with it's id property set.
      */
-    app.post('/project/new', auth.enforceLogin, function(req, res) {
+    app.post('/projects', auth.enforceLogin, function(req, res) {
         var proj = new Project(-1, req.body.name, req.body.desc, false);
         if (proj.id === false) {
             return res.send(new errors.APIErrResp(2, 'Invalid project data.'));
         }
 
-        return db.createProject(proj, function(err, p) {
+        return db.createProject(req.user, proj, function(err, p) {
             proj = p; // Ensure these both refer to the same object.
             if (err) {
                 if (err.code === 'ER_DUP_ENTRY') {
