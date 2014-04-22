@@ -2,11 +2,11 @@
  * @module user
  */
 
-var crypto = require('crypto');
 var bcrypt = require('bcrypt-nodejs');
 var validator = require('email-validator');
 var errors = require('./error.js');
 var _ = require('underscore');
+var util = require('./util.js');
 
 /**
  * Enum type detailing user types and their corresponding numeric and string representations.
@@ -35,21 +35,6 @@ var PrivilegeLevel = Object.freeze({
  * List representation of PrivilegeLevels, for convenience.
  */
 var PLs = [PrivilegeLevel.SUBUSER, PrivilegeLevel.USER, PrivilegeLevel.RESEARCHER, PrivilegeLevel.ADMIN];
-
-/**
- * Generates a random hexadecimal string.
- * @returns {string} A random hexadecimal string.
- */
-function getRandomHash() {
-    var md5 = crypto.createHash('md5');
-    var str = '';
-    var chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    for (var i=0; i<=10; i++) {
-        str += chars[Math.round(Math.random() * (chars.length - 1))];
-    }
-    md5.update(str);
-    return md5.digest('hex');
-}
 
 /**
  * Updates a user's account with a new password.
@@ -347,15 +332,15 @@ function userRoutes(app, auth, db) {
         if (email) {
             if(refresh === -1) {
                 console.log('new token');
-                var hash = getRandomHash();
-                newToken(email, hash, db, function(er, re){
+                var hash = util.getRandomHash();
+                return newToken(email, hash, db, function(er, re){
                     if(er) {
                         return res.send(new errors.APIErrResp(2, 'database error'));
                     } else if (!re) {
                         console.log(re);
                         return res.send(new errors.APIErrResp(3, 'Cannot invalidate this subuser.'));
                     } else if (name || projectid) {
-                        db.updateSubuser(req.user.id, email, name, refresh, projectid, function(err, r) {
+                        return db.updateSubuser(req.user.id, email, name, refresh, projectid, function(err, r) {
                             if (err) {
                                 console.log(err);
                                 return res.send(new errors.APIErrResp(2, 'database error'));
@@ -375,15 +360,15 @@ function userRoutes(app, auth, db) {
                         });
                     }
                 });
-            } else if(name || projectid || refresh === 1) {
-                db.updateSubuser(req.user.id, email, name, refresh, projectid, function(err, r) {
+            } else if (name || projectid || refresh === 1) {
+                return db.updateSubuser(req.user.id, email, name, refresh, projectid, function(err, r) {
                     if (err) {
                         console.log(err);
                        return res.send(new errors.APIErrResp(2, 'database error'));
                     } else if(r) {
                         result1 = false;
                         return res.send({
-                            'res':true
+                            'res': true
                         });
                     } else {
                         console.log("false");
@@ -392,11 +377,11 @@ function userRoutes(app, auth, db) {
                 });
             } else {
                 console.log('re '+result1);
-               res.send(new errors.APIErrResp(3, 'Invalid parameters'));
+                return res.send(new errors.APIErrResp(3, 'Invalid parameters'));
             }
 
         } else {
-            res.send(new errors.APIErrResp(3, 'Invalid parameters'));
+            return res.send(new errors.APIErrResp(3, 'Invalid parameters'));
         }
     }); 
 

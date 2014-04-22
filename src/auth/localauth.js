@@ -10,6 +10,7 @@ var errors = require('../error.js');
 var nodemailer = require('nodemailer');
 var crypto = require('crypto');
 var bcrypt = require('bcrypt-nodejs');
+var util = require('../util.js');
 
 /**
  * Configuration to use for sending emails.
@@ -29,18 +30,6 @@ var host = (process.env.HOST||'nl.ks07.co.uk')+':'+(process.env.PORT || 5000);
 
 // TODO: Remove me!
 var dbCFG = require('../../config/db_settings.json'); 
-
-// TODO: I'm the same method from user.js. Remove me!
-function getValidationHash() {
-    var md5 = crypto.createHash('md5');
-    var str = '';
-    var chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    for (var i=0; i<=10; i++) {
-        str += chars[Math.round(Math.random() * (chars.length - 1))];
-    }
-    md5.update(str);
-    return md5.digest('hex');
-}
 
 // Possible duplicate in user.js? TODO: Remove me?
 function newToken(email, password, callback) {
@@ -78,7 +67,7 @@ function register(user, password, callback) {
             console.log(e);
             return callback(e);
         } else {
-            var vhash = getValidationHash();
+            var vhash = util.getRandomHash();
             return db.addNewUser(user, hash, vhash, function(err, u){
                 if(err) {
                     console.log('database enter user fail');
@@ -247,7 +236,7 @@ function authRoutes(app, enforceLogin) {
     app.post('/subusers', enforceLogin({'minPL':users.PrivilegeLevel.RESEARCHER.i}), function(req, res) {
         var mail = req.body.email;
         var name = req.body.name;
-        var pass = getValidationHash();
+        var pass = util.getRandomHash();
         var priv = users.PrivilegeLevel.SUBUSER.i;
         var grav = req.body.gravatar;
         var proj = parseInt(req.body.projectid);
@@ -327,7 +316,7 @@ function authRoutes(app, enforceLogin) {
                     console.log(err);
                     return res.send(new errors.APIErrResp(2, "database error"));
                 } else if (info) {
-                    var token = getValidationHash();
+                    var token = util.getRandomHash();
                     return newToken(email, token, function(e,r) {
                         if (e) {
                             return res.send(new errors.APIErrResp(2, "database error"));
@@ -380,7 +369,6 @@ function authRoutes(app, enforceLogin) {
 
 // Export all public members.
 module.exports = {
-    getValidationHash:getValidationHash,
     LocalStrategy:BcryptLocalStrategy,
     register:register,
     authRoutes:authRoutes
