@@ -4,6 +4,7 @@
 
 var _ = require('underscore');
 var errors = require('./error.js');
+var users = require('./user.js');
 
 /**
  * The maximum length of a project name.
@@ -228,6 +229,52 @@ function projectRoutes(app, auth, db) {
                     'res': true,
                     'projects': list
                 });
+            }
+        });
+    });
+
+    /**
+     * API endpoint to delete a field defined for a given project. Deleting a field will *destroy* all data
+     * currently associated with that field. May only be applied to inactive projects.
+     * @hbcsapi {DELETE} project/:pid/fields/:fid - This is an API endpoint.
+     * @param {number} pid - The project id to modify.
+     * @param {number} fid - The id of the field to delete.
+     * @returns {BasicAPIResponse} The API response detailing if the delete was successful.
+     */
+    app.del('/projects/:pid/fields/:fid', auth.enforceLoginCustom({'minPL':users.PrivilegeLevel.RESEARCHER.i}), function(req, res) {
+        var pid = parseInt(req.params.pid);
+        var fid = parseInt(req.params.fid);
+
+        if (_.isNaN(pid)) {
+            return res.send(new errors.APIErrResp(2, 'Invalid project id.'));
+        } else if (_.isNaN(fid)) {
+            return res.send(new errors.APIErrResp(3, 'Invalid field id.'));
+        }
+
+        // Check the user's access to the project.
+        return db.checkProjectAccess(req.user, pid, function(aErr, access) {
+            if (aErr) {
+                console.log(aErr);
+                return res.send(new errors.APIErrResp(4, 'Failed to delete field.'));
+            } else {
+                console.log(access);
+                if (access) {
+                    // User may modify the project.
+                    return db.deleteFields(pid, fid, function(err, found) {
+                        if (err) {
+                            console.log(err);
+                            return res.send(new errors.APIErrResp(4, 'Failed to delete field.'));
+                        } else if (found) {
+                            return res.send({
+                                'res': true
+                            });
+                        } else {
+                            return res.send(new errors.APIErrResp(5, 'Project or field not found.'));
+                        }
+                    });
+                } else {
+                    return res.send(new errors.APIErrResp(5, 'Project or field not found.'));
+                }
             }
         });
     });

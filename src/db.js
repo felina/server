@@ -652,10 +652,39 @@ function setupEnums(conn, project, fieldList, callback) {
 }
 
 /**
+ * Tries to delete a field from a project. ALL ASSOCIATED DATA WILL BE LOST.
+ * @static
+ * @param {number} pid - The id of the project.
+ * @param {number} fid - The id of the field.
+ * @param {booleanCallback} callback - The callback that handles the result of trying to delete the given field.
+ */
+function deleteFields(pid, fid, callback) {
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback(connErr);
+        }
+
+        var query = "DELETE FROM `project_fields` WHERE `fieldid` = ? AND `projectid` = ?";
+        var sub = [ fid, pid ];
+
+        query = mysql.format(query, sub);
+        return conn.query(query, function(err, res) {
+            conn.release();
+            if (err) {
+                console.log(err);
+                return callback(err);
+            } else {
+                return callback(null, res.affectedRows === 1);
+            }
+        });
+    });
+}
+
+/**
  * Tries to add fields to a project.
  * @param {number} project - The id of the project.
- * @param {Object[]} fieldList - The list of fields used to setup the project. Must contain all defined fields of type enum for the given project.
- * @param {errorCallback} callback - The callback that handles the result of trying to insert the new enum values.
+ * @param {Object[]} fieldList - The list of fields used to setup the project.
+ * @param {errorCallback} callback - The callback that handles the result of trying to insert the new fields.
  */
 function setFields(project, fieldList, callback) {
     connPool.getConnection(function(connErr, conn) {
@@ -742,6 +771,40 @@ function getProject(id, callback) {
         });
     });
 }
+
+/**
+ * Checks if a user is allowed to modify a project.
+ * @param {user.User} user - The user to check.
+ * @param {number} pid - The id of the project to lookup.
+ * @param {booleanCallback} callback - The callback that tells if the use can modify the project or not.
+ */
+function checkProjectAccess(user, pid, callback) {
+    if (user.isAdmin()) {
+        return callback(null, true);
+    }
+
+    return connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback(connErr);
+        }
+
+        var query = "SELECT `access_level` FROM `project_rights` WHERE `projectid` = ? AND `userid` = ?";
+        var sub = [ pid, user.id ];
+
+        query = mysql.format(query, sub);
+        return conn.query(query, function(err, access) {
+            conn.release();
+            if (err) {
+                console.log(err);
+                return callback(err);
+            } else {
+                // For now, ignore the access_level property.
+                return callback(null, access.length === 1);
+            }
+        });
+    });
+}
+
 
 /**
  * Tries to create a project.
@@ -1730,7 +1793,9 @@ module.exports = {
     getProjects:getProjects,
     getFields:getFields,
     setFields:setFields,
+    deleteFields:deleteFields,
     getProject:getProject,
+    checkProjectAccess:checkProjectAccess,
     createProject:createProject,
     getUserHash: getUserHash,
     addNewUser: addNewUser,
