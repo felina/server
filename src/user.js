@@ -252,19 +252,20 @@ function userRoutes(app, auth, db) {
      * @hbcsapi {PATCH} /users/:uid - This is an API endpoint.
      * @param {string} :uid - The email of the user to update. TODO: Take a numeric id.
      * @param {string} [name] - The new name to give the user. Only valid on self.
-     
+     * @param {string} [gravatar] - The gravatar hash to use as the user's profile image.
      * @param {number} [privilege] - The new privilege level to give the user. Only valid if requested by a researcher.
      * @returns {BasicAPIResponse} The API response signifying success or failure.
      */
-    app.patch('/users/:uid', auth.enforceLoginCustom({'minPL':users.PrivilegeLevel.USER.i}), function(req, res) {
+    app.patch('/users/:uid', auth.enforceLoginCustom({'minPL':PrivilegeLevel.USER.i}), function(req, res) {
         if (req.params.uid) {
             var email = req.params.uid;
             if (email === req.user.email) {
                 var name = req.body.name;
+                var gravatar = req.body.gravatar;
                 if (typeof name !== "string" || name.length <= 1) {
                     return res.send(new errors.APIErrResp(2, 'Invalid name'));
                 }
-                return db.updateUser(name, email, null, null, null, null, function(err, info){
+                return db.updateUser(name, email, null, gravatar, null, null, function(err, info){
                     if (err) {
                         console.log(err);
                         return res.send(new errors.APIErrResp(3, 'Update failed'));
