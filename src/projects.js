@@ -449,41 +449,37 @@ function projectRoutes(app, auth, db) {
 
     /**
      * API endpoint to retrieve details on a project. Projects may be retrieved by id or by name.
-     * @hbcsapi {GET} project/info - This is an API endpoint.
-     * @param {number} [id] - The id of the project to lookup.
-     * @param {string} [name] - The name of the project to lookup. Ignored if id is provided and is valid.
+     * @hbcsapi {GET} projects/:pid - This is an API endpoint.
+     * @param {number|string} :pid - The id or name of the project to lookup. In the case of a numeric name, an id must be used.
      * @returns {ProjectAPIResponse} The API response that provides the project information, if found.
      */
-    app.get('/project/info', function(req, res) {
-        var id = parseInt(req.query.id);
-        var pname = req.query.name;
+    app.get('/projects/:pid', function(req, res) {
+        var id = parseInt(req.params.pid);
 
         if (_.isNaN(id)) {
-            if (typeof pname === 'undefined') { 
-                return res.send(new errors.APIErrResp(2, 'Invalid id.'));
-            } else if (typeof pname === 'string' && pname.length > 0) {
-                id = pname;
+            if (typeof req.params.pid === 'string' && req.params.pid.length > 0) {
+                id = req.params.pid;
             } else {
-                return res.send(new errors.APIErrResp(2, 'Invalid name.'));
+                return res.send(new errors.APIErrResp(2, 'Invalid project id.'));
             }
         }
-        db.getProject(id, function(err, pR) {
+
+        return db.getProject(id, Project, function(err, proj) {
             if (err) {
                 console.log(err);
                 return res.send(new errors.APIErrResp(3, 'Failed to retrieve project.'));
             } else {
-                if (pR === null) {
+                if (!proj) {
                     return res.send(new errors.APIErrResp(4, 'Project id does not exist.'));
-                }
-                var proj = new Project(pR[0].projectid, pR[0].name, pR[0].desc, pR[0].active);
-                if (proj.id === false) {
+                } else if (proj.projectid === false) {
                     console.log('Failed to make project from db result.');
                     return res.send(new errors.APIErrResp(3, 'Failed to retrieve project.'));
+                } else {
+                    return res.send({
+                        'res': true,
+                        'project': proj
+                    });
                 }
-                return res.send({
-                    'res': true,
-                    'project': proj
-                });
             }
         });
     });

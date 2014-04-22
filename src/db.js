@@ -742,17 +742,18 @@ function setFields(project, fieldList, callback) {
  * @param {number} id - The id of the project to lookup.
  * @param {projectCallback} callback - The callback that handles the found project.
  */
-function getProject(id, callback) {
+// TODO: Refactor to not take Project!!!
+function getProject(id, Project, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             return callback(connErr);
         }
 
-        var query;
+        var query = "SELECT `projectid`, `name`, `desc`, `active` FROM `projects` WHERE ";
         if (typeof id === 'number') {
-            query = "SELECT * FROM `projects` WHERE `projectid` = ?";
+            query += "`projectid` = ?";
         } else {
-            query = "SELECT * FROM `projects` WHERE `name` = ?";
+            query += "`name` = ?";
         }
 
         var sub = [ id ];
@@ -764,9 +765,10 @@ function getProject(id, callback) {
                 console.log(err);
                 return callback(err);
             } else if (res.length < 1) {
-                return callback(null, null);
+                return callback();
             } else {
-                return callback(null, res);
+                var proj = new Project(res[0].projectid, res[0].name, res[0].desc, res[0].active);
+                return callback(null, proj);
             }
         });
     });
