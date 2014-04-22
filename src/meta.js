@@ -117,6 +117,13 @@ function parseRegion(reg) {
 function parseAnno(an) {
     // Type must be valid and must match the points list.
     switch (an.type) {
+    case 'point':
+        if (an.points.length === 1) {
+            return parseRegion(an.points);
+        } else {
+            return false;
+        }
+        break;
     case 'rect':
         var rect = parseRectangle(an);
         if (rect === false) {
@@ -129,8 +136,10 @@ function parseAnno(an) {
     case 'poly':
         if (an.points.length >= 2) {
             return parseRegion(an.points);
+        } else {
+            return false;
         }
-        return false;
+        break;
     default:
         console.log('Unrecognised annotation shape: ' + an.type);
         return false;
