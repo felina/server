@@ -50,7 +50,7 @@ function init(callback) {
  * Zip listing callback.
  * @callback zipListCallback
  * @param {Error} err - The error that occurred, if present.
- * @param {Object[]} list - The list of all records found for the given user.
+ * @param {object[]} list - The list of all records found for the given user.
  */
 
 /**
@@ -676,7 +676,7 @@ function getFields(project, callback) {
  * Tries to add enum values for a given enum field. For internal use only.
  * @param {mysql.Connection} conn - The database connection to use.
  * @param {number} project - The id of the project.
- * @param {Object[]} fieldList - The list of fields used to setup the project. Must contain all defined fields of type enum for the given project.
+ * @param {object[]} fieldList - The list of fields used to setup the project. Must contain all defined fields of type enum for the given project.
  * @param {errorCallback} callback - The callback that handles the result of trying to insert the new enum values.
  */
 function setupEnums(conn, project, fieldList, callback) {
@@ -751,7 +751,7 @@ function deleteFields(pid, fid, callback) {
 /**
  * Tries to add fields to a project.
  * @param {number} project - The id of the project.
- * @param {Object[]} fieldList - The list of fields used to setup the project.
+ * @param {object[]} fieldList - The list of fields used to setup the project.
  * @param {errorCallback} callback - The callback that handles the result of trying to insert the new fields.
  */
 function setFields(project, fieldList, callback) {
@@ -952,7 +952,7 @@ function createProject(user, proj, callback) {
  * Converts WKT representation to the desired object representation.
  * @param {string} WKT - The WKT representation of a geometry. As returned by MySQL's AsText() function.
  * @param {boolean} [location=false] - If true, the WKT will be represented as a point on the globe.
- * @returns {Object} The object representation of the supplied WKT.
+ * @returns {object} The object representation of the supplied WKT.
  */
 function geomWKTToPoints(WKT, location) {
     if (location) {
@@ -996,9 +996,9 @@ function geomWKTToPoints(WKT, location) {
 
 /**
  * Converts WKT representation to the desired object representation.
- * @param {Object[]} region - A list of x/y (or lat/lon) points. The final point of a polygon should match the first.
+ * @param {object[]} region - A list of x/y (or lat/lon) points. The final point of a polygon should match the first.
  * @param {boolean} [location=false] - If true, the region will be interpreted as a point on the globe.
- * @returns {Object} The WKT representation of the given region.
+ * @returns {object} The WKT representation of the given region.
  */
 function pointsToGeomWKT(region, location) {
     if (location) {
@@ -1024,8 +1024,8 @@ function pointsToGeomWKT(region, location) {
 
 /**
  * Takes an annotations object and filters it into a list of only valid annotations.
- * @param {Object} annotations - An annotations object, mapping field names to annotations or false values. As produced by the field parser in metadata upload.
- * @returns {Object} A list of annotation objects, with their associated keys saved as title properties. False values will be filtered.
+ * @param {object} annotations - An annotations object, mapping field names to annotations or false values. As produced by the field parser in metadata upload.
+ * @returns {object} A list of annotation objects, with their associated keys saved as title properties. False values will be filtered.
  */
 function condenseAnnotations(annotations) {
     // To make query generation simpler, we will create a condensed array of only valid regions.
@@ -1049,13 +1049,13 @@ function condenseAnnotations(annotations) {
  * Metadata set callback.
  * @callback metadataSetCallback
  * @param {Error} err - The error that occurred, if present.
- * @param {Object} result - An object detailing the result of the insertion.
+ * @param {object} result - An object detailing the result of the insertion.
  */
 
 /**
  * Adds annotations to the given image.
  * @param {string} iid - The id of the image to attach the annotations to.
- * @param {Object} annotations - An annotations object mapping field names to region definitions. As provided by the metadata upload parser.
+ * @param {object} annotations - An annotations object mapping field names to region definitions. As provided by the metadata upload parser.
  * @param {metadataSetCallback} callback - The callback that handles the result of trying to fetch the list of projects.
  */
 function addImageAnno(iid, annotations, callback) {
@@ -1126,7 +1126,7 @@ function addImageAnno(iid, annotations, callback) {
 /**
  * Recursive metadata update function. For internal use only!
  * @param {user.User} user - The user adding the metadata.
- * @param {Object} mdObj - An object mapping image ids to metadata objects. As created by the metadata upload parser.
+ * @param {object} mdObj - An object mapping image ids to metadata objects. As created by the metadata upload parser.
  * @param {metadataSetCallback} callback - The callback that handles the result of trying to fetch the list of projects.
  * @param {boolean[]} rSet - The record of success/failure for all previous metadata updates.
  */
@@ -1254,7 +1254,7 @@ function updateMetaR(user, mdObj, callback, rSet) {
 /**
  * Metadata update helper function. Wraps {@link updateMetaR}.
  * @param {user.User} user - The user adding the metadata.
- * @param {Object} mdObj - An object mapping image ids to metadata objects. As created by the metadata upload parser.
+ * @param {object} mdObj - An object mapping image ids to metadata objects. As created by the metadata upload parser.
  * @param {metadataSetCallback} callback - The callback that handles the result of trying to fetch the list of projects.
  */
 function addImageMeta(user, mdArr, callback) {
@@ -1293,7 +1293,7 @@ function checkImagePerm(uid, id, callback) {
  * @typedef ImageMeta
  * @type {object}
  * @property {Date} datetime - The time and date the picture was taken.
- * @property {Object} location - A lat/lon pair detailing where the image was taken.
+ * @property {object} location - A lat/lon pair detailing where the image was taken.
  * @property {boolean} private - Whether the image should be viewable by other users or not.
  */
 
@@ -1411,7 +1411,7 @@ function getImageFields(iid, callback) {
  * @typedef ImageAnnotations
  * @type {object}
  * @property {string} name - The name of the field.
- * @property {Object} region - The object representation of the region, as provided by {@link geomWKTToPoints}.
+ * @property {object} region - The object representation of the region, as provided by {@link geomWKTToPoints}.
  */
 
 /**
@@ -1461,7 +1461,7 @@ function getAnnotations(iid, callback) {
  * @type {object}
  * @property {string} imageid - The id of the image.
  * @property {Date} datetime - The time and date the picture was taken.
- * @property {Object} loc - A lat/lon pair detailing where the image was taken.
+ * @property {object} loc - A lat/lon pair detailing where the image was taken.
  * @property {boolean} private - Whether the image should be viewable by other users or not.
  * @property {string} uploader - The email of the uploader of the image.
  */
