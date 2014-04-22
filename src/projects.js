@@ -237,8 +237,8 @@ function projectRoutes(app, auth, db) {
      * API endpoint to delete a field defined for a given project. Deleting a field will *destroy* all data
      * currently associated with that field. May only be applied to inactive projects.
      * @hbcsapi {DELETE} project/:pid/fields/:fid - This is an API endpoint.
-     * @param {number} pid - The project id to modify.
-     * @param {number} fid - The id of the field to delete.
+     * @param {number} :pid - The project id to modify.
+     * @param {number} :fid - The id of the field to delete.
      * @returns {BasicAPIResponse} The API response detailing if the delete was successful.
      */
     app.del('/projects/:pid/fields/:fid', auth.enforceLoginCustom({'minPL':users.PrivilegeLevel.RESEARCHER.i}), function(req, res) {
@@ -257,7 +257,6 @@ function projectRoutes(app, auth, db) {
                 console.log(aErr);
                 return res.send(new errors.APIErrResp(4, 'Failed to delete field.'));
             } else {
-                console.log(access);
                 if (access) {
                     // User may modify the project.
                     return db.deleteFields(pid, fid, function(err, found) {
@@ -291,12 +290,12 @@ function projectRoutes(app, auth, db) {
     /**
      * API endpoint to retrieve all project-specific fields defined for a given project. Generic fields and
      * annotations will be separated for easier import into frontends.
-     * @hbcsapi {GET} project/fields - This is an API endpoint.
-     * @param {number} project - The id of the project to lookup.
+     * @hbcsapi {GET} projects/:pid/fields - This is an API endpoint.
+     * @param {number} :pid - The id of the project to lookup.
      * @returns {ProjectFieldsAPIResponse} The API response providing the list of all project specific fields.
      */
-    app.get('/project/fields', auth.enforceLoginCustom({'minPL':1}), function(req, res) {
-        var id = parseInt(req.query.project);
+    app.get('/projects/:pid/fields', auth.enforceLogin, function(req, res) {
+        var id = parseInt(req.params.pid);
         if (_.isNaN(id) || id < 0)  {
             return res.send(new errors.APIErrResp(2, 'Invalid project id.'));
         }
@@ -304,7 +303,6 @@ function projectRoutes(app, auth, db) {
         var all = true;
         // Restrict field listing for inactive project to researcher and above.
         if (!req.user || !(req.user.isResearcher() || req.user.isAdmin())) {
-            console.log('woah');
             console.log(req.user.isResearcher());
             all = false;
         }
@@ -355,14 +353,14 @@ function projectRoutes(app, auth, db) {
 
     /**
      * API endpoint to define new project specific fields on a specified project.
-     * @hbcsapi {POST} project/fields - This is an API endpoint.
-     * @param {number} id - The id of the project to add fields to.
+     * @hbcsapi {POST} projects/:pid/fields - This is an API endpoint.
+     * @param {number} :pid - The id of the project to add fields to.
      * @param {ProjectField[]} fields - The non-annotation project specific fields to add.
      * @param {ProjectField[]} anno - The annotation fields to add.
      * @returns {BasicAPIResponse} The API response detailing whether the request was successful or not.
      */
-    app.post('/project/fields', auth.enforceLogin, function(req, res) {
-        var id = parseInt(req.body.id);
+    app.post('/projects/:pid/fields', auth.enforceLoginCustom({'minPL':users.PrivilegeLevel.RESEARCHER.i}), function(req, res) {
+        var id = parseInt(req.params.pid);
         if (_.isNaN(id)) {
             return res.send(new errors.APIErrResp(2, 'Invalid project id.'));
         }
@@ -377,16 +375,31 @@ function projectRoutes(app, auth, db) {
             }
         }
 
-        db.setFields(id, fieldList.concat(annoList), function(err) {
-            if (err) {
-                console.log(err);
-                if (err.code === 'ER_DUP_ENTRY') {
-                    return res.send(new errors.APIErrResp(4, 'Duplicate field names found for this project.'));
-                } else {
-                    return res.send(new errors.APIErrResp(5, 'Failed to update project.'));
-                }
+        return db.checkProjectAccess(req.user, id, function(aErr, access) {
+            if (aErr) {
+                console.log(aErr);
+                return res.send(new errors.APIErrResp(4, 'Failed to delete field.'));
             } else {
-                return res.send({'res': true});
+                console.log(access);
+                if (access) {
+                    // User may modify the project.
+                    return db.setFields(id, fieldList.concat(annoList), function(err) {
+                        if (err) {
+                            console.log(err);
+                            if (err.code === 'ER_DUP_ENTRY') {
+                                return res.send(new errors.APIErrResp(4, 'Duplicate field names found for this project.'));
+                            } else {
+                                return res.send(new errors.APIErrResp(5, 'Failed to update project.'));
+                            }
+                        } else {
+                            return res.send({
+                                'res': true
+                            });
+                        }
+                    });
+                } else {
+                    return res.send(new errors.APIErrResp(6, 'You are not authorized to modify this resource.'));
+                }
             }
         });
     });
