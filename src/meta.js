@@ -7,6 +7,8 @@ var errors = require('./error.js');
 var images = require('./images.js');
 var async = require('async');
 var users = require('./user.js');
+var auth = require('./auth/auth.js');
+var db = require('./db.js');
 
 /**
  * Utility function to check if a variable is null or undefined.
@@ -303,10 +305,8 @@ function parseQueryCombine(parsed, qRes, onSuccess, callback) {
  * Registers Express routes related to metadata handling. These are API endpoints.
  * @static
  * @param {Express} app - The Express application object.
- * @param {object} auth - The auth module.
- * @param {object} db - The db module.
  */
-function metaRoutes(app, auth, db) {
+function metaRoutes(app) {
 
     // Takes an array of metadata objects (JSON). A metadata object must contain a 32 character id string,
     // and any combination of the following:

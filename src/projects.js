@@ -5,6 +5,8 @@
 var _ = require('underscore');
 var errors = require('./error.js');
 var users = require('./user.js');
+var auth = require('./auth/auth.js');
+var db = require('./db.js');
 
 /**
  * The maximum length of a project name.
@@ -192,10 +194,8 @@ function parseFields(fieldList, annoList) {
 /** Registers Express routes related to project handling. These are API endpoints.
  * @static
  * @param {Express} app - The Express application object.
- * @param {object} auth - The auth module.
- * @param {object} db - The db module.
  */
-function projectRoutes(app, auth, db) {
+function projectRoutes(app) {
 
     /**
      * @typedef ProjectListAPIResponse

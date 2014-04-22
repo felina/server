@@ -14,6 +14,8 @@ var archiver = require('archiver');
 var lazystream = require('lazystream');
 var Thumbnailer = require('./thumbnailer.js');
 var path = require('path');
+var db = require('./db.js');
+var auth = require('./auth/auth.js');
 
 aws.config.loadFromPath('./config/aws.json');
 
@@ -308,10 +310,9 @@ function setAccess(id, priv, callback) {
  * @param {user.User} user - The user to associate the image with.
  * @param {ImageUpload} iInfo - The image to be uploaded.
  * @param {number} pid - The id of the project to associate the image with.
- * @param {object} db - The db object.
  * @param {errorCallback} callback - The callback detailing whether the upload was successful or not.
  */
-function uploadImage(user, iInfo, pid, db, callback) {
+function uploadImage(user, iInfo, pid, callback) {
     console.log('Trying to upload: ' + iInfo.felinaHash);
     var params = {
         'Bucket': PRIVATE_BUCKET,
@@ -362,10 +363,8 @@ function uploadThumb(thumb, callback) {
  * Registers Express routes related to image handling. These are API endpoints.
  * @static
  * @param {Express} app - The Express application object.
- * @param {object} auth - The auth module.
- * @param {object} db - The db module.
  */
-function imageRoutes(app, auth, db) {
+function imageRoutes(app) {
     /**
      * @typedef ImageListAPIResponse
      * @type {object}

@@ -10,6 +10,8 @@ var crypto = require('crypto');
 var async = require('async');
 var express = require('express');
 var jsapi = require('./windows_api/api.js');
+var auth = require('./auth/auth.js');
+var db = require('./db.js');
 
 // Load the AWS configuration file.
 aws.config.loadFromPath('./config/aws.json');
@@ -36,10 +38,9 @@ var EXECUTABLE_BUCKET = 'citizen.science.executable.storage';
  * Uploads a zip file to S3 and insert it into the database using {@link addNewZip}.
  * @param {user.User} user - The user to associate the zip withh.
  * @param {ZipUpload} zInfo - The archive to be uploaded.
- * @param {object} db - The db object.
  * @param {errorCallback} callback - The callback detailing whether upload was successful.
  */
-function uploadZip(user, zInfo, db, callback) {
+function uploadZip(user, zInfo, callback) {
     console.log('Trying to upload: ' + zInfo.name);
 
     return db.tcAddNewZip(user, zInfo.name, zInfo.originalFilename, function(dbErr, id, accept) {
@@ -75,10 +76,8 @@ function uploadZip(user, zInfo, db, callback) {
  * Registers Express routes related to job handling. These are API endpoints.
  * @static
  * @param {Express} app - The Express application object.
- * @param {object} auth - The auth module.
- * @param {object} db - The db module.
  */
-function jobRoutes(app, auth, db) {
+function jobRoutes(app) {
     // TODO: This method needs to be re-written. (placeholder)
     app.post('/start', auth.enforceLogin, function(req, res) {
         // Get the image IDs for processing

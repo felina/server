@@ -7,6 +7,8 @@ var validator = require('email-validator');
 var errors = require('./error.js');
 var _ = require('underscore');
 var util = require('./util.js');
+//var auth = require('./auth/auth.js');
+var db = require('./db.js');
 
 /**
  * Enum type detailing user types and their corresponding numeric and string representations.
@@ -40,10 +42,9 @@ var PLs = [PrivilegeLevel.SUBUSER, PrivilegeLevel.USER, PrivilegeLevel.RESEARCHE
  * Updates a user's account with a new password.
  * @param {string} email - The email that identifies the user.
  * @param {string} password - The plaintext password to hash and store.
- * @param {object} db - The db object.
  * @param {updateSubuserCallback} callback - The callback that handles the update result.
  */
-function newToken(email, password, db, callback) {
+function newToken(email, password, callback) {
     return bcrypt.hash(password, null, null, function(err, hash) {
         if (err) {
             console.log(err);
@@ -242,10 +243,8 @@ function Researcher(name, email, groups) {
  * Registers Express routes related to user handling. These are API endpoints.
  * @static
  * @param {Express} app - The Express application object.
- * @param {object} auth - The auth module.
- * @param {object} db - The db module.
  */
-function userRoutes(app, auth, db) {
+function userRoutes(app, auth) { //TODO: Need to solve circular dependencies to stop this.
     /**
      * API endpoint to update a user. Various parameters are only valid dependent on the target user
      * and the privilege level of the requester.

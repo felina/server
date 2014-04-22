@@ -11,13 +11,13 @@ var API_VERSION = '0.1.0';
 //testaddition
 var express = require('express');
 var passport = require('passport');
+var user = require('./user.js');
 var auth = require('./auth/auth.js');
 var db = require('./db.js');
 var images = require('./images.js');
 var jobs = require('./jobs.js');
 var meta = require('./meta.js');
 var projects = require('./projects.js');
-var user = require('./user.js');
 var jobAPI = require('./windows_api/api.js');
 
 // Call the init function on the database to check configuration.
@@ -106,19 +106,19 @@ app.get('/', function(req, res) {
 auth.authRoutes(app);
 
 // Import project routes
-projects.projectRoutes(app, auth, db);
+projects.projectRoutes(app);
 
 // Import image routes
-images.imageRoutes(app, auth, db);
+images.imageRoutes(app);
 
 // Import metadata routes
-meta.metaRoutes(app, auth, db);
+meta.metaRoutes(app);
 
 // Import job related routes, mostly dummy endpoints for now
-jobs.jobRoutes(app, auth, db);
+jobs.jobRoutes(app);
 
 // Import user routes
-user.userRoutes(app, auth, db);
+user.userRoutes(app, auth);
 
 /**
  * The port the server will listen on.
