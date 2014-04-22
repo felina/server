@@ -31,27 +31,6 @@ var host = (process.env.HOST||'nl.ks07.co.uk')+':'+(process.env.PORT || 5000);
 // TODO: Remove me!
 var dbCFG = require('../../config/db_settings.json'); 
 
-// Possible duplicate in user.js? TODO: Remove me?
-function newToken(email, password, callback) {
-    return bcrypt.hash(password, null, null, function(err, hash) {
-        if (err) {
-            console.log('Failed to hash password');
-            console.log(err);
-            return callback(err, null);
-        } else {
-            return db.updateUserHash(email, hash, 1, function(e, r) {
-                if (e) {
-                    console.log('database error');
-                    console.log(e);
-                    return callback(e, null);
-                } else {
-                    return callback(null, r);
-                }
-            });
-        }
-    });
-}
-
 /**
  * Registers a new user with email/password authentication. Will send an email verification to the user's email address.
  * @static
@@ -317,7 +296,7 @@ function authRoutes(app, enforceLogin) {
                     return res.send(new errors.APIErrResp(2, "database error"));
                 } else if (info) {
                     var token = util.getRandomHash();
-                    return newToken(email, token, function(e,r) {
+                    return util.newToken(email, token, function(e,r) {
                         if (e) {
                             return res.send(new errors.APIErrResp(2, "database error"));
                         } else if (r) {

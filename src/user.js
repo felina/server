@@ -39,30 +39,6 @@ var PrivilegeLevel = Object.freeze({
 var PLs = [PrivilegeLevel.SUBUSER, PrivilegeLevel.USER, PrivilegeLevel.RESEARCHER, PrivilegeLevel.ADMIN];
 
 /**
- * Updates a user's account with a new password.
- * @param {string} email - The email that identifies the user.
- * @param {string} password - The plaintext password to hash and store.
- * @param {updateSubuserCallback} callback - The callback that handles the update result.
- */
-function newToken(email, password, callback) {
-    return bcrypt.hash(password, null, null, function(err, hash) {
-        if (err) {
-            console.log(err);
-            return callback(err);
-        } else {
-            return db.updateUserHash(email, hash, false, function(e, r) {
-                if (e) {
-                    console.log(e);
-                    return callback(e);
-                } else {
-                    return callback(null, r);
-                }
-            });
-        }
-    });
-}
-
-/**
  * Converts a privilege level string into it's integer value.
  * @static
  * @param {string} dbs - The string representation of the privilege level.
@@ -336,7 +312,7 @@ function userRoutes(app, auth) { //TODO: Need to solve circular dependencies to 
             if (refresh === false) {
                 console.log('new token');
                 var hash = util.getRandomHash();
-                return newToken(email, hash, db, function(er, re){
+                return util.newToken(email, hash, db, function(er, re){
                     if (er) {
                         return res.send(new errors.APIErrResp(2, 'Database error.'));
                     } else if (!re) {
