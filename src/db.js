@@ -347,35 +347,41 @@ function updateSubuser(id, email, name, refresh, projectid, callback) {
     var sub = [];
     var first = true;
     
-    if(!id || !email) {
+    if (!id || !email) {
         return callback(null, false);
     }
 
     if (name) {
-        query += " `name`=?";
+        if (!first) {
+            query += ",";
+        }
+        query += " `name` = ?";
         sub.push(name);
         first = false;
     }
 
     if (projectid) {
-        query += " `assigned_project`=?";
+        if (!first) {
+            query += ",";
+        }
+        query += " `assigned_project` = ?";
         sub.push(projectid);
         first = false;
     }
 
-    if (refresh === 1) {
-        if(!first) {
+    if (refresh) {
+        if (!first) {
             query += ",";
         }
-        query += " `token_expiry`=(NOW() + INTERVAL 1 HOUR)";
+        query += " `token_expiry` = (NOW() + INTERVAL 1 HOUR)";
         first = false;
     }
 
-    if(first) {
+    if (first) {
         return callback(null, false);
     }
 
-    query += " WHERE `email`=? AND `supervisor`=?";
+    query += " WHERE `email` = ? AND `supervisor` = ?";
     sub.push(email, id);
     
     connPool.getConnection(function(connErr, conn){
@@ -387,13 +393,12 @@ function updateSubuser(id, email, name, refresh, projectid, callback) {
         console.log(query);
         return conn.query(query, function(err, res){
             conn.release();
-            
+
             if (err) {
                 console.log(err);
-               return callback(err, false);
+                return callback(err, false);
             } else {
-                console.log(JSON.stringify(res));
-                return callback(null, (res.changedRows === 1) );
+                return callback(null, (res.changedRows === 1));
             }
         });
     });
@@ -406,65 +411,70 @@ function updateSubuser(id, email, name, refresh, projectid, callback) {
  * @param {string} [usertype] - The usertype to give the user.
  * @param {string} [profile_image] - The hash of the user's gravatar.
  * @param {number} [supervisor] - The id of the supervisor to give this user. Should only be set with a usertype of subuser!
- * @param {number} [token_expiry] - Whether to set the token expiry or not. Valid only for subusers!
+ * @param {boolean} [token_expiry] - Whether to set the token expiry or not. Valid only for subusers!
  * @param {booleanCallback} callback - The callback that handles the result of trying to update the user.
  */
 function updateUser(name, email, usertype, profile_image, supervisor, token_expiry, callback) {
     var query = "UPDATE `users` SET";
     var sub = [];
     var first = true;
-    if(!email) {
-        callback('Invalid email', false);
+
+    if (!email) {
+        return callback('Invalid email', false);
     }
 
-    if(name) {
-        query += " `name`=?";
+    if (name) {
+        if (!first) {
+            query += ",";
+        }
+        query += " `name` = ?";
         sub.push(name);
         first = false;
     }
 
-    if(profile_image) {
-        // Add me
+    if (profile_image) {
+        if (!first) {
+            query += ",";
+        }
+        query += " `profile_image` = ?";
+        sub.push(profile_image);
+        first = false;
     }
 
-    if(usertype) {
+    if (usertype) {
         if(!first){
-            query += " , ";
+            query += ",";
         }
-        query += " `usertype`=?";
+        query += " `usertype` = ?";
         sub.push(usertype);
         first = false;
     }
 
-    if(supervisor) {
+    if (supervisor) {
         if (!first) {
-            query += " , ";
+            query += ",";
         }
-        query += " `supervisor`=?";
+        query += " `supervisor` = ?";
         sub.push(supervisor);
         first = false;
     }
 
     if (token_expiry) {
         if (!first) {
-            query += " , ";
+            query += ",";
         }
-        if(token_expiry === -1) {
-            query += " `token_expiry`= NULL ";
-        } else {
-            query += " `token_expiry`= (NOW()-INTERVAL 1 HOUR)";
-        }
+        query += " `token_expiry` = (NOW()-INTERVAL 1 HOUR)";
         first = false;
     }
 
-    if(first) {
+    if (first) {
         return callback('Invalid parameters', false);
     } 
     
-    query += " WHERE `email`=?";
+    query += " WHERE `email` = ?";
     sub.push(email);
 
-    connPool.getConnection(function(connErr, conn){
+    return connPool.getConnection(function(connErr, conn){
         if (connErr) {
             return callback('Database error', false);
         }
@@ -476,9 +486,9 @@ function updateUser(name, email, usertype, profile_image, supervisor, token_expi
 
             if (err) {
                 console.log(err);
-                callback(err, false);
+                return callback(err, false);
             } else {
-                callback(null, (res.changedRows === 1) );
+                return callback(null, (res.changedRows === 1) );
             }
         });
     });
@@ -1716,11 +1726,11 @@ function setUserHash(id, auth) {
  * Updates a password on an account and updates the user's token expiry.
  * @param {string} email - The email of the user to update.
  * @param {string} auth - The string representation of the bcrypt hash of the password.
- * @param {number} token_expiry - Whether to set a new expiry or not. See {@link updateUser}.
+ * @param {boolean} token_expiry - Whether to set a new expiry or not. See {@link updateUser}.
  * @param {booleanCallback} callback - The callback that handles the update result.
  */
 function updateUserHash(email, auth, token_expiry, callback) {
-    var query = "UPDATE `local_auth` SET `hash`=? WHERE `userid` IN (SELECT `userid` FROM `users` WHERE `email`=?)";
+    var query = "UPDATE `local_auth` SET `hash` = ? WHERE `userid` IN (SELECT `userid` FROM `users` WHERE `email` = ?)";
     var sub = [ auth, email ];
 
     connPool.getConnection(function(connErr, conn) {
@@ -1730,16 +1740,15 @@ function updateUserHash(email, auth, token_expiry, callback) {
         }
 
         query = mysql.format(query, sub);
-        conn.query(query, function(err, res) {
+        return conn.query(query, function(err, res) {
             conn.release();
             if (err) {
                 // The query failed, respond to the error.
                 console.log(err.code);
-                callback(err, null);
+                return callback(err, null);
             } else {
                 console.log(JSON.stringify(res));
-                updateUser(null, email, null, null, null, token_expiry, callback);
-                //callback(null, res.changedRows === 1);
+                return updateUser(null, email, null, null, null, token_expiry, callback);
             }
         });
     });

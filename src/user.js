@@ -44,18 +44,17 @@ var PLs = [PrivilegeLevel.SUBUSER, PrivilegeLevel.USER, PrivilegeLevel.RESEARCHE
  * @param {updateSubuserCallback} callback - The callback that handles the update result.
  */
 function newToken(email, password, db, callback) {
-    bcrypt.hash(password, null, null, function(err, hash) {
+    return bcrypt.hash(password, null, null, function(err, hash) {
         if (err) {
-            console.log('Failed to hash password');
             console.log(err);
-            callback(err, null);
+            return callback(err);
         } else {
-            db.updateUserHash(email, hash, -1, function(e, r) {
+            return db.updateUserHash(email, hash, false, function(e, r) {
                 if (e) {
-                    console.log('database error');
-                    callback(e, null);
+                    console.log(e);
+                    return callback(e);
                 } else {
-                    callback(null, r);
+                    return callback(null, r);
                 }
             });
         }
@@ -259,32 +258,32 @@ function userRoutes(app, auth, db) {
     app.patch('/user', auth.enforceLogin, function(req, res) {
         console.log(JSON.stringify(req.body));
         console.log(JSON.stringify(req.user));
-        if(req.body.email) {
+        if (req.body.email) {
             var email = req.body.email;
-            if(req.body.email===req.user.email) {
+            if (req.body.email === req.user.email) {
                 var name = req.body.name;
-                if(typeof name !== "string" || name.length <= 1) {
+                if (typeof name !== "string" || name.length <= 1) {
                     return res.send(new errors.APIErrResp(2, 'Invalid name'));
                 }
-                db.updateUser(name,email,null,null,null,null, function(err, info){
-                    if(err) {
+                return db.updateUser(name, email, null, null, null, null, function(err, info){
+                    if (err) {
                         console.log(err);
-                        res.send(new errors.APIErrResp(3, 'Update failed'));
+                        return res.send(new errors.APIErrResp(3, 'Update failed'));
                     } else if(info) {
-                        res.send({
+                        return res.send({
                             'res': true
                         });
                     } else {
                         return res.send(new errors.APIErrResp(4, 'Nothing to update'));
                     }
                 });
-            } else if(req.user.privilege === PrivilegeLevel.RESEARCHER.i) {
+            } else if (req.user.privilege === PrivilegeLevel.RESEARCHER.i) {
                 var level = parseInt(req.body.privilege);
-                console.log("level: "+ level);
-                if(!_.isNaN(level) && (level === 1 || level === 2)) {
+                console.log("level: " + level);
+                if (!_.isNaN(level) && (level === 1 || level === 2)) {
                     var privilege = privilegeFromInt(level);
-                    console.log('priv: '+privilege);
-                    db.updateUser(null,email, privilege, null, null, null, function(err, info){
+                    console.log('priv: ' + privilege);
+                    db.updateUser(null, email, privilege, null, null, null, function(err, info){
                         if(err) {
                             console.log(err);
                             res.send(new errors.APIErrResp(3, 'Update failed'));
@@ -313,14 +312,14 @@ function userRoutes(app, auth, db) {
      * @hbcsapi {POST} updatesub - This is an API endpoint.
      * @param {string} email - The email of the user to update.
      * @param {string} [name] - The new name to give the user. Only valid on self.
-     * @param {number} [refresh] - Whether to refresh the user's validation token.
+     * @param {boolean} [refresh] - Whether to refresh the user's validation token.
      * @param {number} [projectid] - The project id to assign the subuser to.
      * @returns {BasicAPIResponse} - The API response indicating the outcome.
      */
     app.post('/updatesub', auth.enforceLogin, function(req, res) {
         var email = req.body.email;
         var name = req.body.name;
-        var refresh = parseInt(req.body.refresh);
+        var refresh = req.body.refresh;
         var projectid = req.body.projectid;
         var result1 = true;
         if (projectid) {
@@ -329,12 +328,17 @@ function userRoutes(app, auth, db) {
                 return res.send(new errors.APIErrResp(3, 'invalid projectid'));
             }
         }
+        // Sanitise refresh input.
+        if (!_.isBoolean(refresh)) {
+            console.log('Ignoring refresh.');
+            refresh = null;
+        }
         if (email) {
             if(refresh === -1) {
                 console.log('new token');
                 var hash = util.getRandomHash();
                 return newToken(email, hash, db, function(er, re){
-                    if(er) {
+                    if (er) {
                         return res.send(new errors.APIErrResp(2, 'database error'));
                     } else if (!re) {
                         console.log(re);
@@ -344,7 +348,7 @@ function userRoutes(app, auth, db) {
                             if (err) {
                                 console.log(err);
                                 return res.send(new errors.APIErrResp(2, 'database error'));
-                            } else if(r) {
+                            } else if (r) {
                                 result1 = false;
                                 return res.send({
                                     'res': true
@@ -360,12 +364,12 @@ function userRoutes(app, auth, db) {
                         });
                     }
                 });
-            } else if (name || projectid || refresh === 1) {
+            } else if (name || projectid || refresh) {
                 return db.updateSubuser(req.user.id, email, name, refresh, projectid, function(err, r) {
                     if (err) {
                         console.log(err);
-                       return res.send(new errors.APIErrResp(2, 'database error'));
-                    } else if(r) {
+                        return res.send(new errors.APIErrResp(2, 'database error'));
+                    } else if (r) {
                         result1 = false;
                         return res.send({
                             'res': true
