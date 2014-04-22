@@ -483,6 +483,77 @@ function projectRoutes(app, auth, db) {
             }
         });
     });
+
+
+    /**
+     * API endpoint to update details on a project.
+     * @hbcsapi {PUT} projects/:pid - This is an API endpoint.
+     * @param {number} :pid - The id of the project to update.
+     * @returns {ProjectAPIResponse} The API response that provides the updated project information.
+     */
+    app.put('/projects/:pid', auth.enforceLoginCustom({'minPL':users.PrivilegeLevel.RESEARCHER.i}), function(req, res) {
+        var id = parseInt(req.params.pid);
+        var name = req.body.name;
+        var desc = req.body.desc;
+        var active = req.body.active;
+
+        if (_.isNaN(id)) {
+            return res.send(new errors.APIErrResp(2, 'Invalid project id.'));
+        }
+
+        if (name) {
+            if (!(_.isString(name) && name.length > 0 && name.length <= NAME_LENGTH)) {
+                return res.send(new errors.APIErrResp(3, 'Invalid project name.'));
+            }
+        } else {
+            // Ensure we don't set.
+            name = null;
+        }
+
+        if (desc) {
+            if (!(_.isString(desc) && desc.length > 0 && desc.length <= DESC_LENGTH)) {
+                return res.send(new errors.APIErrResp(3, 'Invalid project description.'));
+            }
+        } else {
+            // Ensure we don't set.
+            desc = null;
+        }
+
+        if (active) {
+            if (!_.isBoolean(active)) {
+                return res.send(new errors.APIErrResp(3, 'Invalid project activation state.'));
+            }
+        } else if (active !== false) {
+            // Ensure we don't set. Have to do an additional check for literal false.
+            active = null;
+        }
+
+        return db.checkProjectAccess(req.user, id, function(aErr, access) {
+            if (aErr) {
+                console.log(aErr);
+                return res.send(new errors.APIErrResp(4, 'Failed to update project.'));
+            } else {
+                if (access) {
+                    // User may modify the project.
+                    return db.updateProject(id, name, desc, active, function(err, modified) {
+                        if (err) {
+                            console.log(err);
+                            return res.send(new errors.APIErrResp(4, 'Failed to update project.'));
+                        } else {
+                            if (!modified) {
+                                return res.send(new errors.APIErrResp(5, 'No changes made.'));
+                            } else {
+                                // Redirect the user with a 303 See Other
+                                return res.redirect(303, '/projects/' + id);
+                            }
+                        }
+                    });
+                } else {
+                    return res.send(new errors.APIErrResp(6, 'You are not authorized to modify this resource.'));
+                }
+            }
+        });
+    });
 }
 
 // Export all public members.

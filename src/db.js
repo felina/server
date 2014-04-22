@@ -547,6 +547,74 @@ function getProjects(showAll, id, details, callback) {
 }
 
 /**
+ * Tries to update a project's details.
+ * @param {number} id - The id of the project.
+ * @param {string} [name] - The new name of the project.
+ * @param {string} [desc] - The new description of the project.
+ * @param {boolean} [active] - If the project should be made public.
+ * @param {booleanCallback} callback - The callback that details if a project was updated.
+ */
+function updateProject(id, name, desc, active, callback) {
+    var query = "UPDATE `projects` SET";
+    var sub = [];
+    var first = true;
+
+    if (name) {
+        if (!first) {
+            query += ",";
+        }
+        query += " `name` = ?";
+        sub.push(name);
+        first = false;
+    }
+
+    if (desc) {
+        if (!first) {
+            query += ",";
+        }
+        query += " `desc` = ?";
+        sub.push(desc);
+        first = false;
+    }
+
+    if (active === true || active === false) {
+        if(!first) {
+            query += ",";
+        }
+        query += " `active` = ?";
+        sub.push(active);
+        first = false;
+    }
+
+    if (first) {
+        // No changes to be made.
+        return callback(null, false);
+    }
+
+    query += " WHERE `projectid` = ?";
+    sub.push(id);
+    
+    return connPool.getConnection(function(connErr, conn){
+        if (connErr) {
+            return callback('Database error', false);
+        }
+        
+        query = mysql.format(query, sub);
+        return conn.query(query, function(err, res){
+            conn.release();
+
+            if (err) {
+                console.log(err);
+                console.log(query);
+                return callback(err, false);
+            } else {
+                return callback(null, (res.changedRows === 1) );
+            }
+        });
+    });
+}
+
+/**
  * @typedef ProjectField
  * @type {object}
  * @property {string} name - The name of the field.
@@ -1842,6 +1910,7 @@ module.exports = {
     getProject:getProject,
     checkProjectAccess:checkProjectAccess,
     createProject:createProject,
+    updateProject:updateProject,
     getUserHash: getUserHash,
     addNewUser: addNewUser,
     addNewSub: addNewSub,
