@@ -106,22 +106,20 @@ function register(user, password, callback) {
  * Registers a new subuser with email/password authentication. Will send an email verification to the user's email address.
  * @param {user.User} user - The subuser to create. The id and privilege level will be overwritten. Subuser properties must be set.
  * @param {string} password - The plaintext password to hash and store.
- * @param {function} callback - TODO: This will probably change depending on suggested changes to db.addNewUser.
+ * @param {userCallback} callback - The callback that provides the new user object.
  */
 function registerSub(user, password, callback) {
-    bcrypt.hash(password, null, null, function(e, hash) {
+    return bcrypt.hash(password, null, null, function(e, hash) {
         if (e) {
-            console.log('Failed to hash password.');
             console.log(e);
-            callback(e, null);
+            return callback(e);
         } else {
-            db.addNewSub(user, hash, function(err, id){
+            return db.addNewSub(user, hash, function(err, u) {
                 if(err) {
-                    console.log('database enter user fail');
                     console.log(err);
-                    callback(err, null);
+                    return callback(err);
                 } else {
-                    return callback(null, id);
+                    return callback(null, u);
                 }
             });
         }
@@ -239,14 +237,14 @@ function authRoutes(app, enforceLogin) {
     /**
      * API endpoint to register a new subuser. The password will be randomly generated. The supervisor will be set
      * to the currently logged in user.
-     * @hbcsapi {POST} subuser - This is an API endpoint.
+     * @hbcsapi {POST} /subusers - This is an API endpoint.
      * @param {string} email - The new user's email.
      * @param {string} name - The new user's display name.
      * @param {number} projectid - The project id to assign the subuser to.
      * @param {string} [gravatar] - The hash of the new user's gravatar email.
      * @returns {UserAPIResponse} The API response that details the newly created user.
      */
-    app.post('/subuser', enforceLogin({'minPL':2}), function(req, res) {
+    app.post('/subusers', enforceLogin({'minPL':users.PrivilegeLevel.RESEARCHER.i}), function(req, res) {
         var mail = req.body.email;
         var name = req.body.name;
         var pass = getValidationHash();
@@ -255,27 +253,20 @@ function authRoutes(app, enforceLogin) {
         var proj = parseInt(req.body.projectid);
         var user = new users.User(-1, name, mail, priv, grav, req.user.id, proj);
         
-        if (req.user.privilege < users.PrivilegeLevel.RESEARCHER.i) {
-          res.send(new errors.APIErrResp(2, 'Insufficient privilege'));
-        }
-        
         if (user.id === false) {
             // Details of user are invalid.
-            res.send(new errors.APIErrResp(2, 'User details are invalid!'));
+            return res.send(new errors.APIErrResp(2, 'User details are invalid!'));
         } else {
-            registerSub(user, pass, function(err, id) {
+            return registerSub(user, pass, function(err, u) {
                 if (err) {
                     // Registration failed, notify api.
                     console.log('Registration failed:');
                     console.log(err);
-                    res.send(new errors.APIErrResp(3, 'Registration failed.'));
+                    return res.send(new errors.APIErrResp(3, 'Registration failed.'));
                 } else {
-                    // Update id from DB insertion.
-                    user.id = id;
-                    console.log(['Registered subuser:',id,mail,pass,name,priv,grav,proj].join(" "));                        
-                    res.send({
+                    return res.send({
                         'res': true,
-                        'user': user
+                        'user': u
                     });
                 }
             });

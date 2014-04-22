@@ -1796,28 +1796,31 @@ function addNewUser(user, phash, vhash, callback) {
  * @param {userCallback} callback - The callback that handles the result of trying to add a new user.
  */
 function addNewSub(user, phash, callback) {
-    var query = "INSERT INTO `users` (userid, email, name, usertype, supervisor, token_expiry, assigned_project) VALUE (null,?,?,?,?,(NOW()+INTERVAL 1 HOUR),?)";
-    var sub = [user.email, user.name, users.privilegeFromInt(user.privilege), user.supervisor, user.projectid];
+    var query = "INSERT INTO `users` (`email`, `name`, `usertype`, `supervisor`, `token_expiry`, `assigned_project`) VALUE (?,?,?,?,(NOW()+INTERVAL 1 HOUR),?)";
+    var sub = [user.email, user.name, users.PrivilegeLevel.SUBUSER.i, user.supervisor, user.projectid];
     query = mysql.format(query, sub);
 
-    connPool.getConnection(function(connErr, conn) {
+    return connPool.getConnection(function(connErr, conn) {
         if (connErr) {
-            return callback('Database error', null);
+            return callback('Database error');
         }
 
-        conn.query(query, function(err, res) {
+        return conn.query(query, function(err, res) {
             conn.release();
 
             if (err) {
                 console.log(err.code);
-                callback(err, null);
+                return callback(err);
             } else {
-                setUserHash(res.insertId, phash);
-                callback(null, res.insertId);
+                // Update the user object.
+                user.id = res.insertId;
+                setUserHash(user.id, phash);
+                return callback(null, user);
             }
         });
     });
 }
+
 /**
  * Validates a user's email via the validation hash.
  * @param {string} email - The email we are verifying.
