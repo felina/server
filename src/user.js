@@ -256,7 +256,7 @@ function userRoutes(app, auth, db) {
      * @param {number} [privilege] - The new privilege level to give the user. Only valid if requested by a researcher.
      * @returns {BasicAPIResponse} The API response signifying success or failure.
      */
-    app.patch('/users/:uid', auth.enforceLogin, function(req, res) {
+    app.patch('/users/:uid', auth.enforceLoginCustom({'minPL':users.PrivilegeLevel.USER.i}), function(req, res) {
         if (req.params.uid) {
             var email = req.params.uid;
             if (email === req.user.email) {
