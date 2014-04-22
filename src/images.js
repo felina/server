@@ -402,80 +402,78 @@ function imageRoutes(app, auth, db) {
 
     /**
      * API endpoint to delete an image.
-     * @hbcsapi {DELETE} img - This is an API endpoint.
-     * @param {string} id - The image id to delete.
+     * @hbcsapi {DELETE} /images/:iid - This is an API endpoint.
+     * @param {string} :iid - The image id to delete.
      * @returns {BasicAPIResponse} The API response indicating the outcome.
      */
-    app.del('/img', function(req, res) {
-        var id = req.query.id;
+    app.del('/images/:iid', function(req, res) {
+        var iid = req.params.iid;
         
-        if (typeof id !== 'string' || id.length !== 32) {
+        if (typeof iid !== 'string' || iid.length !== 32) {
             return res.send(new errors.APIErrResp(2, 'Invalid image id.'));
         }
 
         // Need to get the containing bucket and owner id
-        return db.getImageOwner(id, function(err, info) {
+        return db.getImageOwner(iid, function(err, info) {
             if (err) {
                 return res.send(new errors.APIErrResp(3, 'Image not found.'));
             } else if (req.user.isAdmin || info.ownerid === req.user.id) {
-                return db.deleteImage(id, function(err2) {
+                return db.deleteImage(iid, function(err2) {
                     if (err2) {
                         return res.send(new errors.APIErrResp(4, 'Failed to delete image.'));
                     } else {
                         var params = {
                             'Bucket': (info.private ? PRIVATE_BUCKET : PUBLIC_BUCKET),
-                            'Key': id
+                            'Key': iid
                         };
 
                         return s3.deleteObject(params, function(aErr, data) {
                             if (aErr) {
                                 console.log(aErr);
                                 return res.send(new errors.APIErrResp(5, 'Failed to delete image.'));
+                            } else {
+                                return res.send({
+                                    'res': true
+                                });
                             }
-                            return res.send({
-                                'res': true
-                            });
                         });
                     }
                 });
             } else {
-                return res.send(new errors.APIErrResp(1, 'Insufficient permissions.'));
+                return res.send(new errors.APIErrResp(6, 'Insufficient permissions.'));
             }
         });
     });
 
-    // Deprecated
-    app.get('/img/:id', function(req, res) {
-        res.redirect('/img?id=' + req.params.id);
-    });
-
     /**
      * API endpoint to get an image.
-     * @hbcsapi {GET} img - This is an API endpoint.
-     * @param {string} id - The image id to get.
+     * @hbcsapi {GET} /images/:iid - This is an API endpoint.
+     * @param {string} :iid - The image id to get.
      * @param {boolean} [src=false] - If false, the thumbnail will be returned, if it is available.
      * @returns {Redirect} The request will be redirected to the image URL.
      */
-    app.get('/img', function(req, res) {
+    app.get('/images/:iid', function(req, res) {
+        var iid = req.params.iid;
         var uid = req.user ? req.user.id : -1;
         var src = req.query.src;
-        db.checkImagePerm(uid, req.query.id, function(err, priv) {
+
+        return db.checkImagePerm(uid, iid, function(err, priv) {
             if (priv === 1 || priv === true) {
-                // proxyImage(req.query.id, priv, res, !src); // Proxy image via the API server. (Much) slower but more secure.
+                // proxyImage(iid, priv, res, !src); // Proxy image via the API server. (Much) slower but more secure.
                 // TODO: Support thumbnails for private images
                 var params = {
                     'Bucket': PRIVATE_BUCKET,
-                    'Key': (src ? '' : THUMB_PFIX) + req.query.id,
+                    'Key': (src ? '' : THUMB_PFIX) + iid,
                     'Expires': PRIVATE_EXPIRY
                 };
                 // Use a signed URL to serve directly from S3. Note that anyone with the URL can access the image until it expires!
-                res.redirect(s3.getSignedUrl('getObject', params));
+                return res.redirect(s3.getSignedUrl('getObject', params));
             } else if (priv === 0 || priv === false) {
                 // Image is public, redirect to the public URL. Add the prefix if we don't want the source image.
-                res.redirect(S3_URL + (src ? '' : THUMB_PFIX)  + req.query.id);
+                return res.redirect(S3_URL + (src ? '' : THUMB_PFIX)  + iid);
             } else {
                 // res.redirect('/static/padlock.png'); // Local copy of access denied image
-                res.redirect(S3_URL + 'padlock.png'); // S3 copy of image
+                return res.redirect(S3_URL + 'padlock.png'); // S3 copy of image
             }
         });
     });
@@ -491,12 +489,12 @@ function imageRoutes(app, auth, db) {
 
     /**
      * API endpoint to upload an image. This endpoint is irregular in that it accepts multipart form-encoded data, instead of JSON.
-     * @hbcsapi {POST} img - This is an API endpoint.
+     * @hbcsapi {POST} /images - This is an API endpoint.
      * @param {form-data} file - The body of the file to upload. In case of multiple file uploads, this can be any unique string.
      * @param {number} file_project - The id of the project to associate 'file' with. In the case of multiple files, this parameter should match the file parameter, with the suffix '_project'.
      * @returns {ImageUploadAPIResponse} The API response providing the ids assigned to the images, if successful.
      */
-    app.post('/img', [auth.enforceLogin, express.multipart()], function(req, res) {
+    app.post('/images', [auth.enforceLogin, express.multipart()], function(req, res) {
         // Don't return here, temp file cleanup at end!
         async.map(
             Object.keys(req.files),
