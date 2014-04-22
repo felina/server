@@ -864,8 +864,8 @@ function createProject(user, proj, callback) {
                 return callback(err);
             } else {
                 // Update the project object with it's new id.
-                proj.projectid = res.insertId;
-                return setProjectAccess(user, proj.projectid, true, function(aErr) {
+                proj.id = res.insertId;
+                return setProjectAccess(user, proj.id, true, function(aErr) {
                     if (aErr) {
                         console.log('Warning, setAccess failed on project create. Project orphaned!');
                         return callback(aErr, proj);

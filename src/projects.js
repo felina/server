@@ -406,16 +406,19 @@ function projectRoutes(app, auth, db) {
      * @param {string} desc - A short description of the project.
      * @returns {ProjectAPIResponse} The API response detailing the resultant project, with it's id property set.
      */
-    app.post('/projects', auth.enforceLogin, function(req, res) {
+    app.post('/projects', auth.enforceLoginCustom({'minPL':users.PrivilegeLevel.RESEARCHER.i}), function(req, res) {
         var proj = new Project(-1, req.body.name, req.body.desc, false);
         if (proj.id === false) {
             return res.send(new errors.APIErrResp(2, 'Invalid project data.'));
         }
 
         return db.createProject(req.user, proj, function(err, p) {
-            proj = p; // Ensure these both refer to the same object.
             if (err) {
-                if (err.code === 'ER_DUP_ENTRY') {
+                if (p) {
+                    // If the project has been sent too, then creation passed but access failed.
+                    console.log('Orphaned project!');
+                    return res.send(new errors.APIErrResp(5, 'Project creation succeeded, but failed to give ownership.'));
+                } else if (err.code === 'ER_DUP_ENTRY') {
                     console.log('Tried to create duplicate project.');
                     return res.send(new errors.APIErrResp(3, 'A project with this name already exists.'));
                 } else {
