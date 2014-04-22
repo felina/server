@@ -309,15 +309,15 @@ function userRoutes(app, auth, db) {
 
     /**
      * API endpoint to update a subuser.
-     * @hbcsapi {POST} updatesub - This is an API endpoint.
-     * @param {string} email - The email of the user to update.
+     * @hbcsapi {PATCH} /subusers/:uid - This is an API endpoint.
+     * @param {string} :uid - The email of the subuser to update. TODO: Take numeric id.
      * @param {string} [name] - The new name to give the user. Only valid on self.
      * @param {boolean} [refresh] - Whether to refresh the user's validation token.
      * @param {number} [projectid] - The project id to assign the subuser to.
      * @returns {BasicAPIResponse} - The API response indicating the outcome.
      */
-    app.post('/updatesub', auth.enforceLogin, function(req, res) {
-        var email = req.body.email;
+    app.patch('/subusers/:uid', auth.enforceLogin, function(req, res) {
+        var email = req.params.uid;
         var name = req.body.name;
         var refresh = req.body.refresh;
         var projectid = req.body.projectid;
@@ -325,7 +325,7 @@ function userRoutes(app, auth, db) {
         if (projectid) {
             projectid = parseInt(projectid);
             if (_.isNaN(projectid)) {
-                return res.send(new errors.APIErrResp(3, 'invalid projectid'));
+                return res.send(new errors.APIErrResp(3, 'Invalid project id.'));
             }
         }
         // Sanitise refresh input.
@@ -334,12 +334,12 @@ function userRoutes(app, auth, db) {
             refresh = null;
         }
         if (email) {
-            if(refresh === -1) {
+            if (refresh === false) {
                 console.log('new token');
                 var hash = util.getRandomHash();
                 return newToken(email, hash, db, function(er, re){
                     if (er) {
-                        return res.send(new errors.APIErrResp(2, 'database error'));
+                        return res.send(new errors.APIErrResp(2, 'Database error.'));
                     } else if (!re) {
                         console.log(re);
                         return res.send(new errors.APIErrResp(3, 'Cannot invalidate this subuser.'));
@@ -347,7 +347,7 @@ function userRoutes(app, auth, db) {
                         return db.updateSubuser(req.user.id, email, name, refresh, projectid, function(err, r) {
                             if (err) {
                                 console.log(err);
-                                return res.send(new errors.APIErrResp(2, 'database error'));
+                                return res.send(new errors.APIErrResp(2, 'Database error.'));
                             } else if (r) {
                                 result1 = false;
                                 return res.send({
@@ -368,7 +368,7 @@ function userRoutes(app, auth, db) {
                 return db.updateSubuser(req.user.id, email, name, refresh, projectid, function(err, r) {
                     if (err) {
                         console.log(err);
-                        return res.send(new errors.APIErrResp(2, 'database error'));
+                        return res.send(new errors.APIErrResp(2, 'Database error.'));
                     } else if (r) {
                         result1 = false;
                         return res.send({
