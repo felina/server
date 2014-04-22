@@ -1730,7 +1730,7 @@ function setUserHash(id, auth) {
  * @param {booleanCallback} callback - The callback that handles the update result.
  */
 function updateUserHash(email, auth, token_expiry, callback) {
-    var query = "UPDATE `local_auth` SET `hash` = ? WHERE `userid` IN (SELECT `userid` FROM `users` WHERE `email` = ?)";
+    var query = "UPDATE `local_auth` INNER JOIN `users` USING (`userid`) SET `local_auth`.`hash` = ? WHERE `users`.`email` = ?";
     var sub = [ auth, email ];
 
     connPool.getConnection(function(connErr, conn) {
