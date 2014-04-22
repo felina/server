@@ -399,17 +399,17 @@ function userRoutes(app, auth, db) {
 
     /**
      * API endpoint to get a list of subusers belonging to the account.
-     * @hbcsapi {GET} subuser - This is an API endpoint.
+     * @hbcsapi {GET} subusers - This is an API endpoint.
      * @returns {SubusersAPIResponse} - The API response indicating the outcome.
      */
-    app.get('/subuser', auth.enforceLogin, function(req, res){
+    app.get('/subusers', auth.enforceLogin, function(req, res){
         if(req.user.privilege > 1 ) {
-            db.getSubusers(req.user.id, function(err, info){
+            return db.getSubusers(req.user.id, function(err, info){
                 if(err){
                     console.log(err);
-                    res.send(new errors.APIErrResp(2, 'Database error'));
+                    return res.send(new errors.APIErrResp(2, 'Database error.'));
                 } else {
-                    res.send({
+                    return res.send({
                         'res': true,
                         'subusers': info
                     });
@@ -417,7 +417,7 @@ function userRoutes(app, auth, db) {
             });
             
         } else {
-            res.send(new errors.APIErrResp(3, 'Insufficient Privilege'));
+            return res.send(new errors.APIErrResp(3, 'Insufficient Privilege.'));
         }
     }); 
 
