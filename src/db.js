@@ -5,6 +5,7 @@
 var mysql = require('mysql');
 var users = require('./user.js');
 var _ = require('underscore');
+var Project = require('./models/Project.js');
 
 /**
  * The configuration to use to connect to MySQL.
@@ -820,8 +821,7 @@ function setFields(project, fieldList, callback) {
  * @param {number} id - The id of the project to lookup.
  * @param {projectCallback} callback - The callback that handles the found project.
  */
-// TODO: Refactor to not take Project!!!
-function getProject(id, Project, callback) {
+function getProject(id, callback) {
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             return callback(connErr);

@@ -7,47 +7,7 @@ var errors = require('./error.js');
 var users = require('./user.js');
 var auth = require('./auth/auth.js');
 var db = require('./db.js');
-
-/**
- * The maximum length of a project name.
- */
-var NAME_LENGTH = 45;
-
-/**
- * The maximum length of a project description.
- */
-var DESC_LENGTH = 255;
-
-/**
- * Represents a project (also known as a 'species') in the system. The id will be set to false in case of
- * erroneous parameters. The object should be discarded if this is the case.
- * @constructor
- * @param {number} id - The id of the project.
- * @param {string} name - The display name of the project.
- * @param {string} desc - A short description of the project, to display.
- * @param {boolean} active - Whether the project should be considered active, open to contributions and visible.
- */
-function Project(id, name, desc, active) {
-    if (typeof id !== 'number') {
-        this.id = false;
-        console.log('Project has invalid id.');
-        return;
-    }
-    if (typeof name !== 'string' || name.length > NAME_LENGTH) {
-        this.id = false;
-        console.log('Project given invalid name.');
-        return;
-    }
-    if (typeof desc !== 'string' || desc.length > DESC_LENGTH) {
-        this.id = false;
-        console.log('Project given invalid description.');
-        return;
-    }
-    this.id = id;
-    this.name = name;
-    this.desc = desc;
-    this.active = active;
-}
+var Project = require('./models/Project.js');
 
 /**
  * The maximum length of a field name.
@@ -464,7 +424,7 @@ function projectRoutes(app) {
             }
         }
 
-        return db.getProject(id, Project, function(err, proj) {
+        return db.getProject(id, function(err, proj) {
             if (err) {
                 console.log(err);
                 return res.send(new errors.APIErrResp(3, 'Failed to retrieve project.'));
@@ -502,7 +462,7 @@ function projectRoutes(app) {
         }
 
         if (name) {
-            if (!(_.isString(name) && name.length > 0 && name.length <= NAME_LENGTH)) {
+            if (!(_.isString(name) && name.length > 0 && name.length <= Project.prototype.NAME_LENGTH)) {
                 return res.send(new errors.APIErrResp(3, 'Invalid project name.'));
             }
         } else {
@@ -511,7 +471,7 @@ function projectRoutes(app) {
         }
 
         if (desc) {
-            if (!(_.isString(desc) && desc.length > 0 && desc.length <= DESC_LENGTH)) {
+            if (!(_.isString(desc) && desc.length > 0 && desc.length <= Project.prototype.DESC_LENGTH)) {
                 return res.send(new errors.APIErrResp(3, 'Invalid project description.'));
             }
         } else {
