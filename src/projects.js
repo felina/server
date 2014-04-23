@@ -8,56 +8,7 @@ var users = require('./user.js');
 var auth = require('./auth/auth.js');
 var db = require('./db.js');
 var Project = require('./models/Project.js');
-
-/**
- * The maximum length of a field name.
- */
-var FIELD_NAME_LENGTH = 45;
-
-/**
- * The supported types of a field.
- */
-var FIELD_TYPES = ['enum', 'string', 'number'];
-
-/**
- * The supported types of an annotation, as represented internally.
- */
-var ANNO_TYPES = ['apoly', 'arect', 'apoint'];
-
-/**
- * Converts an annotation type to it's display name (shape).
- * @param {string} type - The internal type of an annotation. See {@link ANNO_TYPES}.
- * @returns {string} The shape representation of the type. Defaults to generic poly in case of unrecognised input.
- */
-function typeToShape(type) {
-    switch(type) {
-    case 'arect':
-        return 'rect';
-    case 'apoint':
-        return 'point';
-    default:
-        // apoly, or any erroneous input should be the most generic poly.
-        return 'poly';
-    }
-}
-
-/**
- * Converts the display name of an annotation to it's type name.
- * @param {string} shape - The display name of the type.
- * @returns {string} The type name of the shape. Defaults to generic poly in case of unrecognised input.
- */
-function shapeToType(shape) {
-    switch(shape) {
-    case 'rect':
-        return 'arect';
-    case 'point':
-        return 'apoint';
-    case 'poly':
-        return 'apoly';
-    default:
-        return null;
-    }
-}
+var Field = require('./models/Field.js');
 
 /**
  * @typedef FieldParseError
@@ -80,13 +31,13 @@ function parseFields(fieldList, annoList) {
     fieldList.every(function(f, i) {
         if (_.isObject(f)) {
             // Array item is an object (or list), check it's properties.
-            if (typeof f.name !== 'string' || f.name.length < 1 || f.name.length > FIELD_NAME_LENGTH) {
+            if (typeof f.name !== 'string' || f.name.length < 1 || f.name.length > Field.prototype.NAME_LENGTH) {
                 console.log('Bad field name.');
                 errIdx = i;
                 errList = 'fields';
                 return false;
             }
-            if (typeof f.type !== 'string' || FIELD_TYPES.indexOf(f.type) < 0) {
+            if (typeof f.type !== 'string' || Field.prototype.TYPES.indexOf(f.type) < 0) {
                 console.log('Bad field type.');
                 errIdx = i;
                 errList = 'fields';
@@ -117,13 +68,13 @@ function parseFields(fieldList, annoList) {
         annoList.every(function(f, i) {
             if (_.isObject(f)) {
                 // Array item is an object (or list), check it's properties.
-                if (typeof f.name !== 'string' || f.name.length < 1 || f.name.length > FIELD_NAME_LENGTH) {
+                if (typeof f.name !== 'string' || f.name.length < 1 || f.name.length > Field.prototype.NAME_LENGTH) {
                     console.log('Bad name.');
                     errIdx = i;
                     errList = 'anno';
                     return false;
                 }
-                f.type = shapeToType(f.shape);
+                f.type = Field.prototype.shapeToType(f.shape);
                 if (f.type === null) {
                     console.log('Bad type.');
                     errIdx = i;
@@ -285,12 +236,13 @@ function projectRoutes(app) {
                                 // Set required to true/false in all
                                 ele.required = (ele.required !== 0);
 
-                                if (ANNO_TYPES.indexOf(ele.type) < 0) {
+                                if (Field.prototype.ANNO_TYPES.indexOf(ele.type) < 0) {
                                     meta.push(ele);
                                     return false;
                                 } else {
                                     // We need to rename type and it's value for the image-annotator
-                                    ele.shape = typeToShape(ele.type);
+                                    ele.shape = ele.type.substting(1); // TODO: Placeholder
+                                    //ele.shape = typeToShape(ele.type);
                                     delete ele.type;
                                     return true;
                                 }
@@ -518,6 +470,5 @@ function projectRoutes(app) {
 
 // Export all public members.
 module.exports = {
-    Project:Project,
     projectRoutes:projectRoutes
 };
