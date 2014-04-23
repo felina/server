@@ -4,7 +4,6 @@
 
 var _ = require('underscore');
 var errors = require('./error.js');
-var User = require('./models/User.js');
 var auth = require('./auth/auth.js');
 var db = require('./db.js');
 var Project = require('./models/Project.js');

@@ -5,7 +5,6 @@
 var _ = require('underscore');
 var loauth = require('./localauth.js');
 var extauth = require('./externalauth.js');
-var User = require('../models/User.js');
 var db = require('../db.js');
 var errors = require('../error.js');
 

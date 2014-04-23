@@ -6,7 +6,6 @@ var _ = require('underscore');
 var errors = require('./error.js');
 var images = require('./images.js');
 var async = require('async');
-var User = require('./models/User.js');
 var auth = require('./auth/auth.js');
 var db = require('./db.js');
 
