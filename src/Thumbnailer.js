@@ -22,7 +22,7 @@ var gm = require('gm');
 /**
  * Represents an image processor that creates thumbnails suitable for our frontends.
  * @constructor
- * @alias module:thumbnailer
+ * @alias module:Thumbnailer
  * @param {ValidationRestrictions} vr - The restrictions to enforce when validating images.
  * @param {Dimensions} target_s - The maximum or ideal size of thumbnail to produce.
  * @param {string} in_dir - The directory to read input images from.
