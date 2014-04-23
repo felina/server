@@ -11,7 +11,7 @@ var API_VERSION = '0.1.0';
 //testaddition
 var express = require('express');
 var passport = require('passport');
-var user = require('./user.js');
+var users = require('./users.js');
 var auth = require('./auth/auth.js');
 var db = require('./db.js');
 var images = require('./images.js');
@@ -118,7 +118,7 @@ meta.metaRoutes(app);
 jobs.jobRoutes(app);
 
 // Import user routes
-user.userRoutes(app, auth);
+users.userRoutes(app);
 
 /**
  * The port the server will listen on.

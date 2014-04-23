@@ -7,7 +7,7 @@ var validator = require('email-validator');
 var errors = require('./error.js');
 var _ = require('underscore');
 var util = require('./util.js');
-//var auth = require('./auth/auth.js');
+var auth = require('./auth/auth.js');
 var db = require('./db.js');
 var User = require('./models/User.js');
 
@@ -27,7 +27,7 @@ function Researcher(name, email, groups) {
  * @static
  * @param {Express} app - The Express application object.
  */
-function userRoutes(app, auth) { //TODO: Need to solve circular dependencies to stop this.
+function userRoutes(app) {
     /**
      * API endpoint to update a user. Various parameters are only valid dependent on the target user
      * and the privilege level of the requester.
