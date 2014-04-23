@@ -1,5 +1,5 @@
 /**
- * @module thumbnailer
+ * @module Thumbnailer
  */
 
 var fs = require('fs');
