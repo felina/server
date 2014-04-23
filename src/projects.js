@@ -19,43 +19,29 @@ var Field = require('./models/Field.js');
 
 /**
  * Parses and validates field definitions.
+ * @param {number} pid - The id of the project the fields are declared on.
  * @param {object[]} fieldList - The list of field definitions for a project.
  * @param {object[]} annoList - The list of annotation definitions for a project.
  * @returns {FieldParseError} The details of the first error found in the definitions, if any exist.
  */
-function parseFields(fieldList, annoList) {
+function parseFields(pid, fieldList, annoList) {
     var errIdx = -1;
     var errList = '';
 
     // Check every field definition, breaking out of the loop if an error is found.
     fieldList.every(function(f, i) {
         if (_.isObject(f)) {
-            // Array item is an object (or list), check it's properties.
-            if (typeof f.name !== 'string' || f.name.length < 1 || f.name.length > Field.prototype.NAME_LENGTH) {
-                console.log('Bad field name.');
+            // Use the Field constructor to check parameters.
+            var field = new Field(-1, pid, f.name, f.type, f.required);
+
+            if (field.id === false) {
+                console.log('Bad field definition.');
                 errIdx = i;
                 errList = 'fields';
                 return false;
+            } else {
+                return true;
             }
-            if (typeof f.type !== 'string' || Field.prototype.TYPES.indexOf(f.type) < 0) {
-                console.log('Bad field type.');
-                errIdx = i;
-                errList = 'fields';
-                return false;
-            }
-            if (f.type === 'enum' && (!_.isArray(f.enumvals) || f.enumvals.length < 1)) {
-                console.log("Bad enumvals.");
-                errIdx = i;
-                errList = 'fields';
-                return false;
-            }
-            if (typeof f.required !== 'boolean' && typeof f.required !== 'number') {
-                console.log('Bad required flag.');
-                errIdx = i;
-                errList = 'fields';
-                return false;
-            }
-            return true;
         } else {
             errIdx = i;
             errList = 'fields';
@@ -67,27 +53,17 @@ function parseFields(fieldList, annoList) {
     if (errIdx === -1) {
         annoList.every(function(f, i) {
             if (_.isObject(f)) {
-                // Array item is an object (or list), check it's properties.
-                if (typeof f.name !== 'string' || f.name.length < 1 || f.name.length > Field.prototype.NAME_LENGTH) {
-                    console.log('Bad name.');
+                // Use the Field constructor to check parameters.
+                var field = new Field(-1, pid, f.name, f.type, f.required);
+
+                if (field.id === false) {
+                    console.log('Bad anno definition.');
                     errIdx = i;
                     errList = 'anno';
                     return false;
+                } else {
+                    return true;
                 }
-                f.type = Field.prototype.shapeToType(f.shape);
-                if (f.type === null) {
-                    console.log('Bad type.');
-                    errIdx = i;
-                    errList = 'anno';
-                    return false;
-                }
-                if (typeof f.required !== 'boolean' && typeof f.required !== 'number') {
-                    console.log('Bad required flag.');
-                    errIdx = i;
-                    errList = 'anno';
-                    return false;
-                }
-                return true;
             } else {
                 errIdx = i;
                 errList = 'anno';
@@ -214,7 +190,6 @@ function projectRoutes(app) {
         var all = true;
         // Restrict field listing for inactive project to researcher and above.
         if (!req.user || !(req.user.isResearcher() || req.user.isAdmin())) {
-            console.log(req.user.isResearcher());
             all = false;
         }
 
