@@ -6,7 +6,7 @@ var _ = require('underscore');
 var errors = require('./error.js');
 var images = require('./images.js');
 var async = require('async');
-var users = require('./user.js');
+var User = require('./models/User.js');
 var auth = require('./auth/auth.js');
 var db = require('./db.js');
 
@@ -344,7 +344,7 @@ function metaRoutes(app) {
      * @param {Object.<string, MetadataWrapper>} * - The body of the request should map image ids to the metadata to assign.
      * @returns {MetadataSetAPIResponse} The API response detailing which, if any, of the images successfully updated.
      */
-    app.post('/meta', auth.enforceLoginCustom({'minPL':users.PrivilegeLevel.USER.i}), function(req, res) {
+    app.post('/meta', auth.enforceLoginCustom({'minPL':'user'}), function(req, res) {
         // Check that we've been sent an array
         if (parseMetadata(req.body) === false) {
             res.send(new errors.APIErrResp(2, 'Invalid request.'));

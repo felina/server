@@ -5,7 +5,7 @@
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var db = require('../db.js');
-var users = require('../user.js');
+var User = require('../models/User.js');
 var errors = require('../error.js');
 var nodemailer = require('nodemailer');
 var crypto = require('crypto');
@@ -163,9 +163,9 @@ function authRoutes(app, enforceLogin) {
             var mail = req.body.email;
             var name = req.body.name;
             var pass = req.body.pass;
-            var priv = users.PrivilegeLevel.USER.i;
+            var priv = User.prototype.Type.USER.i;
             var grav = req.body.gravatar;
-            var user = new users.User(-1, name, mail, priv, grav);
+            var user = new User(-1, name, mail, priv, grav);
             if (user.id === false) {
                 // Details of user are invalid.
                 return res.send(new errors.APIErrResp(1, 'User details are invalid!'));
@@ -212,14 +212,14 @@ function authRoutes(app, enforceLogin) {
      * @param {string} [gravatar] - The hash of the new user's gravatar email.
      * @returns {UserAPIResponse} The API response that details the newly created user.
      */
-    app.post('/subusers', enforceLogin({'minPL':users.PrivilegeLevel.RESEARCHER.i}), function(req, res) {
+    app.post('/subusers', enforceLogin({'minPL':'researcher'}), function(req, res) {
         var mail = req.body.email;
         var name = req.body.name;
         var pass = util.getRandomHash();
-        var priv = users.PrivilegeLevel.SUBUSER.i;
+        var priv = User.prototype.Type.SUBUSER.i;
         var grav = req.body.gravatar;
         var proj = parseInt(req.body.projectid);
-        var user = new users.User(-1, name, mail, priv, grav, req.user.id, proj);
+        var user = new User(-1, name, mail, priv, grav, req.user.id, proj);
         
         if (user.id === false) {
             // Details of user are invalid.

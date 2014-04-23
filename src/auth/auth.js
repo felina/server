@@ -5,7 +5,7 @@
 var _ = require('underscore');
 var loauth = require('./localauth.js');
 var extauth = require('./externalauth.js');
-var users = require('../user.js');
+var User = require('../models/User.js');
 var db = require('../db.js');
 var errors = require('../error.js');
 
@@ -34,7 +34,7 @@ function enforceLogin(req, res, next) {
  * @typedef EnforceLoginOptions
  * @type {object}
  * @property {string[]} [ips] - A list of ips to restrict access to.
- * @property {number} [minPL] - The minimum privilege leve/usertype to allow access to.
+ * @property {string} [minPL] - The minimum usertype to allow access to the resource.
  * @property {userVerifier} [verifier] - A function that decides if the request should continue, given the user object.
  */
 
@@ -63,11 +63,13 @@ function enforceLoginCustom(options) {
             }
         });
     }
-    var minPL = users.privilegeFromString(options.minPL);
-    if (minPL !== false) {
+
+    if (_.isString(options.minPL)) {
         middlewares.push(function(req, res, next) {
             // This layer should enforce a login level.
-            if (req.user.privilege >= minPL) {
+            console.log(options.minPL);
+            console.log(req.user);
+            if (req.user.isType(options.minPL, true)) {
                 return next();
             } else {
                 return res.send(new errors.APIErrResp(1, 'Insufficient user level for this resource.'));

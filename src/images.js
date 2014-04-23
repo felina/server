@@ -8,7 +8,6 @@ var aws = require('aws-sdk');
 var async = require('async');
 var _ = require('underscore');
 var errors = require('./error.js');
-var users = require('./user.js');
 var express = require('express');
 var archiver = require('archiver');
 var lazystream = require('lazystream');
@@ -501,7 +500,7 @@ function imageRoutes(app) {
                 
                 // The body must contain a corresponding value that gives the project id.                 
                 var project = false;
-                if(req.user.privilege === users.PrivilegeLevel.SUBUSER.i){
+                if (req.user.isSubuser()){
                     project = req.user.projectid;
                 } else {
                     project = parseInt(req.body[fKey + '_project']);

@@ -9,200 +9,7 @@ var _ = require('underscore');
 var util = require('./util.js');
 //var auth = require('./auth/auth.js');
 var db = require('./db.js');
-
-/**
- * Enum type detailing user types and their corresponding numeric and string representations.
- * @static
- */
-var PrivilegeLevel = Object.freeze({
-    SUBUSER: {
-        i: 0,
-        dbs: "subuser"
-    },
-    USER: {
-        i: 1,
-        dbs: "user"
-    },
-    RESEARCHER: {
-        i: 2,
-        dbs: "researcher"
-    },
-    ADMIN: {
-        i: 3,
-        dbs: "admin"
-    }
-});
-
-/**
- * List representation of PrivilegeLevels, for convenience.
- */
-var PLs = [PrivilegeLevel.SUBUSER, PrivilegeLevel.USER, PrivilegeLevel.RESEARCHER, PrivilegeLevel.ADMIN];
-
-/**
- * Converts a privilege level string into it's integer value.
- * @static
- * @param {string} dbs - The string representation of the privilege level.
- * @returns {number} The numeric representation of the privilege level.
- */
-function privilegeFromString(dbs) {
-    var res = false;
-    PLs.forEach(function(lvl) {
-        if (dbs === lvl.dbs) {
-            res = lvl.i;
-        }
-    });
-    return res;
-}
-
-/**
- * Converts a privilege level integer value into it's string representation.
- * @static
- * @param {number} i - The numeric representation of the privilege level.
- * @returns {string} The string representation of the privilege level.
- */
-function privilegeFromInt(i) {
-    var res = false;
-    PLs.forEach(function(lvl) {
-        if (i === lvl.i) {
-            res = lvl.dbs;
-        }
-    });
-    return res;
-}
-
-/**
- * Represents a user of the service. If any of the required attributes are erroneous, the id will be 
- * set to false to indicate the error state. The object should be discarded in this case.
- * @constructor
- * @param {number} id - The id of the user.
- * @param {string} name - The display name of the user.
- * @param {string} email - The email of the user.
- * @param {number} privilege - The numeric representation of the user's privilege level.
- * @param {string} [gravatar] - The gravatar id - a 32 character hash of the gravatar email.
- * @param {string} [supervisor] - The id of the user's supervisor. Subusers only.
- * @param {number} [projectid] - The id of the project the user will be contributing to. Subusers only.
- */
-function User(id, name, email, privilege, gravatar, supervisor, projectid) {
-    if (typeof id !== 'number') {
-        this.id = false;
-        return;
-    }
-    if (typeof privilege !== 'number') {
-        this.id = false;
-        return;
-    }
-    if (privilege < 0 || privilege > 3) {
-        this.id = false;
-        return;
-    }
-    // May need to change if valid email addresses not being accepted
-    if (validator.validate(email) !== true) {
-        this.id = false;
-        return;
-    }
-    if (privilege === PrivilegeLevel.SUBUSER.i) {
-        // Subuser must have a valid supervisor id, which must not be their own.
-        if (typeof supervisor !== 'number' || supervisor === id) {
-            console.log(typeof supervisor + ' ' + supervisor);
-            console.log('Tried to instantiate subuser with invalid supervisor.');
-            this.id = false;
-            return;
-        } else {
-            this.supervisor = supervisor;
-        }
-
-        // Subuser must have a valid projectid.
-        if (typeof projectid !== 'number') {
-            console.log(typeof projectid + ' ' + projectid);
-            console.log('Tried to instantiate subuser with invalid projectid.');
-            this.id = false;
-            return;
-        } else {
-            this.projectid = projectid;
-        }
-       
-    } else {
-        this.supervisor = null;
-        this.projectid = null; 
-    }
-    if (typeof gravatar !== 'string' || gravatar.length !== 32) {
-        this.gravatar = null;
-    } else {
-        this.gravatar = gravatar;
-    }
-
-    this.id = id;
-    this.name = name;
-    this.email = email;
-    this.privilege = privilege;
-}
-
-/**
- * Retrieves a URL for the user's profile image. This will be a gravtar URL, or a default placeholder.
- * @returns {string} The URL of the image to display.
- */
-User.prototype.profileURL = function() {
-    if (this.gravatar === null) {
-        // TODO: Get the host programmatically or via config
-        return 'http://citizen.science.image.storage.public.s3-website-eu-west-1.amazonaws.com/user.png';
-    } else {
-        return 'http://www.gravatar.com/avatar/' + this.gravatar;
-    }
-};
-
-/**
- * Converts a user to JSON. Overrides the default implementation.
- * @returns {string} The JSON representation of the user.
- */
-User.prototype.toJSON = function() {
-    var json = {
-        'id': this.id,
-        'name': this.name,
-        'email': this.email,
-        'privilege': this.privilege,
-        'profile_image': this.profileURL()
-    };
-
-    if (this.privilege === PrivilegeLevel.SUBUSER.i) {
-        json.supervisor = this.supervisor;
-        json.projectid = this.projectid;
-    }
-
-    return json;
-};
-
-/**
- * Checks if the user is a researcher.
- * @returns {boolean} Whether the user is a researcher.
- */
-User.prototype.isResearcher = function() {
-    if (this.privilege === PrivilegeLevel.RESEARCHER.i) {
-        return true;
-    }
-    return false;
-};
-
-/**
- * Checks if the user is a subuser.
- * @returns {boolean} Whether the user is a subuser.
- */
-User.prototype.isSubuser = function() {
-    if (this.privilege === PrivilegeLevel.SUBUSER.i) {
-        return true;
-    }
-    return false;
-};
-
-/**
- * Checks if the user is an admin.
- * @returns {boolean} Whether the user is an admin.
- */
-User.prototype.isAdmin = function() {
-    if (this.privilege === PrivilegeLevel.ADMIN.i) {
-        return true;
-    }
-    return false;
-};
+var User = require('./models/User.js');
 
 /**
  * Represents a researcher in the system.
@@ -231,7 +38,7 @@ function userRoutes(app, auth) { //TODO: Need to solve circular dependencies to 
      * @param {number} [privilege] - The new privilege level to give the user. Only valid if requested by a researcher.
      * @returns {BasicAPIResponse} The API response signifying success or failure.
      */
-    app.patch('/users/:uid', auth.enforceLoginCustom({'minPL':PrivilegeLevel.USER.i}), function(req, res) {
+    app.patch('/users/:uid', auth.enforceLoginCustom({'minPL':'user'}), function(req, res) {
         if (req.params.uid) {
             var email = req.params.uid;
             if (email === req.user.email) {
@@ -252,11 +59,11 @@ function userRoutes(app, auth) { //TODO: Need to solve circular dependencies to 
                         return res.send(new errors.APIErrResp(4, 'Nothing to update'));
                     }
                 });
-            } else if (req.user.privilege === PrivilegeLevel.RESEARCHER.i) {
+            } else if (req.user.isResearcher()) {
                 var level = parseInt(req.body.privilege);
                 console.log("level: " + level);
                 if (!_.isNaN(level) && (level === 1 || level === 2)) {
-                    var privilege = privilegeFromInt(level);
+                    var privilege = User.prototype.privilegeFromInt(level);
                     console.log('priv: ' + privilege);
                     return db.updateUser(null, email, privilege, null, null, null, function(err, info){
                         if(err) {
@@ -400,10 +207,6 @@ function userRoutes(app, auth) { //TODO: Need to solve circular dependencies to 
 
 // Export all public members.
 module.exports = {
-    PrivilegeLevel: PrivilegeLevel,
-    User: User,
     Researcher: Researcher,
-    privilegeFromString: privilegeFromString,
-    privilegeFromInt: privilegeFromInt,
     userRoutes: userRoutes
 };

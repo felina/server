@@ -4,7 +4,7 @@
 
 var _ = require('underscore');
 var errors = require('./error.js');
-var users = require('./user.js');
+var User = require('./models/User.js');
 var auth = require('./auth/auth.js');
 var db = require('./db.js');
 var Project = require('./models/Project.js');
@@ -128,7 +128,7 @@ function projectRoutes(app) {
      * @param {number} :fid - The id of the field to delete.
      * @returns {BasicAPIResponse} The API response detailing if the delete was successful.
      */
-    app.del('/projects/:pid/fields/:fid', auth.enforceLoginCustom({'minPL':users.PrivilegeLevel.RESEARCHER.i}), function(req, res) {
+    app.del('/projects/:pid/fields/:fid', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
         var pid = parseInt(req.params.pid);
         var fid = parseInt(req.params.fid);
 
@@ -216,7 +216,7 @@ function projectRoutes(app) {
                                     return false;
                                 } else {
                                     // We need to rename type and it's value for the image-annotator
-                                    ele.shape = ele.type.substting(1); // TODO: Placeholder
+                                    ele.shape = ele.type.substring(1); // TODO: Placeholder
                                     //ele.shape = typeToShape(ele.type);
                                     delete ele.type;
                                     return true;
@@ -246,7 +246,7 @@ function projectRoutes(app) {
      * @param {ProjectField[]} anno - The annotation fields to add.
      * @returns {BasicAPIResponse} The API response detailing whether the request was successful or not.
      */
-    app.post('/projects/:pid/fields', auth.enforceLoginCustom({'minPL':users.PrivilegeLevel.RESEARCHER.i}), function(req, res) {
+    app.post('/projects/:pid/fields', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
         var id = parseInt(req.params.pid);
         if (_.isNaN(id)) {
             return res.send(new errors.APIErrResp(2, 'Invalid project id.'));
@@ -306,7 +306,7 @@ function projectRoutes(app) {
      * @param {string} desc - A short description of the project.
      * @returns {ProjectAPIResponse} The API response detailing the resultant project, with it's id property set.
      */
-    app.post('/projects', auth.enforceLoginCustom({'minPL':users.PrivilegeLevel.RESEARCHER.i}), function(req, res) {
+    app.post('/projects', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
         var proj = new Project(-1, req.body.name, req.body.desc, false);
         if (proj.id === false) {
             return res.send(new errors.APIErrResp(2, 'Invalid project data.'));
@@ -378,7 +378,7 @@ function projectRoutes(app) {
      * @param {number} :pid - The id of the project to update.
      * @returns {ProjectAPIResponse} The API response that provides the updated project information.
      */
-    app.put('/projects/:pid', auth.enforceLoginCustom({'minPL':users.PrivilegeLevel.RESEARCHER.i}), function(req, res) {
+    app.put('/projects/:pid', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
         var id = parseInt(req.params.pid);
         var name = req.body.name;
         var desc = req.body.desc;
