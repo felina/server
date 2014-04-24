@@ -79,7 +79,7 @@ function uploadZip(user, zInfo, callback) {
  */
 function jobRoutes(app) {
     // TODO: This method needs to be re-written. (placeholder)
-    app.post('/start', auth.enforceLogin, function(req, res) {
+    app.post('/start', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
         // Get the image IDs for processing
         var executable = req.body.executable;
         var images = req.body.images;
@@ -93,16 +93,45 @@ function jobRoutes(app) {
     });
 
     /**
-     * API endpoint to get the current progress or state of a job.
-     * @hbcsapi {GET} progress - This is an API endpoint.
-     * @param {number} jobID - The id of the job to lookup.
-     * @returns {number} progress - The percentage completion.
+     * @typedef ResultsAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the results were retrieved from the job server.
+     * @property {APIError} [err] - The error that caused the request to fail.
+     * @property {object} The results of the job. The formatting will be job dependent.
      */
-    app.get('/progress', auth.enforceLogin, function(req, res) {
-        var jobID = parseInt(req.query.jobID);
+
+    /**
+     * @typedef ProgressAPIResponse
+     * @type {object}
+     * @property {boolean} res - True iff the progress was retrieved from the job server.
+     * @property {APIError} [err] - The error that caused the request to fail.
+     * @property {number} The approximate percentage completion of the job.
+     */
+
+    /**
+     * API endpoint to get the current progress or state of a job.
+     * @hbcsapi {GET} /jobs/:jid - This is an API endpoint.
+     * @param {number} :jid - The id of the job to lookup.
+     * @param {boolean} [results=0] - If true, the results of the job will be returned.
+     * @returns {ProgressAPIResponse|ResultsAPIResponse} progress - The percentage completion.
+     */
+    app.get('/jobs/:jid', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
+        var jobID = parseInt(req.params.jid);
+        var results = parseInt(req.query.results);
 
         if (_.isNaN(jobID)) {
             return res.send(new errors.APIErrResp(2, 'Invalid job ID.'));
+        } else if (results === 1) {
+            jsapi.getResults(jobID, function(err, results) {
+                if (err) {
+                    return res.send(new errors.APIErrResp(3, 'Failed to retrieve job progress.'));
+                } else {
+                    return res.send({
+                        'res': true,
+                        'results': results
+                    });
+                }
+            });
         } else {
             jsapi.getProgress(jobID, function(err, prog) {
                 if (err) {
@@ -117,42 +146,9 @@ function jobRoutes(app) {
         }
     });
 
-    /**
-     * @typedef ResultsAPIResponse
-     * @type {object}
-     * @property {boolean} res - True iff the results were retrieved from the job server.
-     * @property {APIError} [err] - The error that caused the request to fail.
-     * @property {object} The results of the job. The formatting will be job dependent.
-     */
-
-    /**
-     * API endpoint to get the results of a job.
-     * @hbcsapi {GET} results - This is an API endpoint.
-     * @param {number} jobID - The id of the job to lookup.
-     * @returns {ResultsAPIResponse} The response that provides the results of the job.
-     */
-    app.get('/results', auth.enforceLogin, function(req, res) {
-        var jobID = parseInt(req.query.jobID);
-
-        if (_.isNaN(jobID)) {
-            return res.send(new errors.APIErrResp(2, 'Invalid job ID.'));
-        } else {
-            jsapi.getResults(jobID, function(err, results) {
-                if (err) {
-                    return res.send(new errors.APIErrResp(3, 'Failed to retrieve job progress.'));
-                } else {
-                    return res.send({
-                        'res': true,
-                        'results': results
-                    });
-                }
-            });
-        }
-    });
-
     // Get all the jobs started by the researcher with the given id
     // TODO: actually get ID, read from database, etc.
-    app.get('/jobs', auth.enforceLogin, function(req, res) {
+    app.get('/jobs', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
         res.send({
             'res': true,
             'jobs': [
@@ -184,10 +180,10 @@ function jobRoutes(app) {
 
     /**
      * API endpoint to retrieve the list of executables uploaded by a user.
-     * @hbcsapi {GET} exec - This is an API endpoint.
+     * @hbcsapi {GET} /execs - This is an API endpoint.
      * @returns {ExecutableListAPIResponse} The API response providing the list of executables..
      */
-    app.get('/exec', [auth.enforceLogin, express.multipart()], function(req, res) {
+    app.get('/execs', auth.enforceLoginCustom({'minPL':'researcher'}).concat([express.multipart()]), function(req, res) {
 
         db.zipsForUser(req.user, function(fErr, result) {
             if (fErr) {
@@ -213,13 +209,13 @@ function jobRoutes(app) {
 
     /**
      * API endpoint to upload an archive. This endpoint is irregular in that it accepts multipart form-encoded data, instead of JSON.
-     * @hbcsapi {POST} img - This is an API endpoint.
+     * @hbcsapi {POST} /execs - This is an API endpoint.
      * @param {form-data} file - The body of the file to upload. In case of multiple file uploads, this can be any unique string.
      * @param {string} filename - The filename of the zip.
      * @param {string} name - The name of the executable.
      * @returns {ExecUploadAPIResponse} The API response providing the ids assigned to the archives, if successful.
      */
-    app.post('/exec', [auth.enforceLogin, express.multipart()], function(req, res) {
+    app.post('/execs', auth.enforceLoginCustom({'minPL':'researcher'}).concat([express.multipart()]), function(req, res) {
         async.map(Object.keys(req.files), function(fKey, done) {
             var zInfo = req.files[fKey];
             zInfo.name = req.body.name;
