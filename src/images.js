@@ -358,28 +358,27 @@ function uploadThumb(thumb, callback) {
     });
 }
 
-/**
- * Registers Express routes related to image handling. These are API endpoints.
- * @static
- * @param {Express} app - The Express application object.
- */
-function imageRoutes(app) {
-    /**
-     * @typedef ImageListAPIResponse
-     * @type {object}
-     * @property {boolean} res - True iff the list was retrieved, regardless of any images being present.
-     * @property {Image[]} [images] - The list of images found.
-     * @property {APIError} [err] - The error that caused the request to fail.
-     */
+/***
+ ** API ROUTE FUNCTIONS
+ **/
 
-    /**
-     * API endpoint to get a list of images belonging to a user, optionally filtered by uploader.
-     * @hbcsapi {GET} images - This is an API endpoint.
-     * @param {string} [uploader] - The email of the uploader to filter by.
-     * @returns {ImageListAPIResponse} The API response supplying the list.
-     */
-    app.get('/images', auth.enforceLogin, function(req, res) {
-        db.getUserImages(req.user, req.query.uploader, function(err, result) {
+/**
+ * @typedef ImageListAPIResponse
+ * @type {object}
+ * @property {boolean} res - True iff the list was retrieved, regardless of any images being present.
+ * @property {Image[]} [images] - The list of images found.
+ * @property {APIError} [err] - The error that caused the request to fail.
+ */
+
+/**
+ * API endpoint to get a list of images belonging to a user, optionally filtered by uploader.
+ * @hbcsapi {GET} images - This is an API endpoint.
+ * @alias APIDoc.getimages
+ * @param {string} [uploader] - The email of the uploader to filter by.
+ * @returns {ImageListAPIResponse} The API response supplying the list.
+ */
+function getImages(req, res) {
+    db.getUserImages(req.user, req.query.uploader, function(err, result) {
         if (err) {
             res.send(new errors.APIErrResp(2, 'Could not load image list.'));
         } else {
@@ -388,249 +387,265 @@ function imageRoutes(app) {
                 'images': result
             });
         }
-        });
     });
+}
 
-    /**
-     * @typedef BasicAPIResponse
-     * @type {object}
-     * @property {boolean} res - True iff the operation succeeded.
-     * @property {APIError} [err] - The error that caused the request to fail.
-     */
+/**
+ * @typedef BasicAPIResponse
+ * @type {object}
+ * @property {boolean} res - True iff the operation succeeded.
+ * @property {APIError} [err] - The error that caused the request to fail.
+ */
 
-    /**
-     * API endpoint to delete an image.
-     * @hbcsapi {DELETE} /images/:iid - This is an API endpoint.
-     * @param {string} :iid - The image id to delete.
-     * @returns {BasicAPIResponse} The API response indicating the outcome.
-     */
-    app.del('/images/:iid', auth.enforceLogin, function(req, res) {
-        var iid = req.params.iid;
-        
-        if (typeof iid !== 'string' || iid.length !== 32) {
-            return res.send(new errors.APIErrResp(2, 'Invalid image id.'));
-        }
+/**
+ * API endpoint to delete an image.
+ * @alias APIDoc.delImagesId
+ * @hbcsapi {DELETE} /images/:iid - This is an API endpoint.
+ * @param {string} :iid - The image id to delete.
+ * @returns {BasicAPIResponse} The API response indicating the outcome.
+ */
+function delImagesId(req, res) {
+    var iid = req.params.iid;
+    
+    if (typeof iid !== 'string' || iid.length !== 32) {
+        return res.send(new errors.APIErrResp(2, 'Invalid image id.'));
+    }
 
-        // Need to get the containing bucket and owner id
-        return db.checkImagePerm(req.user, iid, function(err, allow, priv) {
-            if (err) {
-                return res.send(new errors.APIErrResp(3, 'Image not found.'));
-            } else if (allow) {
-                return db.deleteImage(iid, function(err2) {
-                    if (err2) {
-                        return res.send(new errors.APIErrResp(4, 'Failed to delete image.'));
-                    } else {
-                        var params = {
-                            'Bucket': (priv ? PRIVATE_BUCKET : PUBLIC_BUCKET),
-                            'Key': iid
-                        };
-
-                        return s3.deleteObject(params, function(aErr, data) {
-                            if (aErr) {
-                                console.log(aErr);
-                                return res.send(new errors.APIErrResp(5, 'Failed to delete image.'));
-                            } else {
-                                return res.send({
-                                    'res': true
-                                });
-                            }
-                        });
-                    }
-                });
-            } else {
-                return res.send(new errors.APIErrResp(6, 'Insufficient permissions.'));
-            }
-        });
-    });
-
-    /**
-     * API endpoint to get an image.
-     * @hbcsapi {GET} /images/:iid - This is an API endpoint.
-     * @param {string} :iid - The image id to get.
-     * @param {boolean} [src=false] - If false, the thumbnail will be returned, if it is available.
-     * @returns {Redirect} The request will be redirected to the image URL.
-     */
-    app.get('/images/:iid', function(req, res) {
-        var iid = req.params.iid;
-        var src = req.query.src;
-
-        return db.checkImagePerm(req.user, iid, function(err, allowed, priv) {
-            if (!allowed) {
-                // res.redirect('/static/padlock.png'); // Local copy of access denied image
-                return res.redirect(S3_URL + 'padlock.png'); // S3 copy of image
-            } if (priv === 1 || priv === true) {
-                // proxyImage(iid, priv, res, !src); // Proxy image via the API server. (Much) slower but more secure.
-                var params = {
-                    'Bucket': PRIVATE_BUCKET,
-                    'Key': (src ? '' : THUMB_PFIX) + iid,
-                    'Expires': PRIVATE_EXPIRY
-                };
-                // Use a signed URL to serve directly from S3. Note that anyone with the URL can access the image until it expires!
-                return res.redirect(s3.getSignedUrl('getObject', params));
-            } else if (priv === 0 || priv === false) {
-                // Image is public, redirect to the public URL. Add the prefix if we don't want the source image.
-                return res.redirect(S3_URL + (src ? '' : THUMB_PFIX)  + iid);
-            } else {
-                // res.redirect('/static/padlock.png'); // Local copy of access denied image
-                return res.redirect(S3_URL + 'padlock.png'); // S3 copy of image
-            }
-        });
-    });
-
-
-    /**
-     * @typedef ImageUploadAPIResponse
-     * @type {object}
-     * @property {boolean} res - True iff the operation succeeded.
-     * @property {APIError} [err] - The error that caused the request to fail.
-     * @property {string[]} [ids] - A list of all the ids generated for each of the uploaded images. The list will be ordered according to their order in the request body.
-     */
-
-    /**
-     * API endpoint to upload an image. This endpoint is irregular in that it accepts multipart form-encoded data, instead of JSON.
-     * @hbcsapi {POST} /images - This is an API endpoint.
-     * @param {form-data} file - The body of the file to upload. In case of multiple file uploads, this can be any unique string.
-     * @param {number} file_project - The id of the project to associate 'file' with. In the case of multiple files, this parameter should match the file parameter, with the suffix '_project'.
-     * @returns {ImageUploadAPIResponse} The API response providing the ids assigned to the images, if successful.
-     */
-    app.post('/images', [auth.enforceLogin, express.multipart()], function(req, res) {
-        // Don't return here, temp file cleanup at end!
-        async.map(
-            Object.keys(req.files),
-            function(fKey, done) {
-                var iInfo = req.files[fKey];
-                
-                // The body must contain a corresponding value that gives the project id.                 
-                var project = false;
-                if (req.user.isSubuser()){
-                    project = req.user.projectid;
+    // Need to get the containing bucket and owner id
+    return db.checkImagePerm(req.user, iid, function(err, allow, priv) {
+        if (err) {
+            return res.send(new errors.APIErrResp(3, 'Image not found.'));
+        } else if (allow) {
+            return db.deleteImage(iid, function(err2) {
+                if (err2) {
+                    return res.send(new errors.APIErrResp(4, 'Failed to delete image.'));
                 } else {
-                    project = parseInt(req.body[fKey + '_project']);
-                }
-                if (_.isNaN(project)) {
-                    return done('Must supply a valid project id for each image.');
-                }
-                // Attempt to hash the file. If any file has an unwanted type, abort the request.
-                if (VALID_MIME_TYPES.indexOf(iInfo.type) < 0) {
-                    // Invalid mime type, reject request.
-                    return done('Invalid file type: ' + iInfo.type + " name: " + iInfo.name);
-                }
+                    var params = {
+                        'Bucket': (priv ? PRIVATE_BUCKET : PUBLIC_BUCKET),
+                        'Key': iid
+                    };
 
-                // Validate the file first
-                console.log(path.basename(iInfo.path));
-                return IMAGE_PROCESSOR.verify(path.basename(iInfo.path), function(okay) {
-                    if (okay) {
-                        // TODO: Can we avoid loading everything into memory?
-                        iInfo.fileContents = fs.readFileSync(iInfo.path); // semi sketchy decoding
-                        console.log('LENGTHS:' + iInfo.fileContents.length + ' - ' + iInfo.size);
-                        var elementsToHash = "";
-                        for (var j = 0; j < iInfo.fileContents.length; j += iInfo.fileContents.length / 100) {
-                            elementsToHash += iInfo.fileContents[Math.floor(j)];
+                    return s3.deleteObject(params, function(aErr, data) {
+                        if (aErr) {
+                            console.log(aErr);
+                            return res.send(new errors.APIErrResp(5, 'Failed to delete image.'));
+                        } else {
+                            return res.send({
+                                'res': true
+                            });
                         }
-                        iInfo.felinaHash = md5(elementsToHash);
-
-                        return db.imageExists(iInfo.felinaHash, function(iErr, exists) {
-                            if (exists === 0) {
-                                // New image, upload!
-                                console.log('Uploading new image.');
-                                return uploadImage(req.user, iInfo, project, db, function(err) {
-                                    return done(err, iInfo.felinaHash);
-                                });
-                            } else {
-                                // Existing image, reject the request.
-                                return done('Image already exists: ' + iInfo.name);
-                            }
-                        });
-                    } else {
-                        // Upload was not a valid image file!
-                        console.log('Refused image upload after validation.');
-                        return done('File was not a valid image.');
-                    }
-                });
-            },
-            function(err, idArr) {
-                console.log('End block');
-                // If anything errored, abort.
-                if (err) {
-                    // TODO: be more clear if any images were uploaded or not.
-                    if (err.code === 'ER_NO_REFERENCED_ROW_') {
-                        // We haven't met an FK constraint, this should be down to a bad project id.
-                        res.send(new errors.APIErrResp(3, 'Invalid project.'), 400);
-                    } else {
-                        console.log(err);
-                        res.send(new errors.APIErrResp(2, err), 400);
-                    }
-                } else {
-                    // All images should have uploaded succesfully.
-                    res.send({
-                        'res': true,
-                        'ids': idArr
                     });
                 }
-
-                // Cleanup all temporary files used by upload, and generate thumbnails. Do this after we've responded.
-                async.each(Object.keys(req.files),
-                           function(fKey, done) {
-                               var info = req.files[fKey];
-                               if (!info.felinaHash) {
-                                   // Not a valid image, but still needs unlink'ing.
-                                   console.log('Deleting invalid: ' + info.path);
-                                   return fs.unlink(info.path, done);
-                               }
-                               console.log('Thumbnailing: ' + info.path);
-                               return IMAGE_PROCESSOR.make(info.felinaHash, path.basename(info.path), function(err, thm) {
-                                   // Delete the source image regardless of outcome.
-                                   console.log('Deleting: ' + info.path);
-                                   return fs.unlink(info.path, function(sdErr) {
-                                       if (err) {
-                                           // If the thumbnail operation failed, quit now.
-                                           return done(err);
-                                       }
-                                       if (sdErr) {
-                                           console.log(sdErr);
-                                       }
-
-                                       console.log('Storing thumbnail: ' + thm);
-                                       return uploadThumb(thm, function(upErr) {
-                                           if (upErr) {
-                                               // Regardless of error we should delete the thumbnail, else they might build up.
-                                               console.log(upErr);
-                                           }
-                                           console.log('Deleting: ' + thm);
-                                           return fs.unlink(thm, done);
-                                       });
-                                   });
-                               });
-                           },
-                           function(e) {
-                               if (e) {
-                                   console.log(e);
-                               }
-                           });
             });
-    }); // End image upload endpoint.
+        } else {
+            return res.send(new errors.APIErrResp(6, 'Insufficient permissions.'));
+        }
+    });
+}
 
-    /**
-     * API endpoint to export all of a user's images as a zip.
-     * @hbcsapi {GET} export - This is an API endpoint.
-     * @returns {File|APIErrResp} The resulting file to be downloaded, or a JSON encoded API error response.
-     */
-    app.get('/export', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
-        db.getUserImages(req.user, null, function(err, images) {
-            if (err) {
-                return res.send(new errors.APIErrResp(2, 'Failed to gather image listing.'));
+/**
+ * API endpoint to get an image.
+ * @alias APIDoc.getImagesId
+ * @hbcsapi {GET} /images/:iid - This is an API endpoint.
+ * @param {string} :iid - The image id to get.
+ * @param {boolean} [src=false] - If false, the thumbnail will be returned, if it is available.
+ * @returns {Redirect} The request will be redirected to the image URL.
+ */
+function getImagesId(req, res) {
+    var iid = req.params.iid;
+    var src = req.query.src;
+
+    return db.checkImagePerm(req.user, iid, function(err, allowed, priv) {
+        if (!allowed) {
+            // res.redirect('/static/padlock.png'); // Local copy of access denied image
+            return res.redirect(S3_URL + 'padlock.png'); // S3 copy of image
+        } if (priv === 1 || priv === true) {
+            // proxyImage(iid, priv, res, !src); // Proxy image via the API server. (Much) slower but more secure.
+            var params = {
+                'Bucket': PRIVATE_BUCKET,
+                'Key': (src ? '' : THUMB_PFIX) + iid,
+                'Expires': PRIVATE_EXPIRY
+            };
+            // Use a signed URL to serve directly from S3. Note that anyone with the URL can access the image until it expires!
+            return res.redirect(s3.getSignedUrl('getObject', params));
+        } else if (priv === 0 || priv === false) {
+            // Image is public, redirect to the public URL. Add the prefix if we don't want the source image.
+            return res.redirect(S3_URL + (src ? '' : THUMB_PFIX)  + iid);
+        } else {
+            // res.redirect('/static/padlock.png'); // Local copy of access denied image
+            return res.redirect(S3_URL + 'padlock.png'); // S3 copy of image
+        }
+    });
+}
+
+/**
+ * @typedef ImageUploadAPIResponse
+ * @type {object}
+ * @property {boolean} res - True iff the operation succeeded.
+ * @property {APIError} [err] - The error that caused the request to fail.
+ * @property {string[]} [ids] - A list of all the ids generated for each of the uploaded images. The list will be ordered according to their order in the request body.
+ */
+
+/**
+ * API endpoint to upload an image. This endpoint is irregular in that it accepts multipart form-encoded data, instead of JSON.
+ * @alias APIDoc.postImages
+ * @hbcsapi {POST} /images - This is an API endpoint.
+ * @param {form-data} file - The body of the file to upload. In case of multiple file uploads, this can be any unique string.
+ * @param {number} file_project - The id of the project to associate 'file' with. In the case of multiple files, this parameter should match the file parameter, with the suffix '_project'.
+ * @returns {ImageUploadAPIResponse} The API response providing the ids assigned to the images, if successful.
+ */
+function postImages(req, res) {
+    // Don't return here, temp file cleanup at end!
+    async.map(
+        Object.keys(req.files),
+        function(fKey, done) {
+            var iInfo = req.files[fKey];
+            
+            // The body must contain a corresponding value that gives the project id.                 
+            var project = false;
+            if (req.user.isSubuser()){
+                project = req.user.projectid;
             } else {
-                return collectImages(req.user.id, images, function(e, file) {
-                    if (e) {
-                        return res.send(new errors.APIErrResp(3, 'Failed to collect images for download.'));
-                    } else {
-                        return res.sendfile(file, {'root':'/tmp/'});
+                project = parseInt(req.body[fKey + '_project']);
+            }
+            if (_.isNaN(project)) {
+                return done('Must supply a valid project id for each image.');
+            }
+            // Attempt to hash the file. If any file has an unwanted type, abort the request.
+            if (VALID_MIME_TYPES.indexOf(iInfo.type) < 0) {
+                // Invalid mime type, reject request.
+                return done('Invalid file type: ' + iInfo.type + " name: " + iInfo.name);
+            }
+
+            // Validate the file first
+            console.log(path.basename(iInfo.path));
+            return IMAGE_PROCESSOR.verify(path.basename(iInfo.path), function(okay) {
+                if (okay) {
+                    // TODO: Can we avoid loading everything into memory?
+                    iInfo.fileContents = fs.readFileSync(iInfo.path); // semi sketchy decoding
+                    console.log('LENGTHS:' + iInfo.fileContents.length + ' - ' + iInfo.size);
+                    var elementsToHash = "";
+                    for (var j = 0; j < iInfo.fileContents.length; j += iInfo.fileContents.length / 100) {
+                        elementsToHash += iInfo.fileContents[Math.floor(j)];
                     }
+                    iInfo.felinaHash = md5(elementsToHash);
+
+                    return db.imageExists(iInfo.felinaHash, function(iErr, exists) {
+                        if (exists === 0) {
+                            // New image, upload!
+                            console.log('Uploading new image.');
+                            return uploadImage(req.user, iInfo, project, db, function(err) {
+                                return done(err, iInfo.felinaHash);
+                            });
+                        } else {
+                            // Existing image, reject the request.
+                            return done('Image already exists: ' + iInfo.name);
+                        }
+                    });
+                } else {
+                    // Upload was not a valid image file!
+                    console.log('Refused image upload after validation.');
+                    return done('File was not a valid image.');
+                }
+            });
+        },
+        function(err, idArr) {
+            console.log('End block');
+            // If anything errored, abort.
+            if (err) {
+                // TODO: be more clear if any images were uploaded or not.
+                if (err.code === 'ER_NO_REFERENCED_ROW_') {
+                    // We haven't met an FK constraint, this should be down to a bad project id.
+                    res.send(new errors.APIErrResp(3, 'Invalid project.'), 400);
+                } else {
+                    console.log(err);
+                    res.send(new errors.APIErrResp(2, err), 400);
+                }
+            } else {
+                // All images should have uploaded succesfully.
+                res.send({
+                    'res': true,
+                    'ids': idArr
                 });
             }
-        });
-    });
 
+            // Cleanup all temporary files used by upload, and generate thumbnails. Do this after we've responded.
+            async.each(Object.keys(req.files),
+                       function(fKey, done) {
+                           var info = req.files[fKey];
+                           if (!info.felinaHash) {
+                               // Not a valid image, but still needs unlink'ing.
+                               console.log('Deleting invalid: ' + info.path);
+                               return fs.unlink(info.path, done);
+                           }
+                           console.log('Thumbnailing: ' + info.path);
+                           return IMAGE_PROCESSOR.make(info.felinaHash, path.basename(info.path), function(err, thm) {
+                               // Delete the source image regardless of outcome.
+                               console.log('Deleting: ' + info.path);
+                               return fs.unlink(info.path, function(sdErr) {
+                                   if (err) {
+                                       // If the thumbnail operation failed, quit now.
+                                       return done(err);
+                                   }
+                                   if (sdErr) {
+                                       console.log(sdErr);
+                                   }
+
+                                   console.log('Storing thumbnail: ' + thm);
+                                   return uploadThumb(thm, function(upErr) {
+                                       if (upErr) {
+                                           // Regardless of error we should delete the thumbnail, else they might build up.
+                                           console.log(upErr);
+                                       }
+                                       console.log('Deleting: ' + thm);
+                                       return fs.unlink(thm, done);
+                                   });
+                               });
+                           });
+                       },
+                       function(e) {
+                           if (e) {
+                               console.log(e);
+                           }
+                       });
+        }
+    );
+} // End image upload endpoint.
+
+/**
+ * API endpoint to export all of a user's images as a zip.
+ * @alias APIDoc.getExport
+ * @hbcsapi {GET} /export - This is an API endpoint.
+ * @returns {File|APIErrResp} The resulting file to be downloaded, or a JSON encoded API error response.
+ */
+function getExport(req, res) {
+    db.getUserImages(req.user, null, function(err, images) {
+        if (err) {
+            return res.send(new errors.APIErrResp(2, 'Failed to gather image listing.'));
+        } else {
+            return collectImages(req.user.id, images, function(e, file) {
+                if (e) {
+                    return res.send(new errors.APIErrResp(3, 'Failed to collect images for download.'));
+                } else {
+                    return res.sendfile(file, {'root':'/tmp/'});
+                }
+            });
+        }
+    });
+}
+
+/**
+ * Registers Express routes related to image handling. These are API endpoints.
+ * @class
+ * @static
+ * @param {Express} app - The Express application object.
+ */
+function imageRoutes(app) {
+    app.get('/images', auth.enforceLogin, getImages);
+    app.del('/images/:iid', auth.enforceLogin, delImagesId);
+    app.get('/images/:iid', getImagesId);
+    app.post('/images', [auth.enforceLogin, express.multipart()], postImages);
+    app.get('/export', auth.enforceLoginCustom({'minPL':'researcher'}), getExport);
 }
 
 // Export public members.
