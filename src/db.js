@@ -1274,7 +1274,7 @@ function addImageMeta(user, mdArr, callback) {
 //TODO: Merge with getImageOwner
 // Checks eligibility to load an image.
 function checkImagePerm(uid, id, callback) {
-    var query = "SELECT (`ownerid`=? OR NOT `private`) AS 'open', `private` FROM `images` WHERE `imageid`=?";
+    var query = "SELECT (`ownerid`=? OR NOT `private`) AS 'open', `private` AS 'priv' FROM `images` WHERE `imageid`=?";
     var sub = [uid, id];
     query = mysql.format(query, sub);
 
@@ -1291,7 +1291,7 @@ function checkImagePerm(uid, id, callback) {
                 // Image id doesn't exist
                 callback(null, null);
             } else {
-                callback(null, res[0].private);
+                callback(null, res[0].open, res[0].priv);
             }
         });
 

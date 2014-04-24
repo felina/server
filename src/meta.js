@@ -409,7 +409,7 @@ function metaRoutes(app) {
      * @param {string} id - The image id to lookup.
      * @returns {AnnotationGetAPIResponse} The API response providing the annotations.
      */
-    app.get('/anno', function(req, res) {
+    app.get('/anno', auth.enforceLogin, function(req, res) {
         var uid = req.user ? req.user.id : -1;
         var iid = req.query.id;
 

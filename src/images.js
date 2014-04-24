@@ -455,8 +455,11 @@ function imageRoutes(app) {
         var uid = req.user ? req.user.id : -1;
         var src = req.query.src;
 
-        return db.checkImagePerm(uid, iid, function(err, priv) {
-            if (priv === 1 || priv === true) {
+        return db.checkImagePerm(uid, iid, function(err, allowed, priv) {
+            if (!allowed) {
+                // res.redirect('/static/padlock.png'); // Local copy of access denied image
+                return res.redirect(S3_URL + 'padlock.png'); // S3 copy of image
+            } if (priv === 1 || priv === true) {
                 // proxyImage(iid, priv, res, !src); // Proxy image via the API server. (Much) slower but more secure.
                 var params = {
                     'Bucket': PRIVATE_BUCKET,
