@@ -59,8 +59,24 @@ var allowCrossDomain = function(req, res, next) {
     }
 };
 
+/**
+ * Express middleware to respond to robots.txt requests.
+ */
+var robots = function(req, res, next) {
+    if (req.originalUrl === '/robots.txt') {
+        // Send a basic robots.txt which disallows all.
+        res.type('text/plain');
+        return res.send('User-agent: *\nDisallow: /');
+    } else {
+        // Ignore this request.
+        return next();
+    }
+};
+
 // Configure Express to use the various middleware we require.
 app.configure(function() {
+    // Disallow crawlers from accessing the API.
+    app.use(robots);
     // Enable CORS.
     app.use(allowCrossDomain);
     // Enable the request logger, with dev formatting.
