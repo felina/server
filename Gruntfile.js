@@ -20,8 +20,11 @@ module.exports = function(grunt) {
     },
     jsdoc: {
       dist: {
-          src: ['src/*.js', 'src/**/*.js', 'README.md'],
-        dest: 'doc'
+        src: ['src/*.js', 'src/**/*.js', 'README.md'],
+        dest: 'doc',
+        options: {
+          configure: "tools/jsdoc.conf.json"
+        }
       }
     },
     uglify: {
@@ -75,7 +78,8 @@ module.exports = function(grunt) {
           require: true,
           console: true,
           module: true,
-          process: true
+          process: true,
+          exports: true
         }
       },
       lib_test: {

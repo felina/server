@@ -1,0 +1,5 @@
+{
+    "plugins": [
+        "tools/JSDoc_hbcs.js"
+    ]
+}

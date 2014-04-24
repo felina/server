@@ -373,7 +373,6 @@ function uploadThumb(thumb, callback) {
 /**
  * API endpoint to get a list of images belonging to a user, optionally filtered by uploader.
  * @hbcsapi {GET} images - This is an API endpoint.
- * @alias APIDoc.getimages
  * @param {string} [uploader] - The email of the uploader to filter by.
  * @returns {ImageListAPIResponse} The API response supplying the list.
  */
@@ -391,15 +390,7 @@ function getImages(req, res) {
 }
 
 /**
- * @typedef BasicAPIResponse
- * @type {object}
- * @property {boolean} res - True iff the operation succeeded.
- * @property {APIError} [err] - The error that caused the request to fail.
- */
-
-/**
  * API endpoint to delete an image.
- * @alias APIDoc.delImagesId
  * @hbcsapi {DELETE} /images/:iid - This is an API endpoint.
  * @param {string} :iid - The image id to delete.
  * @returns {BasicAPIResponse} The API response indicating the outcome.
@@ -445,7 +436,6 @@ function delImagesId(req, res) {
 
 /**
  * API endpoint to get an image.
- * @alias APIDoc.getImagesId
  * @hbcsapi {GET} /images/:iid - This is an API endpoint.
  * @param {string} :iid - The image id to get.
  * @param {boolean} [src=false] - If false, the thumbnail will be returned, if it is available.
@@ -488,7 +478,6 @@ function getImagesId(req, res) {
 
 /**
  * API endpoint to upload an image. This endpoint is irregular in that it accepts multipart form-encoded data, instead of JSON.
- * @alias APIDoc.postImages
  * @hbcsapi {POST} /images - This is an API endpoint.
  * @param {form-data} file - The body of the file to upload. In case of multiple file uploads, this can be any unique string.
  * @param {number} file_project - The id of the project to associate 'file' with. In the case of multiple files, this parameter should match the file parameter, with the suffix '_project'.
@@ -614,7 +603,6 @@ function postImages(req, res) {
 
 /**
  * API endpoint to export all of a user's images as a zip.
- * @alias APIDoc.getExport
  * @hbcsapi {GET} /export - This is an API endpoint.
  * @returns {File|APIErrResp} The resulting file to be downloaded, or a JSON encoded API error response.
  */
