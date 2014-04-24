@@ -452,10 +452,9 @@ function imageRoutes(app) {
      */
     app.get('/images/:iid', function(req, res) {
         var iid = req.params.iid;
-        var uid = req.user ? req.user.id : -1;
         var src = req.query.src;
 
-        return db.checkImagePerm(uid, iid, function(err, allowed, priv) {
+        return db.checkImagePerm(req.user, iid, function(err, allowed, priv) {
             if (!allowed) {
                 // res.redirect('/static/padlock.png'); // Local copy of access denied image
                 return res.redirect(S3_URL + 'padlock.png'); // S3 copy of image

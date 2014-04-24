@@ -1273,9 +1273,10 @@ function addImageMeta(user, mdArr, callback) {
 
 //TODO: Merge with getImageOwner
 // Checks eligibility to load an image.
-function checkImagePerm(uid, id, callback) {
-    var query = "SELECT (`ownerid`=? OR NOT `private`) AS 'open', `private` AS 'priv' FROM `images` WHERE `imageid`=?";
-    var sub = [uid, id];
+function checkImagePerm(user, iid, callback) {
+    var uid = user ? user.id : -1;
+    var query = "SELECT (`researcher` IS NOT NULL OR `ownerid` = ? OR NOT `private`) AS 'open', `private` AS 'priv' FROM `images` LEFT OUTER JOIN (SELECT `userid` AS 'researcher', `projectid` FROM `project_rights` WHERE `userid` = ?) AS `pr` USING (`projectid`) WHERE `imageid` = ?";
+    var sub = [ uid, uid, iid ];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {

@@ -410,10 +410,9 @@ function metaRoutes(app) {
      * @returns {AnnotationGetAPIResponse} The API response providing the annotations.
      */
     app.get('/anno', auth.enforceLogin, function(req, res) {
-        var uid = req.user ? req.user.id : -1;
         var iid = req.query.id;
 
-        db.checkImagePerm(uid, iid, function(err, bool) {
+        db.checkImagePerm(req.user, iid, function(err, bool) {
             if (bool) {
                 db.getAnnotations(iid, function(err, anno) {
                     if (err) {
@@ -445,11 +444,10 @@ function metaRoutes(app) {
      * @param {string} id - The image id to lookup.
      * @returns {FieldGetAPIResponse} The API response providing the project-specific metadata.
      */
-    app.get('/fields', function(req, res) {
-        var uid = req.user ? req.user.id : -1;
+    app.get('/fields', auth.enforceLogin, function(req, res) {
         var iid = req.query.id;
 
-        db.checkImagePerm(uid, iid, function(err, bool) {
+        db.checkImagePerm(req.user, iid, function(err, bool) {
             if (bool) {
                 db.getImageFields(iid, function(err, fields) {
                     if (err) {
