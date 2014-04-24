@@ -412,16 +412,16 @@ function imageRoutes(app) {
         }
 
         // Need to get the containing bucket and owner id
-        return db.getImageOwner(iid, function(err, info) {
+        return db.checkImagePerm(req.user, iid, function(err, allow, priv) {
             if (err) {
                 return res.send(new errors.APIErrResp(3, 'Image not found.'));
-            } else if (req.user.isAdmin || info.ownerid === req.user.id) {
+            } else if (allow) {
                 return db.deleteImage(iid, function(err2) {
                     if (err2) {
                         return res.send(new errors.APIErrResp(4, 'Failed to delete image.'));
                     } else {
                         var params = {
-                            'Bucket': (info.private ? PRIVATE_BUCKET : PUBLIC_BUCKET),
+                            'Bucket': (priv ? PRIVATE_BUCKET : PUBLIC_BUCKET),
                             'Key': iid
                         };
 

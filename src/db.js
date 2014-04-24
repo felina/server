@@ -194,52 +194,6 @@ function getSubusers(id, callback) {
 }
 
 /**
- * @typedef ImageAccess
- * @type {object}
- * @property {number} ownerid - The ID of the image owner.
- * @property {boolean} private - Whether the image has been marked as private or not.
- */
-
-/**
- * Image access details callback.
- * @callback imageAccessCallback
- * @param {Error} err - The error that occurred, if present.
- * @param {ImageAccess} acc - The image access properties object.
- */
-
-/**
- * Retrieves the access control properties for a given image.
- * @param {string} id - The id of the image to lookup.
- * @param {imageAccessCallback} callback - The callback that handles the access properties of the image.
- */
-function getImageOwner(id, callback) {
-    connPool.getConnection(function(connErr, conn) {
-        if (connErr) {
-            console.log(connErr);
-            return callback(connErr);
-        }
-
-        var query = "SELECT `ownerid`, `private` FROM `images` WHERE `imageid` = ?";
-        var sub = [ id ];
-
-        query = mysql.format(query, sub);
-
-        conn.query(query, function(err, res) {
-            conn.release();
-            if (err) {
-                console.log(err);
-                console.log(query);
-                return callback(err);
-            } else if (res.length !== 1) {
-                return callback('Unknown image id.');
-            } else {
-                return callback(null, res[0]);
-            }
-        });
-    });
-}
-
-/**
  * Attempts to delete an image.
  * @param {string} id - The image id to delete.
  * @param {errorCallback} callback - The callback that handles the result of trying to delete the image.
@@ -1271,12 +1225,25 @@ function addImageMeta(user, mdArr, callback) {
     return updateMetaR(user, mdArr, callback, []);
 }
 
-//TODO: Merge with getImageOwner
-// Checks eligibility to load an image.
+/**
+ * Image access details callback.
+ * @callback imageAccessCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {boolean} allow - If the user should be allowed to access the resource.
+ * @param {boolean} priv - If the image is in the private bucket.
+ */
+
+/**
+ * Checks the access control properties for a given image and returns the containing bucket.
+ * @param {User} user - The user to check the access of.
+ * @param {string} id - The id of the image to lookup.
+ * @param {imageAccessCallback} callback - The callback that handles the access properties of the image.
+ */
 function checkImagePerm(user, iid, callback) {
     var uid = user ? user.id : -1;
-    var query = "SELECT (`researcher` IS NOT NULL OR `ownerid` = ? OR NOT `private`) AS 'open', `private` AS 'priv' FROM `images` LEFT OUTER JOIN (SELECT `userid` AS 'researcher', `projectid` FROM `project_rights` WHERE `userid` = ?) AS `pr` USING (`projectid`) WHERE `imageid` = ?";
-    var sub = [ uid, uid, iid ];
+    var override = user.isAdmin() ? 1 : 0;
+    var query = "SELECT (? OR `researcher` IS NOT NULL OR `ownerid` = ? OR NOT `private`) AS 'open', `private` AS 'priv' FROM `images` LEFT OUTER JOIN (SELECT `userid` AS 'researcher', `projectid` FROM `project_rights` WHERE `userid` = ?) AS `pr` USING (`projectid`) WHERE `imageid` = ?";
+    var sub = [ override, uid, uid, iid ];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
@@ -1292,7 +1259,7 @@ function checkImagePerm(user, iid, callback) {
                 // Image id doesn't exist
                 callback(null, null);
             } else {
-                callback(null, res[0].open, res[0].priv);
+                callback(null, !!res[0].open, !!res[0].priv);
             }
         });
 
@@ -1912,7 +1879,6 @@ module.exports = {
     init: init,
     zipsForUser:zipsForUser,
     tcAddNewZip:tcAddNewZip,
-    getImageOwner:getImageOwner,
     deleteImage:deleteImage,
     imageExists:imageExists,
     getImageFields:getImageFields,
