@@ -164,35 +164,24 @@ function jsGET(path, callback) {
 }
 
 /**
- * @typedef WorkUnit
- * @type {object}
- * @property {string} a - The id of the first image in the pair to process.
- * @property {string} b - The id of the second image in the pair to process.
- */
-
-/**
  * Creates a job on the job server.
  * @static
- * @param {number} jobid - The id of the job.
- * @param {string} zipid - The id of the zip to use for this job.
- * @param {WorkUnit[]} pairsList - The list of image pairs to compare/process in the job.
+ * @param {Job} job - The job to send to the server.
  * @param {jobServerResponseCallback} callback - The callback that handles the server's response.
  */
-function createJob(jobid, zipid, pairsList, callback) {
-    return jsPOST('/api/JobCreate',
-                  {
-                      'jobid': jobid,
-                      'zipid': zipid,
-                      'work': pairsList
-                  },
-                  function(err, res) {
-                      if (err) {
-                          console.log(err);
-                          return callback(err);
-                      } else {
-                          return callback(null, res);
-                      }
-                  });
+function createJob(job, callback) {
+    return jsPOST(
+        '/api/JobCreate',
+        job,
+        function(err, res) {
+            if (err) {
+                console.log(err);
+                return callback(err);
+            } else {
+                return callback(null, res);
+            }
+        }
+    );
 }
 
 /**
