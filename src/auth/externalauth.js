@@ -39,6 +39,20 @@ var FacebookStrategy = new fbStrat(fbConfig, function(req, accessToken, refreshT
     });
 });
 
+/***
+ ** API ROUTE FUNCTIONS
+ **/
+
+/**
+ * API endpoint to login, associate, or register accounts related to a Facebook account.
+ * @TODO This is barely functional
+ * @hbcsapi {GET} /login/facebook - This is an API endpoint.
+ * @returns {BasicAPIResponse} The API response detailing what the outcome of the Facebook authentication was.
+ */
+function getLoginFacebook(req, res, next) {
+    passport.authenticate('facebook')(req, res, next);
+}
+
 /**
  * Registers Express routes related to Facebook authentication. These include API endpoints, as well as endpoints
  * required for authentication with Facebook.
@@ -46,13 +60,7 @@ var FacebookStrategy = new fbStrat(fbConfig, function(req, accessToken, refreshT
  * @param {Express} app - The Express application object.
  */
 function fbRoutes(app) {
-    /**
-     * API endpoint to login, associate, or register accounts related to a Facebook account.
-     * @TODO This is barely functional
-     * @hbcsapi {GET} login/facebook - This is an API endpoint.
-     * @returns {BasicAPIResponse} The API response detailing what the outcome of the Facebook authentication was.
-     */
-    app.get('/login/facebook', passport.authenticate('facebook'));
+    app.get('/login/facebook', getLoginFacebook);
 
     /**
      * Callback endpoint to complete the authentication process.

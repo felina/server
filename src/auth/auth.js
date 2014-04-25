@@ -123,6 +123,49 @@ function authSetup(passport) {
     passport.use(extauth.fbStrategy);
 }
 
+/***
+ ** API ROUTE FUNCTIONS
+ **/
+
+/**
+ * API endpoint to destory the user's session, logging out the current user.
+ * @hbcsapi {POST} /logout - This is an API endpoint.
+ * @returns {BasicAPIResponse} The API response detailing the outcome of the logout operation.
+ */
+function postLogout(req, res) {
+    if (req.user) {
+        req.logout();
+        req.session.destroy(function (err) {
+            return res.send({
+                'res': true
+            });
+        });
+    } else {
+        return res.send(new errors.APIErrResp(1, 'You were not logged in.'));
+    }
+}
+
+/**
+ * @typedef UserAPIResponse
+ * @type {object}
+ * @property {boolean} res - True iff the user is logged in.
+ * @property {APIError} [err] - The error that occured trying to verify the user's login state.
+ * @property {user.User} [user] - The user object of the current user.
+ */
+
+/**
+ * API endpoint to check that the requester is logged in, and to retrieve their user info.
+ * @hbcsapi {GET} /user - This is an API endpoint.
+ * @returns {UserAPIResponse} The API response providing the currently logged in user's information.
+ */
+function getUser(req, res) {
+    // Response to not logged in users will be provided by the middleware.
+    return res.send({
+        'res': true,
+        'user': req.user
+    });
+}
+
 /**
  * Registers Express routes related to authorization actions. These are API endpoints.
  * @static
@@ -135,42 +178,8 @@ function authRoutes(app) {
     // Import the local auth routes
     loauth.authRoutes(app, enforceLoginCustom);
 
-    /**
-     * API endpoint to logout the current user.
-     * @hbcsapi {POST} logout
-     * @returns {BasicAPIResponse} The API response detailing the outcome of the logout operation.
-     */
-    app.post('/logout', function(req, res) {
-        if (req.user) {
-            req.logout();
-            req.session.destroy(function (err) {
-                res.send({'res':true});
-            });
-        } else {
-            res.send(new errors.APIErrResp(1, 'You were not logged in.'));
-        }
-    });
-
-    /**
-     * @typedef UserAPIResponse
-     * @type {object}
-     * @property {boolean} res - True iff the user is logged in.
-     * @property {APIError} [err] - The error that occured trying to verify the user's login state.
-     * @property {user.User} [user] - The user object of the current user.
-     */
-
-    /**
-     * API endpoint to check that the requester is logged in, and to retrieve their user info.
-     * @hbcsapi {GET} logincheck
-     * @returns {UserAPIResponse} The API response providing the currently logged in user's information.
-     */
-    app.get('/user', enforceLogin, function(req, res) {
-        // Response to not logged in users will be provided by the middleware.
-        res.send({
-            'res': true,
-            'user': req.user
-        });
-    });
+    app.post('/logout', postLogout);
+    app.get('/user', enforceLogin, getUser);
 }
 
 // Export all public members.

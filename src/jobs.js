@@ -72,6 +72,140 @@ function uploadZip(user, zInfo, callback) {
     });
 }
 
+/***
+ ** API ROUTE FUNCTIONS
+ **/
+
+/**
+ * @typedef ResultsAPIResponse
+ * @type {object}
+ * @property {boolean} res - True iff the results were retrieved from the job server.
+ * @property {APIError} [err] - The error that caused the request to fail.
+ * @property {object} The results of the job. The formatting will be job dependent.
+ */
+
+/**
+ * @typedef ProgressAPIResponse
+ * @type {object}
+ * @property {boolean} res - True iff the progress was retrieved from the job server.
+ * @property {APIError} [err] - The error that caused the request to fail.
+ * @property {number} The approximate percentage completion of the job.
+ */
+
+/**
+ * API endpoint to get the current progress or state of a job.
+ * @hbcsapi {GET} /jobs/:jid - This is an API endpoint.
+ * @param {number} :jid - The id of the job to lookup.
+ * @param {boolean} [results=0] - If true, the results of the job will be returned.
+ * @returns {ProgressAPIResponse|ResultsAPIResponse} progress - The percentage completion.
+ */
+function getJobsId(req, res) {
+    var jobID = parseInt(req.params.jid);
+    var results = parseInt(req.query.results);
+
+    if (_.isNaN(jobID)) {
+        return res.send(new errors.APIErrResp(2, 'Invalid job ID.'));
+    } else if (results === 1) {
+        jsapi.getResults(jobID, function(err, results) {
+            if (err) {
+                return res.send(new errors.APIErrResp(3, 'Failed to retrieve job progress.'));
+            } else {
+                return res.send({
+                    'res': true,
+                    'results': results
+                });
+            }
+        });
+    } else {
+        jsapi.getProgress(jobID, function(err, prog) {
+            if (err) {
+                return res.send(new errors.APIErrResp(3, 'Failed to retrieve job progress.'));
+            } else {
+                return res.send({
+                    'res': true,
+                    'progress': prog
+                });
+            }
+        });
+    }
+}
+
+/**
+ * @typedef ExecutableListAPIResponse
+ * @type {object}
+ * @property {boolean} res - True iff the list was retrieved, regardless of any executables being found.
+ * @property {APIError} [err] - The error that caused the request to fail.
+ * @property {object[]} [execs] - The list of executables uploaded, along with any properties set on them.
+ */
+
+/**
+ * API endpoint to retrieve the list of executables uploaded by a user.
+ * @hbcsapi {GET} /execs - This is an API endpoint.
+ * @returns {ExecutableListAPIResponse} The API response providing the list of executables..
+ */
+function getExecs(req, res) {
+    db.zipsForUser(req.user, function(fErr, result) {
+        if (fErr) {
+            return res.send({
+                'res': false,
+                'msg': 'an error occured'
+            });
+        }
+        return res.send({
+            'res': true,
+            'execs': result
+        });
+    });
+}
+
+/**
+ * @typedef ExecUploadAPIResponse
+ * @type {object}
+ * @property {boolean} res - True iff the operation succeeded.
+ * @property {APIError} [err] - The error that caused the request to fail.
+ * @property {string[]} [ids] - A list of all the ids generated for each of the uploaded archives. The list will be ordered according to their order in the request body.
+ */
+
+/**
+ * API endpoint to upload an archive. This endpoint is irregular in that it accepts multipart form-encoded data, instead of JSON.
+ * @hbcsapi {POST} /execs - This is an API endpoint.
+ * @param {form-data} file - The body of the file to upload. In case of multiple file uploads, this can be any unique string.
+ * @param {string} filename - The filename of the zip.
+ * @param {string} name - The name of the executable.
+ * @returns {ExecUploadAPIResponse} The API response providing the ids assigned to the archives, if successful.
+ */
+function postExecs(req, res) {
+    async.map(Object.keys(req.files),
+              function(fKey, done) {
+                  var zInfo = req.files[fKey];
+                  zInfo.name = req.body.name;
+                  zInfo.fileContents = fs.readFileSync(zInfo.path);
+                  console.log(zInfo);
+                  return uploadZip(req.user, zInfo, db, done); // Will call done() for us;
+              },
+              function(err, idArr) {
+                  // If anything errored, abort.
+                  if (err) {
+                      // TODO: be more clear if any images were uploaded or not.
+                      if (err.code === 'ER_NO_REFERENCED_ROW_') {
+                          // We haven't met an FK constraint, this should be down to a bad project id.
+                          return res.send(new errors.APIErrResp(3, 'Invalid project.'));
+                      } else {
+                          console.log(err);
+                          return res.send(new errors.APIErrResp(2, err));
+                      }
+                  } else {
+                      // All images should have uploaded succesfully.
+                      return res.send({
+                          'res': true,
+                          'ids': idArr
+                      });
+                  }
+              }
+             );  
+}
+
+
 /**
  * Registers Express routes related to job handling. These are API endpoints.
  * @static
@@ -92,62 +226,8 @@ function jobRoutes(app) {
         }
     });
 
-    /**
-     * @typedef ResultsAPIResponse
-     * @type {object}
-     * @property {boolean} res - True iff the results were retrieved from the job server.
-     * @property {APIError} [err] - The error that caused the request to fail.
-     * @property {object} The results of the job. The formatting will be job dependent.
-     */
-
-    /**
-     * @typedef ProgressAPIResponse
-     * @type {object}
-     * @property {boolean} res - True iff the progress was retrieved from the job server.
-     * @property {APIError} [err] - The error that caused the request to fail.
-     * @property {number} The approximate percentage completion of the job.
-     */
-
-    /**
-     * API endpoint to get the current progress or state of a job.
-     * @hbcsapi {GET} /jobs/:jid - This is an API endpoint.
-     * @param {number} :jid - The id of the job to lookup.
-     * @param {boolean} [results=0] - If true, the results of the job will be returned.
-     * @returns {ProgressAPIResponse|ResultsAPIResponse} progress - The percentage completion.
-     */
-    app.get('/jobs/:jid', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
-        var jobID = parseInt(req.params.jid);
-        var results = parseInt(req.query.results);
-
-        if (_.isNaN(jobID)) {
-            return res.send(new errors.APIErrResp(2, 'Invalid job ID.'));
-        } else if (results === 1) {
-            jsapi.getResults(jobID, function(err, results) {
-                if (err) {
-                    return res.send(new errors.APIErrResp(3, 'Failed to retrieve job progress.'));
-                } else {
-                    return res.send({
-                        'res': true,
-                        'results': results
-                    });
-                }
-            });
-        } else {
-            jsapi.getProgress(jobID, function(err, prog) {
-                if (err) {
-                    return res.send(new errors.APIErrResp(3, 'Failed to retrieve job progress.'));
-                } else {
-                    return res.send({
-                        'res': true,
-                        'progress': prog
-                    });
-                }
-            });
-        }
-    });
-
     // Get all the jobs started by the researcher with the given id
-    // TODO: actually get ID, read from database, etc.
+    // TODO: Placeholder - actually get ID, read from database, etc.
     app.get('/jobs', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
         res.send({
             'res': true,
@@ -170,79 +250,9 @@ function jobRoutes(app) {
         });
     });
 
-    /**
-     * @typedef ExecutableListAPIResponse
-     * @type {object}
-     * @property {boolean} res - True iff the list was retrieved, regardless of any executables being found.
-     * @property {APIError} [err] - The error that caused the request to fail.
-     * @property {object[]} [execs] - The list of executables uploaded, along with any properties set on them.
-     */
-
-    /**
-     * API endpoint to retrieve the list of executables uploaded by a user.
-     * @hbcsapi {GET} /execs - This is an API endpoint.
-     * @returns {ExecutableListAPIResponse} The API response providing the list of executables..
-     */
-    app.get('/execs', auth.enforceLoginCustom({'minPL':'researcher'}).concat([express.multipart()]), function(req, res) {
-
-        db.zipsForUser(req.user, function(fErr, result) {
-            if (fErr) {
-                return res.send({
-                  'res': false,
-                  'msg': 'an error occured'
-              });
-            }
-            return res.send({
-                  'res': true,
-                  'execs': result
-              });
-        });
-    });
-
-    /**
-     * @typedef ExecUploadAPIResponse
-     * @type {object}
-     * @property {boolean} res - True iff the operation succeeded.
-     * @property {APIError} [err] - The error that caused the request to fail.
-     * @property {string[]} [ids] - A list of all the ids generated for each of the uploaded archives. The list will be ordered according to their order in the request body.
-     */
-
-    /**
-     * API endpoint to upload an archive. This endpoint is irregular in that it accepts multipart form-encoded data, instead of JSON.
-     * @hbcsapi {POST} /execs - This is an API endpoint.
-     * @param {form-data} file - The body of the file to upload. In case of multiple file uploads, this can be any unique string.
-     * @param {string} filename - The filename of the zip.
-     * @param {string} name - The name of the executable.
-     * @returns {ExecUploadAPIResponse} The API response providing the ids assigned to the archives, if successful.
-     */
-    app.post('/execs', auth.enforceLoginCustom({'minPL':'researcher'}).concat([express.multipart()]), function(req, res) {
-        async.map(Object.keys(req.files), function(fKey, done) {
-            var zInfo = req.files[fKey];
-            zInfo.name = req.body.name;
-            zInfo.fileContents = fs.readFileSync(zInfo.path);
-            console.log(zInfo);
-            return uploadZip(req.user, zInfo, db, done); // Will call done() for us;
-        },
-        function(err, idArr) {
-            // If anything errored, abort.
-            if (err) {
-                // TODO: be more clear if any images were uploaded or not.
-                if (err.code === 'ER_NO_REFERENCED_ROW_') {
-                    // We haven't met an FK constraint, this should be down to a bad project id.
-                    return res.send(new errors.APIErrResp(3, 'Invalid project.'));
-                } else {
-                    console.log(err);
-                    return res.send(new errors.APIErrResp(2, err));
-                }
-            } else {
-              // All images should have uploaded succesfully.
-                return res.send({
-                    'res': true,
-                    'ids': idArr
-                });
-            }
-        });  
-    });
+    app.get('/jobs/:jid', auth.enforceLoginCustom({'minPL':'researcher'}), getJobsId);
+    app.get('/execs', auth.enforceLoginCustom({'minPL':'researcher'}).concat([express.multipart()]), getExecs);
+    app.post('/execs', auth.enforceLoginCustom({'minPL':'researcher'}).concat([express.multipart()]), postExecs);
 }
 
 // Export public members.
