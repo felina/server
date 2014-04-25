@@ -360,12 +360,12 @@ function postMeta(req, res) {
 
 /**
  * API endpoint to fetch basic metadata stored for an image.
- * @hbcsapi {GET} meta - This is an API endpoint. 
- * @param {string} id - The image id to lookup.
+ * @hbcsapi {GET} /images/:iid/metas - This is an API endpoint. 
+ * @param {string} :iid - The image id to lookup.
  * @returns {MetadataGetAPIResponse} The API response providing the metadata.
  */
-function getMeta(req, res) {
-    var iid = req.query.id;
+function getImagesIdMetas(req, res) {
+    var iid = req.params.iid;
 
     return db.getMetaBasic(req.user, iid, function(err, meta) {
         if (err) {
@@ -391,12 +391,12 @@ function getMeta(req, res) {
 
 /**
  * API endpoint to fetch annotations stored for an image.
- * @hbcsapi {GET} anno - This is an API endpoint. 
- * @param {string} id - The image id to lookup.
+ * @hbcsapi {GET} /images/:iid/annos - This is an API endpoint. 
+ * @param {string} :iid - The image id to lookup.
  * @returns {AnnotationGetAPIResponse} The API response providing the annotations.
  */
-function getAnno(req, res) {
-    var iid = req.query.id;
+function getImagesIdAnnos(req, res) {
+    var iid = req.params.iid;
 
     db.checkImagePerm(req.user, iid, function(err, bool) {
         if (bool) {
@@ -426,12 +426,12 @@ function getAnno(req, res) {
 
 /**
  * API endpoint to fetch extended project specific metadata stored for an image.
- * @hbcsapi {GET} fields - This is an API endpoint. 
- * @param {string} id - The image id to lookup.
+ * @hbcsapi {GET} /images/:iid/fields - This is an API endpoint. 
+ * @param {string} :iid - The image id to lookup.
  * @returns {FieldGetAPIResponse} The API response providing the project-specific metadata.
  */
-function getFields(req, res) {
-    var iid = req.query.id;
+function getImagesIdFields(req, res) {
+    var iid = req.params.iid;
 
     db.checkImagePerm(req.user, iid, function(err, bool) {
         if (bool) {
@@ -458,9 +458,9 @@ function getFields(req, res) {
  */
 function metaRoutes(app) {
     app.post('/meta', auth.enforceLoginCustom({'minPL':'user'}), postMeta);
-    app.get('/meta', getMeta);
-    app.get('/anno', auth.enforceLogin, getAnno);
-    app.get('/fields', auth.enforceLogin, getFields);
+    app.get('/images/:iid/metas', getImagesIdMetas);
+    app.get('/images/:iid/annos', auth.enforceLogin, getImagesIdAnnos);
+    app.get('/images/:iid/fields', auth.enforceLogin, getImagesIdFields);
 }
 
 // Export all public members.

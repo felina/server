@@ -497,7 +497,7 @@ function postImages(req, res) {
     if (_.isNaN(project)) {
         res.send(400, new errors.APIErrResp(2, 'Invalid project provided.'));
         // Simply delete invalid image.
-        return fs.unlinkSync(info.path);
+        return fs.unlinkSync(iInfo.path);
     }
 
     // If any file has an unwanted type, abort the request.
@@ -505,7 +505,7 @@ function postImages(req, res) {
         // Invalid mime type, reject request.
         res.send(400, new errors.APIErrResp(3, 'Invalid file or type.'));
         // Simply delete invalid image.
-        return fs.unlinkSync(info.path);
+        return fs.unlinkSync(iInfo.path);
     }
 
     // Validate the file first
