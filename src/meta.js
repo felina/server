@@ -325,6 +325,7 @@ function parseQueryCombine(parsed, qRes, onSuccess, callback) {
  * API endpoint to set metadata on images, including adding annotations. Multiple images may be updated
  * in a single request. In case of erroneous inputs, parts of the request will be ignored.
  * @hbcsapi {POST} meta - This is an API endpoint.
+ * @deprecated
  * @param {Object.<string, MetadataWrapper>} * - The body of the request should map image ids to the metadata to assign.
  * @returns {MetadataSetAPIResponse} The API response detailing which, if any, of the images successfully updated.
  */

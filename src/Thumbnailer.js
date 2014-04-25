@@ -89,9 +89,8 @@ Thumbnailer.prototype.VALID_TYPES = [
  * @param {thumbnailCreationCallback} callback - The callback that uses the newly created thumbnail.
  */
 Thumbnailer.prototype.make = function(stem, src, callback) {
-    console.log(arguments);
     var infile = this.in_dir + '/' + src;
-    console.log('wut: ' + infile);
+
     var cmd = gm(infile)
         .resize(this.target_s.w, this.target_s.h, '>') // Only resize images greater than the size.
         .gravity('Center'); // Center the resized output
