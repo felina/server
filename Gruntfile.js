@@ -20,7 +20,7 @@ module.exports = function(grunt) {
     },
     jsdoc: {
       dist: {
-        src: ['src/*.js', 'src/**/*.js', 'README.md'],
+          src: ['src/*.js', 'src/**/*.js', 'README.md', 'tools/apidoc.js'],
         dest: 'doc',
         options: {
           configure: "tools/jsdoc.conf.json"
