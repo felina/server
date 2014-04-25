@@ -478,6 +478,7 @@ function getImagesId(req, res) {
 
 /**
  * API endpoint to upload an image. This endpoint is irregular in that it accepts multipart form-encoded data, instead of JSON.
+ * @todo Need to refactor temp file cleanup so that it happens on all outcomes.
  * @hbcsapi {POST} /images - This is an API endpoint.
  * @param {form-data} image - The body of the file to upload.
  * @param {number} project - The id of the project to associate the image with.
@@ -494,13 +495,17 @@ function postImages(req, res) {
         project = parseInt(req.body.project);
     }
     if (_.isNaN(project)) {
-        return res.send(400, new errors.APIErrResp(2, 'Invalid project provided.'));
+        res.send(400, new errors.APIErrResp(2, 'Invalid project provided.'));
+        // Simply delete invalid image.
+        return fs.unlinkSync(info.path);
     }
 
     // If any file has an unwanted type, abort the request.
     if (VALID_MIME_TYPES.indexOf(iInfo.type) < 0) {
         // Invalid mime type, reject request.
-        return res.send(400, new errors.APIErrResp(3, 'Invalid file or type.'));
+        res.send(400, new errors.APIErrResp(3, 'Invalid file or type.'));
+        // Simply delete invalid image.
+        return fs.unlinkSync(info.path);
     }
 
     // Validate the file first
