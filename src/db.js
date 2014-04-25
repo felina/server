@@ -174,7 +174,7 @@ function getSubusers(id, callback) {
             return callback(connErr);
         }
 
-        var query = "SELECT `name`, `email`, `assigned_project` AS 'projectid', `token_expiry` IS NULL AS 'invalidated' FROM `users` WHERE `supervisor` = ?";
+        var query = "SELECT `name`, `email`, `assigned_project` AS 'projectid', `token_expiry` IS NOT NULL AS 'valid' FROM `users` WHERE `supervisor` = ?";
         var sub = [ id ];
 
         query = mysql.format(query, sub);

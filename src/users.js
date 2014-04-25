@@ -189,6 +189,10 @@ function getSubusers(req, res){
                 console.log(err);
                 return res.send(new errors.APIErrResp(2, 'Database error.'));
             } else {
+                // Convert to boolean.
+                _.each(info, function(su) {
+                    su.valid = su.valid === 1;
+                });
                 return res.send({
                     'res': true,
                     'subusers': info
