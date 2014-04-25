@@ -38,6 +38,7 @@
     "grunt-mocha-test": "~0.9.3",
     "grunt-contrib-jshint": "~0.8.0",
     "jsdoc": "~3.3.0-alpha5",
-    "grunt-jsdoc": "~0.5.4"
+    "grunt-jsdoc": "~0.5.4",
+    "should": "~3.3.1"
   }
 }

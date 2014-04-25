@@ -55,7 +55,7 @@ module.exports = function(grunt) {
           reporter: 'spec',
           timeout: 2
         },
-        src: ['test/*']
+        src: ['test/*.js']
       }
     },
     jshint: {

@@ -22,6 +22,10 @@ function User(id, name, email, privilege, gravatar, supervisor, projectid) {
         this.id = false;
         return;
     }
+    if (typeof name !== 'string' || name.length < 1) {
+        this.id = false;
+        return;
+    }
     if (typeof privilege !== 'number') {
         this.id = false;
         return;
