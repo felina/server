@@ -176,33 +176,34 @@ function getExecs(req, res) {
  */
 function postExecs(req, res) {
     async.map(Object.keys(req.files),
-              function(fKey, done) {
-                  var zInfo = req.files[fKey];
-                  zInfo.name = req.body.name;
-                  zInfo.fileContents = fs.readFileSync(zInfo.path);
-                  console.log(zInfo);
-                  return uploadZip(req.user, zInfo, db, done); // Will call done() for us;
-              },
-              function(err, idArr) {
-                  // If anything errored, abort.
-                  if (err) {
-                      // TODO: be more clear if any images were uploaded or not.
-                      if (err.code === 'ER_NO_REFERENCED_ROW_') {
-                          // We haven't met an FK constraint, this should be down to a bad project id.
-                          return res.send(new errors.APIErrResp(3, 'Invalid project.'));
-                      } else {
-                          console.log(err);
-                          return res.send(new errors.APIErrResp(2, err));
-                      }
-                  } else {
-                      // All images should have uploaded succesfully.
-                      return res.send({
-                          'res': true,
-                          'ids': idArr
-                      });
-                  }
-              }
-             );  
+        function(fKey, done) {
+            var zInfo = req.files[fKey];
+            zInfo.name = req.body.name;
+            zInfo.fileContents = fs.readFileSync(zInfo.path);
+            console.log(zInfo);
+            // return uploadZip(req.user, zInfo, db, done); // Will call done() for us;
+            return uploadZip(req.user, zInfo, done); // Will call done() for us;
+        },
+        function(err, idArr) {
+              // If anything errored, abort.
+            if (err) {
+              // TODO: be more clear if any images were uploaded or not.
+                if (err.code === 'ER_NO_REFERENCED_ROW_') {
+                  // We haven't met an FK constraint, this should be down to a bad project id.
+                  return res.send(new errors.APIErrResp(3, 'Invalid project.'));
+                } else {
+                  console.log(err);
+                  return res.send(new errors.APIErrResp(2, err));
+                }
+            } else {
+                // All images should have uploaded succesfully.
+                return res.send({
+                  'res': true,
+                  'ids': idArr
+                });
+            }
+        }
+    );  
 }
 
 
@@ -219,7 +220,34 @@ function jobRoutes(app) {
         var images = req.body.images;
 
         if (images && executable && images.length > 0 && executable.length > 0) {
-            return res.send({'res': true, 'code': 0, 'images': images, 'executable': executable});
+            imageArray = [];
+            for (var i = 0; i < images.length; i = i + 2) {
+                imagesArray.push({
+                    'Image1': {
+                        'Key': images[i],
+                        'Bucket': EXECUTABLE_BUCKET
+                    },
+                    'Image2': {
+                        'Key': images[i+1],
+                        'Bucket': EXECUTABLE_BUCKET
+                    }
+                });
+            }
+            windowsPostData = {
+                'JobId': 1,
+                'ZipId': executable,
+                'Privilage': true,
+                'Work': imagesArray
+            };
+            jsapi.jsPOST('/createjob', windowsPostData, function(something) {
+                console.log(something);
+            });
+
+            return res.send({
+                'res': true, 
+                'code': 0, 
+                'dataPosted': windowsPostData
+            });
         } else {
             return res.send({'res':false, 'code': 2, // Do proper code checks
                 'msg': 'Need to specify images and executable for a job'});
