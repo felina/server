@@ -47,6 +47,40 @@ function init(callback) {
     });
 }
 
+function addJob(projectId, executableId, name, command, userId, callback) {
+    var query = "INSERT INTO `jobs` (projectid, name, exeid, ownerid, command) VALUE (?,?,?,?,?)";
+    var sub = [projectId, name, executableId, userId, command];
+    query = mysql.format(query, sub);
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback('Database error');
+        }
+        // Start a transaction
+        return conn.beginTransaction(function(tcErr) {
+            if (tcErr) {
+                console.log(tcErr);
+                conn.release();
+                return callback(tcErr);
+            } else {
+                conn.query(query, function(err, res) {
+                    if (err) {
+                        console.log(err.code);
+                        // There was an error, so we should rollback.
+                        conn.rollback(function() {
+                            callback(err);
+                            return conn.release();
+                        });
+                    } else {
+                        console.log('Inserted job into db.');
+                        return callback(null, res.insertId)
+                    }
+                });
+            }
+        });
+    });
+}
+
+
 /**
  * Zip listing callback.
  * @callback zipListCallback
@@ -1877,6 +1911,7 @@ function getUserHash(email, callback) {
 // Export all public members.
 module.exports = {
     init: init,
+    addJob:addJob,
     zipsForUser:zipsForUser,
     tcAddNewZip:tcAddNewZip,
     deleteImage:deleteImage,
