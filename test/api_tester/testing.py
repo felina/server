@@ -18,7 +18,7 @@ port = 5000
 path = 'http://localhost:' + str(port)
 
 login_path = '/login'
-register_path = '/register'
+register_path = '/user'  # '/register'
 login_check_path = '/logincheck'
 logout_path = '/logout'
 login_path = '/login'
@@ -28,7 +28,7 @@ new_project_path = '/project/new'
 meta_upload_path = '/upload/metadata'
 image_listing_path = '/images'
 
-test_config = json.loads(open('test/testConfig.json').read())
+test_config = json.loads(open('test/api_tester/testConfig.json').read())
 register_details = test_config['register_details']
 project_details = test_config['project_details']
 test_image1 = test_config['images']['test_image1']
@@ -78,9 +78,11 @@ def exit_handler():
 
 
 def swap_configs():
-    os.system('mv config/db_settings.json test/db_settings.json')
-    os.system('mv test/db_settingsTest.json config/db_settings.json')
-    os.system('mv test/db_settings.json test/db_settingsTest.json')
+    os.system('mv config/db_settings.json test/api_tester/db_settings.json')
+    os.system(
+        'mv test/api_tester/db_settingsTest.json config/db_settings.json')
+    os.system(
+        'mv test/api_tester/db_settings.json test/api_tester/db_settingsTest.json')
 
 
 def exec_sql_file(cursor, sql_file):

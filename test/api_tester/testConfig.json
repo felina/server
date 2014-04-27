@@ -2,7 +2,8 @@
     "register_details" : {
         "email": "test@gmail.com",
         "name": "testtest",
-        "pass": "secrettest"
+        "pass": "secrettest",
+        "gravatar": "this is dumb"
     },
 
     "images" : {
@@ -11,7 +12,26 @@
     },
 
     "project_details" : {
-	"name": "testproject",
-	"desc": "a super awesome test project"
+    	"name": "testproject",
+    	"desc": "a super awesome test project"
+    },
+
+    "windows_job_create" : {
+        "JobId": 12,  
+        "ZipId":4,  
+        "Privilege": true, 
+        "Work": [
+            {
+                 "Image1": {
+                     "Key": "b90f6c7e57f955032456d1e9016cd4a2", 
+                     "Bucket": "citizen.science.image.storage"
+                },
+
+                "Image2": {
+                     "Key": "0e56ddab03713f143a0a32154df1deac", 
+                     "Bucket": "citizen.science.image.storage"
+                }
+            }
+        ] 
     }
 }
