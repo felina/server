@@ -26,6 +26,9 @@ var s3 = new aws.S3();
  */
 var EXECUTABLE_BUCKET = 'citizen.science.executable.storage';
 
+var IMAGE_BUCKET = 'citizen.science.image.storage';
+
+
 /**
  * @typedef ZipUpload
  * @type {object}
@@ -206,6 +209,64 @@ function postExecs(req, res) {
     );  
 }
 
+function postStartJob(req, res) {
+    // Get the image IDs for processing
+    var executable = req.body.executable;
+    var images = req.body.images;
+    var command = req.body.command;
+    var projectId = req.body.projectId;
+    var jobName = req.body.name;
+    if (images && executable && command && projectId && jobName && images.length > 0 && 
+        _.isNumber(executable) && command.length > 0 && _.isNumber(projectId) && jobName.length > 0) {
+        imageArray = [];
+        for (var i = 0; i < images.length; i = i + 2) {
+            imageArray.push({
+                'Image1': {
+                    'Key': images[i],
+                    'Bucket': IMAGE_BUCKET
+                },
+                'Image2': {
+                    'Key': images[i+1],
+                    'Bucket': IMAGE_BUCKET
+                }
+            });
+        }
+        console.log(imageArray);
+        db.addJob(projectId, executable, jobName, command, req.user.id, function(fErr, jobId) {
+            if (fErr) {
+                console.log(fErr);
+                return res.send(new errors.APIErrResp(1, fErr));
+            }
+            console.log(jobId);
+            windowsPostData = {
+                'JobId': jobId,
+                'ZipId': executable,
+                'Privilege': true,
+                'Command': command,
+                'Work': imageArray 
+            };
+
+            console.log(windowsPostData);
+            for (var i = 0; i < windowsPostData['Work'].length; i++) {
+                console.log(windowsPostData['Work'][i]);
+            }
+            jsapi.createJob(windowsPostData, function(err, windowsResult) {
+                if (err) {
+                    console.log(err);
+                    return res.send(new errors.APIErrResp(2, err));
+                }
+                return res.send({
+                    'res': true, 
+                    'code': 0, 
+                    'message': windowsResult
+                });
+            });
+        });
+    } else {
+        return res.send({'res':false, 'code': 2, // Do proper code checks
+            'msg': 'Need to specify images and executable for a job'});
+    }
+}
 
 /**
  * Registers Express routes related to job handling. These are API endpoints.
@@ -213,46 +274,8 @@ function postExecs(req, res) {
  * @param {Express} app - The Express application object.
  */
 function jobRoutes(app) {
-    // TODO: This method needs to be re-written. (placeholder)
-    app.post('/start', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
-        // Get the image IDs for processing
-        var executable = req.body.executable;
-        var images = req.body.images;
 
-        if (images && executable && images.length > 0 && executable.length > 0) {
-            imageArray = [];
-            for (var i = 0; i < images.length; i = i + 2) {
-                imagesArray.push({
-                    'Image1': {
-                        'Key': images[i],
-                        'Bucket': EXECUTABLE_BUCKET
-                    },
-                    'Image2': {
-                        'Key': images[i+1],
-                        'Bucket': EXECUTABLE_BUCKET
-                    }
-                });
-            }
-            windowsPostData = {
-                'JobId': 1,
-                'ZipId': executable,
-                'Privilage': true,
-                'Work': imagesArray
-            };
-            jsapi.jsPOST('/createjob', windowsPostData, function(something) {
-                console.log(something);
-            });
-
-            return res.send({
-                'res': true, 
-                'code': 0, 
-                'dataPosted': windowsPostData
-            });
-        } else {
-            return res.send({'res':false, 'code': 2, // Do proper code checks
-                'msg': 'Need to specify images and executable for a job'});
-        }
-    });
+    app.post('/start', auth.enforceLoginCustom({'minPL':'researcher'}), postStartJob);
 
     // Get all the jobs started by the researcher with the given id
     // TODO: Placeholder - actually get ID, read from database, etc.
