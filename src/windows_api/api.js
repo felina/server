@@ -171,7 +171,7 @@ function jsGET(path, callback) {
  */
 function createJob(job, callback) {
     return jsPOST(
-        '/api/JobCreate',
+        '/api/createjob',
         job,
         function(err, res) {
             if (err) {
