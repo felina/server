@@ -72,7 +72,7 @@ function addJob(projectId, executableId, name, command, userId, callback) {
                         });
                     } else {
                         console.log('Inserted job into db.');
-                        return callback(null, res.insertId)
+                        return callback(null, res.insertId);
                     }
                 });
             }

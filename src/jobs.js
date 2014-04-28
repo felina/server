@@ -218,7 +218,7 @@ function postStartJob(req, res) {
     var jobName = req.body.name;
     if (images && executable && command && projectId && jobName && images.length > 0 && 
         _.isNumber(executable) && command.length > 0 && _.isNumber(projectId) && jobName.length > 0) {
-        imageArray = [];
+        var imageArray = [];
         for (var i = 0; i < images.length; i = i + 2) {
             imageArray.push({
                 'Image1': {
@@ -238,7 +238,7 @@ function postStartJob(req, res) {
                 return res.send(new errors.APIErrResp(1, fErr));
             }
             console.log(jobId);
-            windowsPostData = {
+            var windowsPostData = {
                 'JobId': jobId,
                 'ZipId': executable,
                 'Privilege': true,
