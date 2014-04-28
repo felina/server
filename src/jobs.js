@@ -104,11 +104,12 @@ function uploadZip(user, zInfo, callback) {
  */
 function getJobsId(req, res) {
     var jobID = parseInt(req.params.jid);
-    var results = parseInt(req.query.results);
-
+    var resultsQ = parseInt(req.query.results);
+    console.log(jobID, resultsQ);
+    console.log(req.query);
     if (_.isNaN(jobID)) {
         return res.send(new errors.APIErrResp(2, 'Invalid job ID.'));
-    } else if (results === 1) {
+    } else if (resultsQ === 1) {
         jsapi.getResults(jobID, function(err, results) {
             if (err) {
                 return res.send(new errors.APIErrResp(3, 'Failed to retrieve job progress.'));
@@ -209,6 +210,17 @@ function postExecs(req, res) {
     );  
 }
 
+
+/**
+ * API endpoint to start a job
+ * @hbcsapi {POST} /start - This is an API endpoint.
+ * @param {number} executable - The server identifier of the executable to be run
+ * @param {string} name - The name of the job.
+ * @param {string} command - The name of the executable so that it can be run
+ * @param {number} projectId - The id of the project
+ * @param {string[]} images - Array of image identifiers
+ * @returns {ExecUploadAPIResponse} The API response providing the ids assigned to the archives, if successful.
+ */
 function postStartJob(req, res) {
     // Get the image IDs for processing
     var executable = req.body.executable;
@@ -243,7 +255,7 @@ function postStartJob(req, res) {
                 'ZipId': executable,
                 'Privilege': true,
                 'Command': command,
-                'Work': imageArray 
+                'Work': imageArray
             };
 
             console.log(windowsPostData);
