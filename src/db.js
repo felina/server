@@ -1519,6 +1519,34 @@ function getUserImages(user, uploader, callback) {
 }
 
 /**
+ * Gets the images based on some filters.
+ * @param {number} [pid] - The project to get images from.
+ * @param {imagesCallback} callback - The callback that handles the image list.
+ */
+function getImages(pid, callback) {
+    var query = "SELECT `imageid`, `datetime`, AsText(`location`) AS 'loc', `private` FROM `images` WHERE `projectid`=?";
+    var sub = [pid];
+    query = mysql.format(query, sub);
+
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback('Database error', false);
+        }
+
+        conn.query(query, function(err, res) {
+            if (err) {
+                console.log(err.code);
+                callback(err, null);
+            } else {
+                callback(null, res);
+            }
+        });
+
+        conn.release();
+    });
+}
+
+/**
  * Tries to add a new image for a given user.
  * @param {user.User} user - The user who should be given ownership of the zip.
  * @param {number} project - The id of the project the image should be attached to.
@@ -1941,5 +1969,6 @@ module.exports = {
     tokenExpiry: tokenExpiry,
     updateUserHash: updateUserHash,
     updateSubuser: updateSubuser,
-    getSubusers: getSubusers
+    getSubusers: getSubusers,
+    getImages: getImages
 };

@@ -390,6 +390,25 @@ function getImages(req, res) {
 }
 
 /**
+ * API endpoint to get a list of images belonging to a project.
+ * @hbcsapi {GET} /projects/:pid/images - This is an API endpoint.
+ * @param {number} :pid - The id of the project.
+ * @returns {ImageListAPIResponse} The API response supplying the list.
+ */
+function getProjectsIdImages(req, res) {
+    db.getImages(req.params.pid, function(err, result) {
+        if (err) {
+            res.send(new errors.APIErrResp(2, 'Could not load image list.'));
+        } else {
+            res.send({
+                'res': true,
+                'images': result
+            });
+        }
+    });
+}
+
+/**
  * API endpoint to delete an image.
  * @hbcsapi {DELETE} /images/:iid - This is an API endpoint.
  * @param {string} :iid - The image id to delete.
@@ -627,6 +646,7 @@ function imageRoutes(app) {
     app.get('/images/:iid', getImagesId);
     app.post('/images', [auth.enforceLogin, express.multipart()], postImages);
     app.get('/export', auth.enforceLoginCustom({'minPL':'researcher'}), getExport);
+    app.get('/projects/:pid/images', auth.enforceLoginCustom({'minPL':'researcher'}), getProjectsIdImages);
 }
 
 // Export public members.
