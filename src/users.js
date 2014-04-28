@@ -58,11 +58,12 @@ function patchUsersId(req, res) {
                 }
             });
         } else if (!req.user.isSubuser()) {
-            var level = parseInt(req.body.uid);
+            var level = parseInt(req.params.uid);
             console.log("level: " + level);
             if (level === -1) {
                 level = req.user.privilage;
             }
+            console.log("level: " + level);
             if (!_.isNaN(level) && (level === 1 || level === 2)) {
                 var privilege = User.prototype.typeFromInt(level);
                 console.log('priv: ' + privilege);
