@@ -191,7 +191,7 @@ function createJob(job, callback) {
  * @param {jobServerResponseCallback} callback - The callback that handles the server's response.
  */
 function getProgress(jobid, callback) {
-    return jsGET('/api/JobProgress?jobid=' + encodeURIComponent(jobid), function(err, res) {
+    return jsGET('/api/jobprogress/' + encodeURIComponent(jobid), function(err, res) {
         if (err) {
             console.log(err);
             return callback(err);
@@ -208,7 +208,7 @@ function getProgress(jobid, callback) {
  * @param {jobServerResponseCallback} callback - The callback that handles the results of the job.
  */
 function getResults(jobid, callback) {
-    return jsGET('/api/JobResults?jobid=' + encodeURIComponent(jobid), function(err, res) {
+    return jsGET('/api/JobResults/' + encodeURIComponent(jobid), function(err, res) {
         if (err) {
             console.log(err);
             return callback(err);

@@ -57,7 +57,7 @@ function patchUsersId(req, res) {
                     return res.send(new errors.APIErrResp(4, 'Nothing to update'));
                 }
             });
-        } else if (req.user.isResearcher()) {
+        } else if (!req.user.isSubuser()) {
             var level = parseInt(req.body.uid);
             console.log("level: " + level);
             if (level === -1) {
