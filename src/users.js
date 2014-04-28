@@ -58,7 +58,7 @@ function patchUsersId(req, res) {
                 }
             });
         } else if (req.user.isResearcher()) {
-            var level = parseInt(req.body.privilege);
+            var level = req.user.privilege;
             console.log("level: " + level);
             if (!_.isNaN(level) && (level === 1 || level === 2)) {
                 var privilege = User.prototype.privilegeFromInt(level);
