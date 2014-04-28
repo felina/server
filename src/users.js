@@ -61,7 +61,7 @@ function patchUsersId(req, res) {
             var level = req.user.privilege;
             console.log("level: " + level);
             if (!_.isNaN(level) && (level === 1 || level === 2)) {
-                var privilege = User.prototype.privilegeFromInt(level);
+                var privilege = User.prototype.typeFromInt(level);
                 console.log('priv: ' + privilege);
                 return db.updateUser(null, email, privilege, null, null, null, function(err, info){
                     if(err) {
