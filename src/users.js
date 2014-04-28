@@ -58,10 +58,14 @@ function patchUsersId(req, res) {
                 }
             });
         } else if (req.user.isResearcher()) {
-            var level = req.user.privilege;
+            var level = parseInt(req.body.privilege);
             console.log("level: " + level);
             if (!_.isNaN(level) && (level === 1 || level === 2)) {
+                if (level === -1) {
+                    level = req.user.privilage;
+                }
                 var privilege = User.prototype.typeFromInt(level);
+
                 console.log('priv: ' + privilege);
                 return db.updateUser(null, email, privilege, null, null, null, function(err, info){
                     if(err) {
