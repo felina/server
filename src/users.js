@@ -38,7 +38,7 @@ function Researcher(name, email, groups) {
  */
 function patchUsersId(req, res) {
     if (req.params.uid) {
-        var email = req.params.uid;
+        var email = req.params.email;
         if (email === req.user.email) {
             var name = req.body.name;
             var gravatar = req.body.gravatar;
@@ -58,14 +58,13 @@ function patchUsersId(req, res) {
                 }
             });
         } else if (req.user.isResearcher()) {
-            var level = parseInt(req.body.privilege);
+            var level = parseInt(req.body.uid);
             console.log("level: " + level);
+            if (level === -1) {
+                level = req.user.privilage;
+            }
             if (!_.isNaN(level) && (level === 1 || level === 2)) {
-                if (level === -1) {
-                    level = req.user.privilage;
-                }
                 var privilege = User.prototype.typeFromInt(level);
-
                 console.log('priv: ' + privilege);
                 return db.updateUser(null, email, privilege, null, null, null, function(err, info){
                     if(err) {
