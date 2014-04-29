@@ -328,9 +328,31 @@ function getJobs(req, res) {
             console.log(err);
             return result.send(new errors.APIErrorResp(1, err));
         }
-        return res.send({
-            'res': true,
-            jobs: result
+        // console.log(result);
+        return async.map(result, function(obj, callback) {
+            return jsapi.getProgress(obj.jobid, function(uploadErr, prog) {
+                if (err) {
+                    console.log(uploadErr);
+                    return callback(err);
+                }
+                // console.log(prog);
+                for (key in prog) {
+                    var val = prog[key];
+                    prog[key.toLowerCase()] = val;
+                    delete prog[key];
+                }
+                prog['name'] = obj.name;
+                return callback(null, prog);
+            });
+        }, function(errDone, done) {
+            if (errDone) {
+                console.log(errDone);
+                return res.send(new errors.APIErrorResp(1, errDone));
+            }
+            return res.send({
+                'res': true,
+                jobs: done
+            }); 
         });
     });
 }

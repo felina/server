@@ -294,6 +294,7 @@ CREATE TABLE IF NOT EXISTS `felina`.`jobs` (
   `exeid` INT NOT NULL,
   `ownerid` INT NULL,
   `command` VARCHAR(255) NOT NULL,
+  `done` BOOLEAN NOT NULL DEFAULT TRUE,
   PRIMARY KEY (`jobid`),
   -- INDEX `project_jobs_rel_idx` (`projectid` ASC),
   INDEX `users_jobs_rel_idx` (`ownerid` ASC),
