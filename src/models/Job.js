@@ -49,3 +49,6 @@ function Job(id, zip, cmd, work) {
     this.cmd = cmd;
     this.work = work;
 }
+
+// Export the constructor as the module.
+module.exports = Job;
