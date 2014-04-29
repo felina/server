@@ -222,7 +222,6 @@ function postExecs(req, res) {
  * @param {number} executable - The server identifier of the executable to be run
  * @param {string} name - The name of the job.
  * @param {string} command - The name of the executable so that it can be run
- * @param {number} projectId - The id of the project
  * @param {string[]} images - Array of image identifiers
  * @returns {ExecUploadAPIResponse} The API response providing the ids assigned to the archives, if successful.
  */
@@ -231,10 +230,19 @@ function postStartJob(req, res) {
     var executable = req.body.executable;
     var images = req.body.images;
     var command = req.body.command;
-    var projectId = req.body.projectId;
     var jobName = req.body.name;
-    if (images && executable && command && projectId && jobName && images.length > 0 && 
-        _.isNumber(executable) && command.length > 0 && _.isNumber(projectId) && jobName.length > 0) {
+
+    if (images) {
+
+    } else if (executable && _.isNumber(executable)) {
+        return res.send(new errors.APIErrResp(1, 'Invalid executable.'));
+    } else if (command && command.length > 0) {
+        return res.send(new errors.APIErrResp(2, 'Invalid command.'));
+    } else if (jobName && jobName.length > 0) {
+        return res.send(new errors.APIErrResp(3, 'Invalid job name.'));
+    } else if (images && images.length > 0 && images.length % 2 !== 0) {
+        return res.send(new errors.APIErrResp(3, 'Invalid images.'));
+    } else {
         var imageArray = [];
         for (var i = 0; i < images.length; i = i + 2) {
             imageArray.push({
@@ -249,7 +257,7 @@ function postStartJob(req, res) {
             });
         }
         console.log(imageArray);
-        db.addJob(projectId, executable, jobName, command, req.user.id, function(fErr, jobId, accept) {
+        db.addJob(executable, jobName, command, req.user.id, function(fErr, jobId, accept) {
             if (fErr) {
                 console.log(fErr);
                 return res.send(new errors.APIErrResp(1, fErr));
@@ -281,10 +289,10 @@ function postStartJob(req, res) {
                 });
             });
         });
-    } else {
+    } /*else {
         return res.send({'res':false, 'code': 2, // Do proper code checks
             'msg': 'Need to specify images and executable for a job'});
-    }
+    }*/
 }
 
 /**
