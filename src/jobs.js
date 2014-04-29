@@ -341,6 +341,7 @@ function getJobs(req, res) {
                     prog[key.toLowerCase()] = val;
                     delete prog[key];
                 }
+                prog['name'] = obj.name;
                 return callback(null, prog);
             });
         }, function(errDone, done) {
