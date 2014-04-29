@@ -28,25 +28,25 @@ function parseFields(pid, fieldList, annoList) {
     var errList = '';
 
     // Check every field definition, breaking out of the loop if an error is found.
-    fieldList.every(function(f, i) {
-        if (_.isObject(f)) {
-            // Use the Field constructor to check parameters.
-            var field = new Field(-1, pid, f.name, f.type, f.required);
+    // fieldList.every(function(f, i) {
+    //     if (_.isObject(f)) {
+    //         // Use the Field constructor to check parameters.
+    //         var field = new Field(-1, pid, f.name, f.type, f.required);
 
-            if (field.id === false) {
-                console.log('Bad field definition.');
-                errIdx = i;
-                errList = 'fields';
-                return false;
-            } else {
-                return true;
-            }
-        } else {
-            errIdx = i;
-            errList = 'fields';
-            return false;
-        }
-    });
+    //         if (field.id === false) {
+    //             console.log('Bad field definition.');
+    //             errIdx = i;
+    //             errList = 'fields';
+    //             return false;
+    //         } else {
+    //             return true;
+    //         }
+    //     } else {
+    //         errIdx = i;
+    //         errList = 'fields';
+    //         return false;
+    //     }
+    // });
 
     // Skip checking annotations if fields are invalid.
     if (errIdx === -1) {
@@ -250,7 +250,7 @@ function postProjectsIdFields(req, res) {
     }
     var fieldList = req.body.fields;
     var annoList = req.body.anno;
-    if (!_.isArray(fieldList) || !_.isArray(annoList) || (fieldList.length < 1 && annoList.length < 1)) {
+    if (false) {//!_.isArray(fieldList) || !_.isArray(annoList) || (fieldList.length < 1 && annoList.length < 1)) {
         return res.send(new errors.APIErrResp(3, 'Invalid field or annotation list.'));
     } else {
         var parseError = parseFields(fieldList, annoList);
