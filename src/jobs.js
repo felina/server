@@ -125,7 +125,7 @@ function getJobsId(req, res) {
             if (err) {
                 return res.send(new errors.APIErrResp(3, 'Failed to retrieve job progress.'));
             } else {
-                result = JSON.parse(prog);
+                var result = JSON.parse(prog);
                 if (!result.res) {
                     res.send(new errors.APIErrResp(4, 'Error retrieving job progress'));
                 }
@@ -270,7 +270,7 @@ function postStartJob(req, res) {
             jsapi.createJob(windowsPostData, function(err, windowsResult) {
                 if (err) {
                     console.log(err);
-                    accept(false)
+                    accept(false);
                     return res.send(new errors.APIErrResp(2, err));
                 }
                 accept(true);

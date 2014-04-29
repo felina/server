@@ -49,6 +49,7 @@ function parseFields(pid, fieldList, annoList) {
     // });
 
     // Skip checking annotations if fields are invalid.
+    console.log(pid, fieldList, annoList);
     if (errIdx === -1) {
         annoList.every(function(f, i) {
             if (_.isObject(f)) {
@@ -267,7 +268,12 @@ function postProjectsIdFields(req, res) {
             console.log(access);
             if (access) {
                 // User may modify the project.
-                return db.setFields(id, fieldList.concat(annoList), function(err) {
+                var stuffToInsert = [];
+                if (fieldList) {
+                    stuffToInsert = fieldList;
+                }
+                stuffToInsert = fieldList.concat(annoList);
+                return db.setFields(id, stuffToInsert, function(err) {
                     if (err) {
                         console.log(err);
                         if (err.code === 'ER_DUP_ENTRY') {
