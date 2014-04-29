@@ -51,6 +51,7 @@ function addJob(projectId, executableId, name, command, userId, callback) {
     var query = "INSERT INTO `jobs` (projectid, name, exeid, ownerid, command) VALUE (?,?,?,?,?)";
     var sub = [projectId, name, executableId, userId, command];
     query = mysql.format(query, sub);
+    console.log(query);
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             return callback('Database error');
@@ -72,7 +73,28 @@ function addJob(projectId, executableId, name, command, userId, callback) {
                         });
                     } else {
                         console.log('Inserted job into db.');
-                        return callback(null, res.insertId);
+                        console.log(res);
+                        return callback(null, res.insertId, function(accept) {
+                            // The accept callback, the calling code will decide whether to commit.
+                            if (accept) {
+                                conn.commit(function(cmErr) {
+                                    // If we fail at this point, we will just fail silently. The user will
+                                    // be able to retry the upload without issue.
+                                    if (cmErr) {
+                                        conn.rollback(function () {
+                                            console.log(cmErr);
+                                            return conn.release();
+                                        });
+                                    } else {
+                                        return conn.release();
+                                    }
+                                });
+                            } else {
+                                // Rollback the insert, as requested.
+                                conn.rollback(function() {});
+                                return conn.release();
+                            }
+                        });
                     }
                 });
             }
