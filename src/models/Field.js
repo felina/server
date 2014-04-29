@@ -26,7 +26,7 @@ function Field(id, project, name, type, required) {
         console.log('Field has invalid name.');
         return;
     }
-    if (this.types.indexOf(type) < 0) {
+    if (Field.prototype.TYPES.indexOf(type) < 0 && Field.prototype.ANNO_TYPES.indexOf(type) < 0) {
         this.id = false;
         console.log('Field has invalid type.');
         return;
