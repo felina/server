@@ -226,15 +226,14 @@ function postExecs(req, res) {
  * @returns {ExecUploadAPIResponse} The API response providing the ids assigned to the archives, if successful.
  */
 function postStartJob(req, res) {
+    console.log(req.body);
     // Get the image IDs for processing
     var executable = req.body.executable;
     var images = req.body.images;
     var command = req.body.command;
     var jobName = req.body.name;
 
-    if (images) {
-
-    } else if (executable && _.isNumber(executable)) {
+    if (executable && _.isNumber(executable)) {
         return res.send(new errors.APIErrResp(1, 'Invalid executable.'));
     } else if (command && command.length > 0) {
         return res.send(new errors.APIErrResp(2, 'Invalid command.'));
