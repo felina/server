@@ -27,6 +27,7 @@ var connPool = mysql.createPool(dbCFG);
 
 /**
  * Runs a test to check database credentials and state.
+ * @static
  * @param {errorCallback} callback - The callback that handles the test outcome.
  */
 function init(callback) {
@@ -47,6 +48,19 @@ function init(callback) {
     });
 }
 
+/**
+ * Job list handling callback.
+ * @callback jobListCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {Job[]} jobs - The list of all jobs.
+ */
+
+/**
+ * Gets a list of all jobs belonging to the given user.
+ * @static
+ * @param {User} user - The owner of the jobs.
+ * @param {jobListCallback} callback - The callback that handles the list of jobs.
+ */
 function getJobs(user, callback) {
     var query = "SELECT * FROM `jobs` WHERE ownerid = (?)";
     query = mysql.format(query, [user.id]);
@@ -63,6 +77,23 @@ function getJobs(user, callback) {
     });
 }
 
+/**
+ * Transaction handling job creation callback.
+ * @callback optionalJobAddCallback
+ * @param {Error} err - The error the occurred, if present.
+ * @param {number} id - The id assigned to the zip.
+ * @param {tcControlCallback} accept - The callback that optionally rolls back the insert, if deemed necessary.
+ */
+
+/**
+ * Adds a job to the database, optionally allowing the caller to accept or rollback the insert at a later point.
+ * @static
+ * @param {number} executableId - The id of the associated executable.
+ * @param {string} name - The name of the job.
+ * @param {string} command - The name of the executable.
+ * @param {number} userId - The id of the user who owns the job.
+ * @param {optionalJobAddCallback} callback - The callback that handles the insert and decides whether the operation should be accepted or not.
+ */
 function addJob(executableId, name, command, userId, callback) {
     var query = "INSERT INTO `jobs` (name, exeid, ownerid, command) VALUE (?,?,?,?)";
     var sub = [name, executableId, userId, command];
@@ -118,7 +149,6 @@ function addJob(executableId, name, command, userId, callback) {
     });
 }
 
-
 /**
  * Zip listing callback.
  * @callback zipListCallback
@@ -128,6 +158,7 @@ function addJob(executableId, name, command, userId, callback) {
 
 /**
  * Retrieves a list of executable zips uploaded by a user.
+ * @static
  * @param {user.User} user - The user to fetch zips from.
  * @param {zipListCallback} callback - The callback that handles the result of trying to fetch the list of zips.
  */
@@ -137,7 +168,7 @@ function zipsForUser(user, callback) {
             return callback(connErr);
         }
         var query = "SELECT * FROM `executables` WHERE `ownerid` = ?";
-        var sub = [ user['id'] ];
+        var sub = [ user.id ];
         query = mysql.format(query, sub);
 
         conn.query(query, function(err, res) {
@@ -167,6 +198,7 @@ function zipsForUser(user, callback) {
 
 /**
  * Tries to add a new zip for a given user. Wraps the insert in a transaction so that the callback can decide whether to undo the operation.
+ * @static
  * @param {user.User} user - The user who should be given ownership of the zip.
  * @param {string} name - The display name/description of the zip.
  * @param {string} filename - The filename of the zip.
@@ -236,6 +268,7 @@ function tcAddNewZip(user, name, filename, callback) {
 
 /**
  * Retrieves a list of subusers supervised by a specified user.
+ * @static
  * @param {number} id - The user id to find subusers of.
  * @param {subuserListCallback} callback - The callback that handles the result of trying to fetch the list of subusers.
  */
@@ -267,6 +300,7 @@ function getSubusers(id, callback) {
 
 /**
  * Attempts to delete an image.
+ * @static
  * @param {string} id - The image id to delete.
  * @param {errorCallback} callback - The callback that handles the result of trying to delete the image.
  */
@@ -303,6 +337,7 @@ function deleteImage(id, callback) {
 
 /**
  * Checks whether a given subuser's token has expired.
+ * @static
  * @param {number} id - The user id to find subusers of.
  * @param {booleanCallback} callback - The callback that handles the result of checking a token's validity. True if valid.
  */
@@ -335,6 +370,7 @@ function tokenExpiry(email, callback) {
 
 /**
  * Checks if the given image exists.
+ * @static
  * @param {string} hash - The id of the image to look for.
  * @param {booleanCallback} callback - The callback that handles the result of the check for the image.
  */
@@ -362,6 +398,7 @@ function imageExists(hash, callback) {
 
 /**
  * Tries to update a given subuser.
+ * @static
  * @param {number} id - The user id of the supervisor.
  * @param {string} email - The email of the subuser.
  * @param {string} [name] - The name to assign to the subuser.
@@ -433,6 +470,7 @@ function updateSubuser(id, email, name, refresh, projectid, callback) {
 
 /**
  * Tries to update a given user.
+ * @static
  * @param {string} [name] - The name to assign to the user.
  * @param {string} email - The email of the user to update.
  * @param {string} [usertype] - The usertype to give the user.
@@ -530,6 +568,7 @@ function updateUser(name, email, usertype, profile_image, supervisor, token_expi
 
 /**
  * Retrieves a list of projects.
+ * @static
  * @param {boolean} showAll - If false, the list of projects will be filtered to contain only active projects.
  * @param {number} [id] - If provided, return only the project with the given id.
  * @param {boolean} [details] - If true, a list of Project objects will be returned, instead of names.
@@ -585,6 +624,7 @@ function getProjects(showAll, id, details, callback) {
 
 /**
  * Tries to update a project's details.
+ * @static
  * @param {number} id - The id of the project.
  * @param {string} [name] - The new name of the project.
  * @param {string} [desc] - The new description of the project.
@@ -669,6 +709,7 @@ function updateProject(id, name, desc, active, callback) {
 
 /**
  * Retrieves a list of fields defined for a given project.
+ * @static
  * @param {number} project - The id of the project to lookup.
  * @param {fieldListCallback} callback - The callback that handles the result of trying to fetch the list of project specific field definitions.
  */
@@ -711,6 +752,7 @@ function getFields(project, callback) {
 
 /**
  * Tries to add enum values for a given enum field. For internal use only.
+ * @static
  * @param {mysql.Connection} conn - The database connection to use.
  * @param {number} project - The id of the project.
  * @param {object[]} fieldList - The list of fields used to setup the project. Must contain all defined fields of type enum for the given project.
@@ -787,6 +829,7 @@ function deleteFields(pid, fid, callback) {
 
 /**
  * Tries to add fields to a project.
+ * @static
  * @param {number} project - The id of the project.
  * @param {object[]} fieldList - The list of fields used to setup the project.
  * @param {errorCallback} callback - The callback that handles the result of trying to insert the new fields.
@@ -844,6 +887,7 @@ function setFields(project, fieldList, callback) {
 
 /**
  * Retrieves a project from it's id.
+ * @static
  * @param {number} id - The id of the project to lookup.
  * @param {projectCallback} callback - The callback that handles the found project.
  */
@@ -880,6 +924,7 @@ function getProject(id, callback) {
 
 /**
  * Checks if a user is allowed to modify a project.
+ * @static
  * @param {user.User} user - The user to check.
  * @param {number} pid - The id of the project to lookup.
  * @param {booleanCallback} callback - The callback that tells if the use can modify the project or not.
@@ -913,6 +958,7 @@ function checkProjectAccess(user, pid, callback) {
 
 /**
  * Gives or revokes a user's access to a project.
+ * @static
  * @param {user.User} user - The user to give access.
  * @param {number} pid - The id of the project.
  * @param {boolean} give - If true, the user will be given access. If false, access will be revoked.
@@ -949,6 +995,7 @@ function setProjectAccess(user, pid, give, callback) {
 
 /**
  * Tries to create a project.
+ * @static
  * @param {user.User} user - The user who should be set as the owner of the project.
  * @param {Project} project - The project to create. The ID will be ignored.
  * @param {projectCallback} callback - The callback that handles the newly created project. The project object will have it's id set.
@@ -1286,9 +1333,9 @@ function updateMetaR(user, mdObj, callback, rSet) {
     }
 }
 
-// TODO: Check privileges!
 /**
  * Metadata update helper function. Wraps {@link updateMetaR}.
+ * @static
  * @param {user.User} user - The user adding the metadata.
  * @param {object} mdObj - An object mapping image ids to metadata objects. As created by the metadata upload parser.
  * @param {metadataSetCallback} callback - The callback that handles the result of trying to fetch the list of projects.
@@ -1307,6 +1354,7 @@ function addImageMeta(user, mdArr, callback) {
 
 /**
  * Checks the access control properties for a given image and returns the containing bucket.
+ * @static
  * @param {User} user - The user to check the access of.
  * @param {string} id - The id of the image to lookup.
  * @param {imageAccessCallback} callback - The callback that handles the access properties of the image.
@@ -1356,6 +1404,7 @@ function checkImagePerm(user, iid, callback) {
 
 /**
  * Retrieves the basic metadata for an image, checking that the user is allowed access.
+ * @static
  * @param {!user.User} user - The user attempting to fetch this metadata.
  * @param {string} iid - The id of the image to lookup.
  * @param {imageMetaCallback} callback - The callback that handles the basic image metadata.
@@ -1409,6 +1458,7 @@ function getMetaBasic(user, iid, callback) {
 
 /**
  * Retrieves all metadata fields set on an image.
+ * @static
  * @param {string} iid - The id of the image to lookup.
  * @param {imageFieldsCallback} callback - The callback that handles the basic image metadata.
  */
@@ -1473,6 +1523,7 @@ function getImageFields(iid, callback) {
 
 /**
  * Retrieves all annotations set on an image.
+ * @static
  * @param {string} iid - The id of the image to lookup.
  * @param {imageAnnoCallback} callback - The callback that handles the image annotations.
  */
@@ -1525,6 +1576,7 @@ function getAnnotations(iid, callback) {
 
 /**
  * Retrieves the basic metadata for an image, checking that the user is allowed access.
+ * @static
  * @param {user.User} user - The user to fetch images from.
  * @param {number} [uploader] - The email of the uploader to filter on, if provided.
  * @param {imagesCallback} callback - The callback that handles the image list.
@@ -1565,6 +1617,7 @@ function getUserImages(user, uploader, callback) {
 
 /**
  * Gets the images based on some filters.
+ * @static
  * @param {number} pid - The project to get images from.
  * @param {number} offset - The offset to begin listing images from.
  * @param {number} limit - The maximum number of images to return.
@@ -1601,6 +1654,7 @@ function getImages(pid, offset, limit, callback) {
 
 /**
  * Tries to add a new image for a given user.
+ * @static
  * @param {user.User} user - The user who should be given ownership of the zip.
  * @param {number} project - The id of the project the image should be attached to.
  * @param {string} imageHash - The hash of the image, to use as the id.
@@ -1643,6 +1697,7 @@ function addNewImage(user, project, imageHash, callback) {
 
 /**
  * Retrieves a user from it's id.
+ * @static
  * @param {number} id - The id of the user to lookup.
  * @param {userCallback} callback - The callback that handles the found user.
  */
@@ -1685,6 +1740,7 @@ function getUser(id, done) {
 
 /**
  * Tries to add a new external authorization account to a given user.
+ * @static
  * @param {string} id - The unique id of the external account.
  * @param {string} provider - A string that identifies the service providing the external account - e.g. "facebook"
  * @param {user.User} loginUser - The standard user who should be authorized by this external account.
@@ -1716,6 +1772,7 @@ function extAssocUser(id, provider, loginUser, done) {
 
 /**
  * Retrieves a user from an external authorization attempt. If the user is already logged in, the external account will be associated with their current user, if possible.
+ * @static
  * @param {string} id - The external account id to login with.
  * @param {string} provider - A string that identifies the service providing the external account - e.g. "facebook"
  * @param {user.User} [loginUser] - The currently logged in user, if they are logged in.
@@ -1781,6 +1838,7 @@ function extGetUser(id, provider, loginUser, done) {
 
 /**
  * Adds a password hash to an account to allow email/password authentication.
+ * @static
  * @param {number} id - The user id to associate the password with.
  * @param {string} auth - The string representation of the bcrypt hash of the password.
  */
@@ -1807,6 +1865,7 @@ function setUserHash(id, auth) {
 
 /**
  * Updates a password on an account and updates the user's token expiry.
+ * @static
  * @param {string} email - The email of the user to update.
  * @param {string} auth - The string representation of the bcrypt hash of the password.
  * @param {boolean} token_expiry - Whether to set a new expiry or not. See {@link updateUser}.
@@ -1839,6 +1898,7 @@ function updateUserHash(email, auth, token_expiry, callback) {
 
 /**
  * Tries to add a new user with a usertype of 'user'.
+ * @static
  * @param {user.User} user - The user to create. The id and usertype properties will be ignored.
  * @param {string} [phash] - The string representation of the bcrypt hash of the user's password.
  * @param {string} [vhash] - The validation hash the user must return to verify their email.
@@ -1883,6 +1943,7 @@ function addNewUser(user, phash, vhash, callback) {
 
 /**
  * Tries to add a new subuser.
+ * @static
  * @param {user.User} user - The user to create. The id and usertype properties will be ignored.
  * @param {string} phash - The string representation of the bcrypt hash of the user's password.
  * @param {userCallback} callback - The callback that handles the result of trying to add a new user.
@@ -1915,6 +1976,7 @@ function addNewSub(user, phash, callback) {
 
 /**
  * Validates a user's email via the validation hash.
+ * @static
  * @param {string} email - The email we are verifying.
  * @param {string} vhash - The validation hash to verify.
  * @param {booleanCallback} callback - The callback that handles the outcome of the validation.
@@ -1953,6 +2015,7 @@ function validateEmail(email, vhash, callback) {
 
 /**
  * Retrieves the user object and password hash corresponding to the given email.
+ * @static
  * @param {string} email - The email of the user to lookup.
  * @param {userHashCallback} callback - The callback that handles the password hash comparison and user object.
  */
