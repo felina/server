@@ -393,10 +393,21 @@ function getImages(req, res) {
  * API endpoint to get a list of images belonging to a project.
  * @hbcsapi {GET} /projects/:pid/images - This is an API endpoint.
  * @param {number} :pid - The id of the project.
+ * @param {number} [offset=0] - The index to begin listing images from.
+ * @param {number} [limit=250] - The max number of images to return in the response.
  * @returns {ImageListAPIResponse} The API response supplying the list.
  */
 function getProjectsIdImages(req, res) {
     var pid = parseInt(req.params.pid);
+    var offset = parseInt(req.query.offset);
+    var limit = parseInt(req.query.limit);
+
+    if (_.isNaN(offset)) {
+        offset = 0;
+    }
+    if (_.isNaN(limit)) {
+        limit = 250;
+    }
 
     if (_.isNaN(pid)) {
         return res.send(400, new errors.APIErrResp(2, 'Invalid project id.'));
@@ -406,7 +417,7 @@ function getProjectsIdImages(req, res) {
                 console.log(aErr);
                 return res.send(new errors.APIErrResp(3, 'Failed to load project image list.'));
             } else if (access) {
-                db.getImages(req.params.pid, function(err, result) {
+                db.getImages(pid, offset, limit, function(err, result) {
                     if (err) {
                         res.send(new errors.APIErrResp(3, 'Failed to load project image list.'));
                     } else {

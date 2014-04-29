@@ -1520,12 +1520,14 @@ function getUserImages(user, uploader, callback) {
 
 /**
  * Gets the images based on some filters.
- * @param {number} [pid] - The project to get images from.
+ * @param {number} pid - The project to get images from.
+ * @param {number} offset - The offset to begin listing images from.
+ * @param {number} limit - The maximum number of images to return.
  * @param {imagesCallback} callback - The callback that handles the image list.
  */
-function getImages(pid, callback) {
-    var query = "SELECT `imageid`, `datetime`, AsText(`location`) AS 'loc', `private` FROM `images` WHERE `projectid`=?";
-    var sub = [pid];
+function getImages(pid, offset, limit, callback) {
+    var query = "SELECT `imageid`, `datetime`, AsText(`location`) AS 'loc', `private` FROM `images` WHERE `projectid`=? LIMIT ?,?";
+    var sub = [pid, offset, limit];
     query = mysql.format(query, sub);
 
     connPool.getConnection(function(connErr, conn) {
