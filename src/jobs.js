@@ -285,7 +285,7 @@ function postStartJob(req, res) {
                 // result = JSON.parse(windowsResult);
                 // console.log(windowsResult);
                 if (!windowsResult.res) {
-                    return res.send(new errors.APIErrorResp(2, result));
+                    return res.send(new errors.APIErrorResp(2, windowsResult));
                 } else {
                     return res.send({
                         'res': true, 
@@ -301,6 +301,40 @@ function postStartJob(req, res) {
     }*/
 }
 
+
+// res.send({
+//             'res': true,
+//             'jobs': [
+//                 {
+//                     name: 'Process some penguins',
+//                     eta: '37m',
+//                     current: 10,
+//                     total: 37,
+//                     image: '/img/elephant.jpg'
+//                 },
+//                 {
+//                     name: 'Analyse some elephants',
+//                     eta: '2h 15m',
+//                     current: 82,
+//                     total: 96,
+//                     image: '/img/elephant.jpg'
+//                 }
+//             ]
+//         });
+
+function getJobs(req, res) {
+    return db.getJobs(req.user, function (err, result) {
+        if (err) {
+            console.log(err);
+            return result.send(new errors.APIErrorResp(1, err));
+        }
+        return res.send({
+            'res': true,
+            jobs: result
+        });
+    });
+}
+
 /**
  * Registers Express routes related to job handling. These are API endpoints.
  * @static
@@ -312,27 +346,7 @@ function jobRoutes(app) {
 
     // Get all the jobs started by the researcher with the given id
     // TODO: Placeholder - actually get ID, read from database, etc.
-    app.get('/jobs', auth.enforceLoginCustom({'minPL':'researcher'}), function(req, res) {
-        res.send({
-            'res': true,
-            'jobs': [
-                {
-                    name: 'Process some penguins',
-                    eta: '37m',
-                    current: 10,
-                    total: 37,
-                    image: '/img/elephant.jpg'
-                },
-                {
-                    name: 'Analyse some elephants',
-                    eta: '2h 15m',
-                    current: 82,
-                    total: 96,
-                    image: '/img/elephant.jpg'
-                }
-            ]
-        });
-    });
+    app.get('/jobs', auth.enforceLoginCustom({'minPL':'researcher'}), getJobs);
 
     app.get('/jobs/:jid', auth.enforceLoginCustom({'minPL':'researcher'}), getJobsId);
     app.get('/execs', auth.enforceLoginCustom({'minPL':'researcher'}).concat([express.multipart()]), getExecs);

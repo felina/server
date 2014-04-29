@@ -49,6 +49,35 @@ function init(callback) {
 }
 
 /**
+ * Job list handling callback.
+ * @callback jobListCallback
+ * @param {Error} err - The error that occurred, if present.
+ * @param {Job[]} jobs - The list of all jobs.
+ */
+
+/**
+ * Gets a list of all jobs belonging to the given user.
+ * @static
+ * @param {User} user - The owner of the jobs.
+ * @param {jobListCallback} callback - The callback that handles the list of jobs.
+ */
+function getJobs(user, callback) {
+    var query = "SELECT * FROM `jobs` WHERE ownerid = (?)";
+    query = mysql.format(query, [user.id]);
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback('Database error');
+        }
+        return conn.query(query, function(err, res) {
+            if (err) {
+                return callback(err, null);
+            }
+            return callback(null, res);
+        });
+    });
+}
+
+/**
  * Transaction handling job creation callback.
  * @callback optionalJobAddCallback
  * @param {Error} err - The error the occurred, if present.
@@ -119,7 +148,6 @@ function addJob(executableId, name, command, userId, callback) {
         });
     });
 }
-
 
 /**
  * Zip listing callback.
@@ -2027,6 +2055,7 @@ function getUserHash(email, callback) {
 // Export all public members.
 module.exports = {
     init: init,
+    getJobs:getJobs,
     addJob:addJob,
     zipsForUser:zipsForUser,
     tcAddNewZip:tcAddNewZip,
