@@ -125,14 +125,14 @@ function getJobsId(req, res) {
             if (err) {
                 return res.send(new errors.APIErrResp(3, 'Failed to retrieve job progress.'));
             } else {
-                var result = JSON.parse(prog);
-                if (!result.res) {
+                // var result = JSON.parse(prog);
+                if (!prog.res) {
                     res.send(new errors.APIErrResp(4, 'Error retrieving job progress'));
                 }
-                delete result.res;
+                delete prog.res;
                 return res.send({
                     'res': true,
-                    'progress': result
+                    'progress': prog
                 });
             }
         });
@@ -281,11 +281,18 @@ function postStartJob(req, res) {
                     return res.send(new errors.APIErrResp(2, err));
                 }
                 accept(true);
-                return res.send({
-                    'res': true, 
-                    'code': 0, 
-                    'message': JSON.parse(windowsResult)
-                });
+                // console.log(typeof(windowsResult));
+                // result = JSON.parse(windowsResult);
+                // console.log(windowsResult);
+                if (!windowsResult.res) {
+                    return res.send(new errors.APIErrorResp(2, result));
+                } else {
+                    return res.send({
+                        'res': true, 
+                        'code': 0, 
+                        'message': windowsResult
+                    });
+                }
             });
         });
     } /*else {
