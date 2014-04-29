@@ -249,7 +249,7 @@ function postStartJob(req, res) {
             });
         }
         console.log(imageArray);
-        db.addJob(projectId, executable, jobName, command, req.user.id, function(fErr, jobId) {
+        db.addJob(projectId, executable, jobName, command, req.user.id, function(fErr, jobId, accept) {
             if (fErr) {
                 console.log(fErr);
                 return res.send(new errors.APIErrResp(1, fErr));
@@ -270,8 +270,10 @@ function postStartJob(req, res) {
             jsapi.createJob(windowsPostData, function(err, windowsResult) {
                 if (err) {
                     console.log(err);
+                    accept(false)
                     return res.send(new errors.APIErrResp(2, err));
                 }
+                accept(true);
                 return res.send({
                     'res': true, 
                     'code': 0, 
