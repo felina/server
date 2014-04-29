@@ -19,6 +19,8 @@ var jobs = require('./jobs.js');
 var meta = require('./meta.js');
 var projects = require('./projects.js');
 var jobAPI = require('./windows_api/api.js');
+var fs = require('fs');
+var https = require('https');
 
 // Call the init function on the database to check configuration.
 db.init(function(err) {
@@ -145,7 +147,27 @@ users.userRoutes(app);
  */
 var port = process.env.PORT || 5000;
 
-// Start the server.
-app.listen(port, function() {
-    return console.log("Listening on " + port);
-});
+// Only use HTTP if we've been forced to do so.
+if (process.argv.length > 2 && process.argv[2] === '-forceHTTP') {
+    console.log('WARNING: Forcing HTTP, this should only be used for development purposes!');
+    // Start the server.
+    app.listen(port, function() {
+        return console.log("Listening on " + port);
+    });
+} else {
+    var https_options = null;
+
+    try {
+        https_options = {
+            "key": fs.readFileSync('./config/ssl-key.pem'),
+            "cert": fs.readFileSync('./config/ssl-cert.pem')
+        };
+
+        https.createServer(https_options, app).listen(port);
+        console.log("Listening on (SSL) " + port);
+    } catch (e) {
+        // An error occurred reading the SSL keys.
+        console.log("Failed to start server: " + e);
+        process.exit(1);
+    }
+}
