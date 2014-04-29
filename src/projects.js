@@ -253,7 +253,7 @@ function postProjectsIdFields(req, res) {
     if (false) {//!_.isArray(fieldList) || !_.isArray(annoList) || (fieldList.length < 1 && annoList.length < 1)) {
         return res.send(new errors.APIErrResp(3, 'Invalid field or annotation list.'));
     } else {
-        var parseError = parseFields(fieldList, annoList);
+        var parseError = parseFields(id, fieldList, annoList);
         if (parseError.i !== -1) {
             return res.send(new errors.APIErrResp(3, 'Invalid field in section ' + parseError.part + ' position: ' + parseError.i));
         }
