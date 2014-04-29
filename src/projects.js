@@ -305,7 +305,7 @@ function postProjectsIdFields(req, res) {
  */
 function postProjects(req, res) {
     console.log(req.body);
-    var proj = new Project(-1, req.body.name, req.body.desc, false);
+    var proj = new Project(-1, req.body.name, req.body.desc, true);
     console.log(proj);
     if (proj.id === false) {
         return res.send(new errors.APIErrResp(2, 'Invalid project data.'));
