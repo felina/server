@@ -125,9 +125,14 @@ function getJobsId(req, res) {
             if (err) {
                 return res.send(new errors.APIErrResp(3, 'Failed to retrieve job progress.'));
             } else {
+                result = JSON.parse(prog);
+                if (!result.res) {
+                    res.send(new errors.APIErrResp(4, 'Error retrieving job progress'));
+                }
+                delete result.res;
                 return res.send({
                     'res': true,
-                    'progress': prog
+                    'progress': result
                 });
             }
         });
@@ -270,7 +275,7 @@ function postStartJob(req, res) {
                 return res.send({
                     'res': true, 
                     'code': 0, 
-                    'message': windowsResult
+                    'message': JSON.parse(windowsResult)
                 });
             });
         });
