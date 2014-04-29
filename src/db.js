@@ -1532,6 +1532,13 @@ function getUserImages(user, uploader, callback) {
                 console.log(err.code);
                 callback(err, null);
             } else {
+                // Convert all loc properties to object representation.
+                res.forEach(function(img) {
+                    if (_.isString(img.loc)) {
+                        // Convert the given WKT string to a point object.
+                        img.loc = geomWKTToPoints(img.loc, true);
+                    }
+                });
                 callback(null, res);
             }
         });
@@ -1562,6 +1569,12 @@ function getImages(pid, offset, limit, callback) {
                 console.log(err.code);
                 callback(err, null);
             } else {
+                res.forEach(function(img) {
+                    if (_.isString(img.loc)) {
+                        // Convert the given WKT string to a point object.
+                        img.loc = geomWKTToPoints(img.loc, true);
+                    }
+                });
                 callback(null, res);
             }
         });
