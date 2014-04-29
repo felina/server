@@ -323,14 +323,14 @@ function postStartJob(req, res) {
 //         });
 
 function getJobs(req, res) {
-    return db.getJobs(req.user, function (err, res) {
+    return db.getJobs(req.user, function (err, result) {
         if (err) {
             console.log(err);
-            return res.send(new errors.APIErrorResp(1, err));
+            return result.send(new errors.APIErrorResp(1, err));
         }
         return res.send({
-            res: true,
-            jobs: res
+            'res': true,
+            jobs: result
         });
     });
 }

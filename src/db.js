@@ -1992,6 +1992,7 @@ function getUserHash(email, callback) {
 // Export all public members.
 module.exports = {
     init: init,
+    getJobs:getJobs,
     addJob:addJob,
     zipsForUser:zipsForUser,
     tcAddNewZip:tcAddNewZip,
