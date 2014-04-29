@@ -47,9 +47,9 @@ function init(callback) {
     });
 }
 
-function addJob(projectId, executableId, name, command, userId, callback) {
-    var query = "INSERT INTO `jobs` (projectid, name, exeid, ownerid, command) VALUE (?,?,?,?,?)";
-    var sub = [projectId, name, executableId, userId, command];
+function addJob(executableId, name, command, userId, callback) {
+    var query = "INSERT INTO `jobs` (name, exeid, ownerid, command) VALUE (?,?,?,?)";
+    var sub = [name, executableId, userId, command];
     query = mysql.format(query, sub);
     console.log(query);
     connPool.getConnection(function(connErr, conn) {
@@ -804,7 +804,7 @@ function setFields(project, fieldList, callback) {
                 console.log(err);
                 return callback(err);
             } else {
-                return setupEnums(conn, project, fieldList, callback);
+                return callback();//setupEnums(conn, project, fieldList, callback);
             }
         });
     });

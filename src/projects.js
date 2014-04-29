@@ -272,7 +272,7 @@ function postProjectsIdFields(req, res) {
                 if (fieldList) {
                     stuffToInsert = fieldList;
                 }
-                stuffToInsert = fieldList.concat(annoList);
+                stuffToInsert = stuffToInsert.concat(annoList);
                 return db.setFields(id, stuffToInsert, function(err) {
                     if (err) {
                         console.log(err);
