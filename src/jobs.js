@@ -228,18 +228,18 @@ function postExecs(req, res) {
 function postStartJob(req, res) {
     console.log(req.body);
     // Get the image IDs for processing
-    var executable = req.body.executable;
+    var executable = parseInt(req.body.executable, 10);
     var images = req.body.images;
     var command = req.body.command;
     var jobName = req.body.name;
 
-    if (executable && _.isNumber(executable)) {
+    if ((!executable) && _.isNumber(executable)) {
         return res.send(new errors.APIErrResp(1, 'Invalid executable.'));
-    } else if (command && command.length > 0) {
+    } else if ((!command) && command.length > 0) {
         return res.send(new errors.APIErrResp(2, 'Invalid command.'));
-    } else if (jobName && jobName.length > 0) {
+    } else if ((!jobName) && jobName.length > 0) {
         return res.send(new errors.APIErrResp(3, 'Invalid job name.'));
-    } else if (images && images.length > 0 && images.length % 2 !== 0) {
+    } else if ((!images) && images.length > 0 && images.length % 2 !== 0) {
         return res.send(new errors.APIErrResp(3, 'Invalid images.'));
     } else {
         var imageArray = [];
