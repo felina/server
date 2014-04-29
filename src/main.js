@@ -68,7 +68,7 @@ var robots = function(req, res, next) {
         res.type('text/plain');
         return res.send('User-agent: *\nDisallow: /');
     } else {
-        // Ignore this request.
+        // Ignore this request
         return next();
     }
 };
@@ -108,15 +108,18 @@ app.configure(function() {
 
 /**
  * API endpoint to expose the API version.
- * @hbcsapi {GET} '/' - This is an API endpoint.
+ * @hbcsapi {GET} / - This is an API endpoint.
  * @returns {VersionAPIResponse} The API response detailing the API version.
  */
-app.get('/', function(req, res) {
+function getRoot(req, res) {
     return res.send({
         res: true,
         version: API_VERSION
     });
-});
+}
+
+// Setup the root API endpoint.
+app.get('/', getRoot);
 
 // Import various auth routes/endpoints
 auth.authRoutes(app);
