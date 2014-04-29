@@ -47,6 +47,22 @@ function init(callback) {
     });
 }
 
+function getJobs(user, callback) {
+    var query = "SELECT * FROM `jobs` WHERE ownerid = (?)";
+    query = mysql.format(query, [user.id]);
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback('Database error');
+        }
+        return conn.query(query, function(err, res) {
+            if (err) {
+                return callback(err, null);
+            }
+            return callback(null, res);
+        });
+    });
+}
+
 function addJob(executableId, name, command, userId, callback) {
     var query = "INSERT INTO `jobs` (name, exeid, ownerid, command) VALUE (?,?,?,?)";
     var sub = [name, executableId, userId, command];
