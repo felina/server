@@ -396,16 +396,31 @@ function getImages(req, res) {
  * @returns {ImageListAPIResponse} The API response supplying the list.
  */
 function getProjectsIdImages(req, res) {
-    db.getImages(req.params.pid, function(err, result) {
-        if (err) {
-            res.send(new errors.APIErrResp(2, 'Could not load image list.'));
-        } else {
-            res.send({
-                'res': true,
-                'images': result
-            });
-        }
-    });
+    var pid = parseInt(req.params.pid);
+
+    if (_.isNaN(pid)) {
+        return res.send(400, new errors.APIErrResp(2, 'Invalid project id.'));
+    } else {
+        return db.checkProjectAccess(req.user, pid, function(aErr, access) {
+            if (aErr) {
+                console.log(aErr);
+                return res.send(new errors.APIErrResp(3, 'Failed to load project image list.'));
+            } else if (access) {
+                db.getImages(req.params.pid, function(err, result) {
+                    if (err) {
+                        res.send(new errors.APIErrResp(3, 'Failed to load project image list.'));
+                    } else {
+                        res.send({
+                            'res': true,
+                            'images': result
+                        });
+                    }
+                });
+            } else {
+                return res.send(new errors.APIErrResp(4, 'Project not found.'));
+            }
+        });
+    }
 }
 
 /**
