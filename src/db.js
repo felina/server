@@ -1297,7 +1297,7 @@ function addImageMeta(user, mdArr, callback) {
  */
 function checkImagePerm(user, iid, callback) {
     var uid = user ? user.id : -1;
-    var override = user.isAdmin() ? 1 : 0;
+    var override = user ? (user.isAdmin() ? 1 : 0) : 0;
     var query = "SELECT (? OR `researcher` IS NOT NULL OR `ownerid` = ? OR NOT `private`) AS 'open', `private` AS 'priv' FROM `images` LEFT OUTER JOIN (SELECT `userid` AS 'researcher', `projectid` FROM `project_rights` WHERE `userid` = ?) AS `pr` USING (`projectid`) WHERE `imageid` = ?";
     var sub = [ override, uid, uid, iid ];
     query = mysql.format(query, sub);
