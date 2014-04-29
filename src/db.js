@@ -48,6 +48,25 @@ function init(callback) {
     });
 }
 
+function jobDone(complete, jobid, callback) {
+    if (!complete) {
+        return callback(null, true);
+    }
+    var query = "UPDATE `jobs` SET done = 1 WHERE jobid = (?)";
+    query = mysql.format(query, [jobid]);
+    connPool.getConnection(function(connErr, conn) {
+        if (connErr) {
+            return callback(connErr, null);
+        }
+        conn.query(query, function(err, res) {
+            if (err) {
+                return callback(err, null);
+            }
+            return callback(null, true);
+        });  
+    });
+}
+
 /**
  * Job list handling callback.
  * @callback jobListCallback
@@ -62,7 +81,7 @@ function init(callback) {
  * @param {jobListCallback} callback - The callback that handles the list of jobs.
  */
 function getJobs(user, callback) {
-    var query = "SELECT * FROM `jobs` WHERE ownerid = (?)";
+    var query = "SELECT * FROM `jobs` WHERE ownerid = (?) AND done = FALSE";
     query = mysql.format(query, [user.id]);
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
@@ -2055,6 +2074,7 @@ function getUserHash(email, callback) {
 // Export all public members.
 module.exports = {
     init: init,
+    jobDone:jobDone,
     getJobs:getJobs,
     addJob:addJob,
     zipsForUser:zipsForUser,

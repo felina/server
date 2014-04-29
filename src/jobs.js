@@ -190,7 +190,6 @@ function postExecs(req, res) {
             zInfo.name = req.body.name;
             zInfo.fileContents = fs.readFileSync(zInfo.path);
             console.log(zInfo);
-            // return uploadZip(req.user, zInfo, db, done); // Will call done() for us;
             return uploadZip(req.user, zInfo, done); // Will call done() for us;
         },
         function(err, idArr) {
@@ -226,7 +225,6 @@ function postExecs(req, res) {
  * @returns {ExecUploadAPIResponse} The API response providing the ids assigned to the archives, if successful.
  */
 function postStartJob(req, res) {
-    console.log(req.body);
     // Get the image IDs for processing
     var executable = parseInt(req.body.executable, 10);
     var images = req.body.images;
@@ -281,9 +279,6 @@ function postStartJob(req, res) {
                     return res.send(new errors.APIErrResp(2, err));
                 }
                 accept(true);
-                // console.log(typeof(windowsResult));
-                // result = JSON.parse(windowsResult);
-                // console.log(windowsResult);
                 if (!windowsResult.res) {
                     return res.send(new errors.APIErrorResp(2, windowsResult));
                 } else {
@@ -295,32 +290,8 @@ function postStartJob(req, res) {
                 }
             });
         });
-    } /*else {
-        return res.send({'res':false, 'code': 2, // Do proper code checks
-            'msg': 'Need to specify images and executable for a job'});
-    }*/
+    }
 }
-
-
-// res.send({
-//             'res': true,
-//             'jobs': [
-//                 {
-//                     name: 'Process some penguins',
-//                     eta: '37m',
-//                     current: 10,
-//                     total: 37,
-//                     image: '/img/elephant.jpg'
-//                 },
-//                 {
-//                     name: 'Analyse some elephants',
-//                     eta: '2h 15m',
-//                     current: 82,
-//                     total: 96,
-//                     image: '/img/elephant.jpg'
-//                 }
-//             ]
-//         });
 
 function getJobs(req, res) {
     return db.getJobs(req.user, function (err, result) {
@@ -328,7 +299,6 @@ function getJobs(req, res) {
             console.log(err);
             return result.send(new errors.APIErrorResp(1, err));
         }
-        // console.log(result);
         return async.map(result, function(obj, callback) {
             return jsapi.getProgress(obj.jobid, function(uploadErr, prog) {
                 if (err) {
@@ -336,13 +306,15 @@ function getJobs(req, res) {
                     return callback(err);
                 }
                 // console.log(prog);
-                for (key in prog) {
+                for (var key in prog) {
                     var val = prog[key];
                     prog[key.toLowerCase()] = val;
                     delete prog[key];
                 }
-                prog['name'] = obj.name;
-                return callback(null, prog);
+                db.jobDone(prog.completed, prog.jobid, function(err, success) {
+                    prog['name'] = obj.name;
+                    return callback(null, prog);
+                });
             });
         }, function(errDone, done) {
             if (errDone) {

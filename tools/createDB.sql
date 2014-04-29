@@ -296,14 +296,8 @@ CREATE TABLE IF NOT EXISTS `felina`.`jobs` (
   `command` VARCHAR(255) NOT NULL,
   `done` BOOLEAN NOT NULL DEFAULT TRUE,
   PRIMARY KEY (`jobid`),
-  -- INDEX `project_jobs_rel_idx` (`projectid` ASC),
   INDEX `users_jobs_rel_idx` (`ownerid` ASC),
   INDEX `executables_jobs_rel_idx` (`exeid` ASC),
-  -- CONSTRAINT `project_jobs_rel`
-  --   FOREIGN KEY (`projectid`)
-  --   REFERENCES `felina`.`projects` (`projectid`)
-  --   ON DELETE CASCADE
-  --   ON UPDATE CASCADE,
   CONSTRAINT `users_jobs_rel`
     FOREIGN KEY (`ownerid`)
     REFERENCES `felina`.`users` (`userid`)
