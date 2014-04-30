@@ -531,7 +531,7 @@ function getImagesId(req, res) {
  */
 function postImages(req, res) {
     var iInfo = req.files.image;
-    console.log(req.files.image);
+    // console.log(req.files.image);
     // The body must contain a corresponding value that gives the project id.
     var project;
     if (req.user.isSubuser()) {

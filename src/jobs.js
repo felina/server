@@ -233,11 +233,11 @@ function postStartJob(req, res) {
 
     if ((!executable) && _.isNumber(executable)) {
         return res.send(new errors.APIErrResp(1, 'Invalid executable.'));
-    } else if ((!command) && command.length > 0) {
+    } else if ((!command) && (!command.length)) {
         return res.send(new errors.APIErrResp(2, 'Invalid command.'));
-    } else if ((!jobName) && jobName.length > 0) {
+    } else if ((!jobName) && (!jobName.length)) {
         return res.send(new errors.APIErrResp(3, 'Invalid job name.'));
-    } else if ((!images) && images.length > 0 && images.length % 2 !== 0) {
+    } else if ((!images) && ((!images.length) || images.length % 2 !== 0)) {
         return res.send(new errors.APIErrResp(3, 'Invalid images.'));
     } else {
         var imageArray = [];
