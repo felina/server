@@ -530,8 +530,9 @@ function getImagesId(req, res) {
  * @returns {ImageUploadAPIResponse} The API response providing the ids assigned to the images, if successful.
  */
 function postImages(req, res) {
+
     var iInfo = req.files.image;
-    // console.log(req.files.image);
+    console.log(iInfo);
     // The body must contain a corresponding value that gives the project id.
     var project;
     if (req.user.isSubuser()) {
@@ -584,7 +585,6 @@ function postImages(req, res) {
                                 'id': iInfo.felinaHash
                             });
                         }
-
                         // Cleanup all temporary files used by upload, and generate thumbnails. Do this after we've responded.
                         _.each(req.files, function(info, fKey) {
                             if (fKey === 'image') {

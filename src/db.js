@@ -52,7 +52,7 @@ function jobDone(complete, jobid, callback) {
     if (!complete) {
         return callback(null, true);
     }
-    var query = "UPDATE `jobs` SET done = 1 WHERE jobid = (?)";
+    var query = "UPDATE `jobs` SET `done` = (1) WHERE `jobid` = (?)";
     query = mysql.format(query, [jobid]);
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {

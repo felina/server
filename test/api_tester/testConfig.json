@@ -7,8 +7,7 @@
     },
 
     "images" : {
-        "test_image1" : "test/examples/390px-Emperor-cold_hg.jpg",
-        "test_image2" : "test/examples/446px-Emperor-walk_hg.jpg"
+        "test_image1" : "test/testImage3.JPG"
     },
 
     "project_details" : {
