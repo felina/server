@@ -7,7 +7,7 @@
 /**
  * The version of the API we are implementing.
  */
-var API_VERSION = '0.1.0';
+var API_VERSION = '1.0.0';
 //testaddition
 var express = require('express');
 var passport = require('passport');
