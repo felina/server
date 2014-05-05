@@ -358,6 +358,12 @@ function getJobs(req, res) {
                     prog[key.toLowerCase()] = val;
                     delete prog[key];
                 }
+                if (req.query.debug) {
+                    if (Math.random() > 0.8) {
+                        prog.Progress = Math.random();
+                        prog.Completed = false;
+                    }
+                }
                 db.jobDone(prog.completed, prog.jobid, function(err, success) {
                     prog['name'] = obj.name;
                     return callback(null, prog);
