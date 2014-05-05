@@ -357,7 +357,7 @@ function deleteImage(id, callback) {
 /**
  * Checks whether a given subuser's token has expired.
  * @static
- * @param {number} id - The user id to find subusers of.
+ * @param {string} email - The user email.
  * @param {booleanCallback} callback - The callback that handles the result of checking a token's validity. True if valid.
  */
 function tokenExpiry(email, callback) {
