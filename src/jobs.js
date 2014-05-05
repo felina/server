@@ -366,6 +366,7 @@ function getJobs(req, res) {
                         comp = false;
                     }
                     done.push({
+                        name: 'Job ' + i,
                         jobid:i,
                         started:true,
                         completed:comp,
