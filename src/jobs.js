@@ -312,6 +312,7 @@ function postStartJob(req, res) {
 }
 
 function getJobs(req, res) {
+    console.log(req.query);
     return db.getJobs(req.user, req.query.done, function (err, result) {
         if (err) {
             console.log(err);
