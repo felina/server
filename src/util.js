@@ -37,7 +37,7 @@ module.exports.newToken = function(email, password, callback) {
             console.log(err);
             return callback(err);
         } else {
-            return db.updateUserHash(email, hash, false, function(e, r) {
+            return db.updateUserHash(email, hash, 0, function(e, r) {
                 if (e) {
                     console.log(e);
                     return callback(e);

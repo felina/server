@@ -69,8 +69,8 @@ var VALID_MIME_TYPES = [
  * @type {ValidationRestrictions}
  */
 var IMG_LIMITS = {
-    'minDim': 400,
-    'minPx': 512 * 512
+    'minDim': 250,
+    'minPx': 250 * 250
 };
 
 /**
