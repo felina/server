@@ -233,6 +233,7 @@ function postExecs(req, res) {
 }
 
 
+
 /**
  * API endpoint to start a job
  * @hbcsapi {POST} /start - This is an API endpoint.
@@ -334,16 +335,17 @@ function getJobs(req, res) {
                     console.log(uploadErr);
                     return callback(err);
                 }
-                // console.log(prog);
+
                 for (var key in prog) {
                     var val = prog[key];
                     prog[key.toLowerCase()] = val;
                     delete prog[key];
+                    // EVERYTHING MUST BE UPPERASE ;ALKJSDF;LKAJS DF;LAJNSD [0IIO4JU]
                 }
                 if (req.query.debug) {
                     if (Math.random() > 0.8) {
-                        prog.Progress = Math.random();
-                        prog.Completed = false;
+                        prog.progress = Math.random();
+                        prog.completed = false;
                     }
                 }
                 db.jobDone(prog.completed, prog.jobid, function(err, success) {
@@ -355,6 +357,26 @@ function getJobs(req, res) {
             if (errDone) {
                 console.log(errDone);
                 return res.send(new errors.APIErrorResp(1, errDone));
+            }
+            if (req.query.debug) {
+                done = [];
+                for (var i = 0; i < 10; i++) {
+                    var comp = true;
+                    var progrizzle = 1;
+                    if (i < 5) {
+                        comp = false;
+                        progrizzle = Math.random();
+                    }
+                    done.push({
+                        name: 'Job ' + i,
+                        jobid:i,
+                        started:true,
+                        completed:comp,
+                        paused:false,
+                        progress:progrizzle,
+                        message:'potatoes'
+                    });
+                }
             }
             return res.send({
                 'res': true,

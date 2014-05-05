@@ -1,7 +1,7 @@
 node_modules/
 config/
 doc/
-static/doc
+static/*doc*
 
 # Ignore some editor backup files
 *~
