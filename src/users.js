@@ -149,11 +149,11 @@ function patchSubusersId(req, res) {
                 }
             });
         } else if (name || projectid || refresh) {
-	    if (refresh === true) {
-		refresh = 1;
-	    } else {
-		refresh = null;
-	    }
+            if (refresh === true) {
+                refresh = 1;
+            } else {
+                refresh = null;
+            }
             return db.updateSubuser(req.user.id, email, name, refresh, projectid, function(err, r) {
                 if (err) {
                     console.log(err);
