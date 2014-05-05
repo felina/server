@@ -294,10 +294,21 @@ function postStartJob(req, res) {
 }
 
 function getJobs(req, res) {
-    return db.getJobs(req.user, function (err, result) {
+    return db.getJobs(req.user, req.query.done, function (err, result) {
         if (err) {
             console.log(err);
-            return result.send(new errors.APIErrorResp(1, err));
+            return res.send(new errors.APIErrorResp(1, err));
+        }
+        if (req.query.done) {
+            for (var i = 0; i < result.length; i++) {
+                var job = result[i];
+                job['Started'] = true;
+                job['Completed'] = true;
+                job['Paused'] = false;
+                job['Progress'] = 1;
+                job['message'] = 'potatoes';
+            }
+            return res.send({res: true, jobs: result});
         }
         return async.map(result, function(obj, callback) {
             return jsapi.getProgress(obj.jobid, function(uploadErr, prog) {

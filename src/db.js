@@ -80,9 +80,9 @@ function jobDone(complete, jobid, callback) {
  * @param {User} user - The owner of the jobs.
  * @param {jobListCallback} callback - The callback that handles the list of jobs.
  */
-function getJobs(user, callback) {
-    var query = "SELECT * FROM `jobs` WHERE ownerid = (?) AND done = FALSE";
-    query = mysql.format(query, [user.id]);
+function getJobs(user, done, callback) {
+    var query = "SELECT * FROM `jobs` WHERE ownerid = (?) AND done = (?)";
+    query = mysql.format(query, [user.id, done]);
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             return callback('Database error');
