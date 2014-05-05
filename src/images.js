@@ -15,6 +15,7 @@ var Thumbnailer = require('./Thumbnailer.js');
 var path = require('path');
 var db = require('./db.js');
 var auth = require('./auth/auth.js');
+var util = require('./util.js');
 
 aws.config.loadFromPath('./config/aws.json');
 
@@ -525,13 +526,36 @@ function getImagesId(req, res) {
  * API endpoint to upload an image. This endpoint is irregular in that it accepts multipart form-encoded data, instead of JSON.
  * @todo Need to refactor temp file cleanup so that it happens on all outcomes.
  * @hbcsapi {POST} /images - This is an API endpoint.
+ * @param {string} url - The URL to grab a remote image from. Ignored if an image file is found in the body.
  * @param {form-data} image - The body of the file to upload.
  * @param {number} project - The id of the project to associate the image with.
  * @returns {ImageUploadAPIResponse} The API response providing the ids assigned to the images, if successful.
  */
 function postImages(req, res) {
+    var iInfo = req.files ? req.files.image : null;
 
-    var iInfo = req.files.image;
+    if (!iInfo) {
+        // No image file has been sent to us, look for a URL instead.
+        var url = req.body.url;
+        var fn = require('os').tmpDir() + '/' + util.getRandomHash();
+        var file = fs.createWriteStream(fn);
+        // TODO: Do this better.
+        return require('http').get(url, function(response) {
+            console.log('Piping to ' + fn);
+            var pipey = response.pipe(file);
+            return pipey.on('finish', function() {
+                console.log('THE END');
+                iInfo = {
+                    "path": fn,
+                    "name": "urlimage",
+                    "type": "image/jpeg"
+                };
+                req.files =  {image:iInfo};
+                return postImages(req,res);
+            });
+        });
+    }
+
     // The body must contain a corresponding value that gives the project id.
     var project;
     if (req.user.isSubuser()) {
