@@ -102,7 +102,7 @@ function getResultsURL(id) {
  * @type {object}
  * @property {boolean} res - True iff the results were retrieved from the job server.
  * @property {APIError} [err] - The error that caused the request to fail.
- * @property {object} The results of the job. The formatting will be job dependent.
+ * @property {string} [url] - The URL of the job results.
  */
 
 /**
@@ -128,16 +128,16 @@ function getJobsId(req, res) {
     if (_.isNaN(jobID)) {
         return res.send(new errors.APIErrResp(2, 'Invalid job ID.'));
     } else if (resultsQ === 1) {
-        jsapi.getResults(jobID, function(err, results) {
-            if (err) {
-                return res.send(new errors.APIErrResp(3, 'Failed to retrieve job progress.'));
-            } else {
-                return res.send({
-                    'res': true,
-                    'results': results
-                });
-            }
-        });
+        // Assume the results are available.
+        var url = getResultsURL(jobID);
+        if (url) {
+            return res.send({
+                'res': true,
+                'url': url
+            });
+        } else {
+            return res.send(new errors.APIErrResp(3, 'Failed to get job results.'));
+        }
     } else {
         jsapi.getProgress(jobID, function(err, prog) {
             if (err) {
@@ -154,24 +154,6 @@ function getJobsId(req, res) {
                 });
             }
         });
-    }
-}
-
-function getCSVsId(req, res) {
-    var id = parseInt(req.params.id);
-
-    if (_.isNaN(id)) {
-        return res.send(new errors.APIErrResp(2, 'Invalid job id.'));
-    } else {
-        var url = getResultsURL(id);
-        if (url) {
-            return res.send({
-                'res': true,
-                'url': url
-            });
-        } else {
-            return res.send(new errors.APIErrResp(3, 'Failed to get job results.'));
-        }
     }
 }
 
@@ -382,7 +364,8 @@ function getJobs(req, res) {
  * @param {Express} app - The Express application object.
  */
 function jobRoutes(app) {
-    app.get('/csvs/:id', auth.enforceLoginCustom({'minPL':'researcher'}),getCSVsId);
+//    app.get('/csvs/:id', auth.enforceLoginCustom({'minPL':'researcher'}),getCSVsId);
+    
     app.post('/start', auth.enforceLoginCustom({'minPL':'researcher'}), postStartJob);
 
     // Get all the jobs started by the researcher with the given id
