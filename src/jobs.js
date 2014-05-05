@@ -233,6 +233,7 @@ function postExecs(req, res) {
 }
 
 
+
 /**
  * API endpoint to start a job
  * @hbcsapi {POST} /start - This is an API endpoint.
@@ -335,7 +336,7 @@ function getJobs(req, res) {
                     console.log(uploadErr);
                     return callback(err);
                 }
-                // console.log(prog);
+
                 for (var key in prog) {
                     var val = prog[key];
                     prog[key.toLowerCase()] = val;
@@ -356,6 +357,23 @@ function getJobs(req, res) {
             if (errDone) {
                 console.log(errDone);
                 return res.send(new errors.APIErrorResp(1, errDone));
+            }
+            if (req.query.debug) {
+                done = [];
+                for (var i = 0; i < 10; i++) {
+                    var comp;
+                    if (i < 5) {
+                        comp = false;
+                    }
+                    done.push({
+                        jobid:i,
+                        Started:true,
+                        Completed:comp,
+                        Paused:false,
+                        Progress:Math.random(),
+                        message:'potatoes'
+                    });
+                }
             }
             return res.send({
                 'res': true,
