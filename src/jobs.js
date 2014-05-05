@@ -341,11 +341,12 @@ function getJobs(req, res) {
                     var val = prog[key];
                     prog[key.toLowerCase()] = val;
                     delete prog[key];
+                    // EVERYTHING MUST BE UPPERASE ;ALKJSDF;LKAJS DF;LAJNSD [0IIO4JU]
                 }
                 if (req.query.debug) {
                     if (Math.random() > 0.8) {
-                        prog.Progress = Math.random();
-                        prog.Completed = false;
+                        prog.progress = Math.random();
+                        prog.completed = false;
                     }
                 }
                 db.jobDone(prog.completed, prog.jobid, function(err, success) {
@@ -367,10 +368,10 @@ function getJobs(req, res) {
                     }
                     done.push({
                         jobid:i,
-                        Started:true,
-                        Completed:comp,
-                        Paused:false,
-                        Progress:Math.random(),
+                        started:true,
+                        completed:comp,
+                        paused:false,
+                        progress:Math.random(),
                         message:'potatoes'
                     });
                 }
