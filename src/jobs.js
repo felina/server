@@ -297,7 +297,7 @@ function getJobs(req, res) {
     return db.getJobs(req.user, function (err, result) {
         if (err) {
             console.log(err);
-            return result.send(new errors.APIErrorResp(1, err));
+            return res.send(new errors.APIErrorResp(1, err));
         }
         return async.map(result, function(obj, callback) {
             return jsapi.getProgress(obj.jobid, function(uploadErr, prog) {
