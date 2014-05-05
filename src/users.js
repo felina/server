@@ -128,7 +128,7 @@ function patchSubusersId(req, res) {
                     console.log(re);
                     return res.send(new errors.APIErrResp(3, 'Cannot invalidate this subuser.'));
                 } else if (name || projectid) {
-                    return db.updateSubuser(req.user.id, email, name, refresh, projectid, function(err, r) {
+                    return db.updateSubuser(req.user.id, email, name, -1, projectid, function(err, r) {
                         if (err) {
                             console.log(err);
                             return res.send(new errors.APIErrResp(2, 'Database error.'));
@@ -149,6 +149,11 @@ function patchSubusersId(req, res) {
                 }
             });
         } else if (name || projectid || refresh) {
+	    if (refresh === true) {
+		refresh = 1;
+	    } else {
+		refresh = null;
+	    }
             return db.updateSubuser(req.user.id, email, name, refresh, projectid, function(err, r) {
                 if (err) {
                     console.log(err);

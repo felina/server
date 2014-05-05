@@ -375,6 +375,7 @@ function tokenExpiry(email, callback) {
         return conn.query(query, function(err, res) {
             conn.release();
             if (err) {
+		console.log(err);
                 return callback(err, null);
             } else {
                 if (res.length > 0) {
@@ -495,7 +496,7 @@ function updateSubuser(id, email, name, refresh, projectid, callback) {
  * @param {string} [usertype] - The usertype to give the user.
  * @param {string} [profile_image] - The hash of the user's gravatar.
  * @param {number} [supervisor] - The id of the supervisor to give this user. Should only be set with a usertype of subuser!
- * @param {boolean} [token_expiry] - Whether to set the token expiry or not. Valid only for subusers!
+ * @param {number} [token_expiry] - Whether to set the token expiry or not. Valid only for subusers! (-1: Set null, 0: Set now-1, 1: Set now + 1)
  * @param {booleanCallback} callback - The callback that handles the result of trying to update the user.
  */
 function updateUser(name, email, usertype, profile_image, supervisor, token_expiry, callback) {
@@ -543,11 +544,24 @@ function updateUser(name, email, usertype, profile_image, supervisor, token_expi
         first = false;
     }
 
-    if (token_expiry) {
+    // (-1: Set null, 0: Set now-1, 1: Set now + 1)
+    if (token_expiry === -1) {
+        if (!first) {
+            query += ",";
+        }
+        query += " `token_expiry` = NULL";
+        first = false;
+    } else if (token_expiry === 0) {
         if (!first) {
             query += ",";
         }
         query += " `token_expiry` = (NOW()-INTERVAL 1 HOUR)";
+        first = false;
+    } else if (token_expiry === 1) {
+        if (!first) {
+            query += ",";
+        }
+        query += " `token_expiry` = (NOW()+INTERVAL 1 HOUR)";
         first = false;
     }
 
@@ -1887,7 +1901,7 @@ function setUserHash(id, auth) {
  * @static
  * @param {string} email - The email of the user to update.
  * @param {string} auth - The string representation of the bcrypt hash of the password.
- * @param {boolean} token_expiry - Whether to set a new expiry or not. See {@link updateUser}.
+ * @param {number} token_expiry - Whether to set a new expiry or not. See {@link updateUser}.
  * @param {booleanCallback} callback - The callback that handles the update result.
  */
 function updateUserHash(email, auth, token_expiry, callback) {
@@ -1969,7 +1983,7 @@ function addNewUser(user, phash, vhash, callback) {
  */
 function addNewSub(user, phash, callback) {
     var query = "INSERT INTO `users` (`email`, `name`, `usertype`, `supervisor`, `token_expiry`, `assigned_project`) VALUE (?,?,?,?,(NOW()+INTERVAL 1 HOUR),?)";
-    var sub = [user.email, user.name, User.prototype.Type.SUBUSER.i, user.supervisor, user.projectid];
+    var sub = [user.email, user.name, User.prototype.Type.SUBUSER.dbs, user.supervisor, user.projectid];
     query = mysql.format(query, sub);
 
     return connPool.getConnection(function(connErr, conn) {
