@@ -362,9 +362,11 @@ function getJobs(req, res) {
             if (req.query.debug) {
                 done = [];
                 for (var i = 0; i < 10; i++) {
-                    var comp;
+                    var comp = true;
+                    var progrizzle = 1;
                     if (i < 5) {
                         comp = false;
+                        progrizzle = Math.random();
                     }
                     done.push({
                         name: 'Job ' + i,
@@ -372,7 +374,7 @@ function getJobs(req, res) {
                         started:true,
                         completed:comp,
                         paused:false,
-                        progress:Math.random(),
+                        progress:progrizzle,
                         message:'potatoes'
                     });
                 }
