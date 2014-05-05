@@ -80,9 +80,9 @@ function jobDone(complete, jobid, callback) {
  * @param {User} user - The owner of the jobs.
  * @param {jobListCallback} callback - The callback that handles the list of jobs.
  */
-function getJobs(user, callback) {
-    var query = "SELECT * FROM `jobs` WHERE ownerid = (?) AND done = FALSE";
-    query = mysql.format(query, [user.id]);
+function getJobs(user, done, callback) {
+    var query = "SELECT * FROM `jobs` WHERE ownerid = (?) AND done = (?)";
+    query = mysql.format(query, [user.id, done]);
     connPool.getConnection(function(connErr, conn) {
         if (connErr) {
             return callback('Database error');
@@ -357,7 +357,7 @@ function deleteImage(id, callback) {
 /**
  * Checks whether a given subuser's token has expired.
  * @static
- * @param {number} id - The user id to find subusers of.
+ * @param {string} email - The user email.
  * @param {booleanCallback} callback - The callback that handles the result of checking a token's validity. True if valid.
  */
 function tokenExpiry(email, callback) {
