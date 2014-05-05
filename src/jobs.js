@@ -26,8 +26,10 @@ var s3 = new aws.S3();
  */
 var EXECUTABLE_BUCKET = 'citizen.science.executable.storage';
 
+/**
+ * The S3 bucket name to use for image storage.
+ */
 var IMAGE_BUCKET = 'citizen.science.image.storage';
-
 
 /**
  * @typedef ZipUpload
@@ -73,6 +75,22 @@ function uploadZip(user, zInfo, callback) {
             });
         }
     });
+}
+
+/**
+ * Gets the URL of a job results CSV.
+ * @param {number} id - The id of the job to get results from.
+ * @returns {string} The URL of the job results, or null if not found.
+ */
+function getResultsURL(id) {
+    var params = {
+        'Bucket': IMAGE_BUCKET + '.public', //TODO: Fix Windows server
+        'Key': id + '.csv',
+        'Expires': 30000
+    };
+
+    // Use a signed URL to serve directly from S3. Note that anyone with the URL can access the image until it expires!
+    return s3.getSignedUrl('getObject', params); 
 }
 
 /***
@@ -136,6 +154,24 @@ function getJobsId(req, res) {
                 });
             }
         });
+    }
+}
+
+function getCSVsId(req, res) {
+    var id = parseInt(req.params.id);
+
+    if (_.isNaN(id)) {
+        return res.send(new errors.APIErrResp(2, 'Invalid job id.'));
+    } else {
+        var url = getResultsURL(id);
+        if (url) {
+            return res.send({
+                'res': true,
+                'url': url
+            });
+        } else {
+            return res.send(new errors.APIErrResp(3, 'Failed to get job results.'));
+        }
     }
 }
 
@@ -352,7 +388,7 @@ function getJobs(req, res) {
  * @param {Express} app - The Express application object.
  */
 function jobRoutes(app) {
-
+    app.get('/csvs/:id', auth.enforceLoginCustom({'minPL':'researcher'}),getCSVsId);
     app.post('/start', auth.enforceLoginCustom({'minPL':'researcher'}), postStartJob);
 
     // Get all the jobs started by the researcher with the given id
