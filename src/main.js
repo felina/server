@@ -76,10 +76,13 @@ var robots = function(req, res, next) {
     }
 };
 
+/**
+ * Options to use when storing sessions in Redis.
+ */
 var redisOpts = {
     'host': 'localhost',
     'port': '6379',
-    'db': 1,
+    'db': 0,
     'ttl': 60 * 60,
     'prefix': 'darwinSess:'
 };
