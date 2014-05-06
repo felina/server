@@ -557,12 +557,13 @@ function postImages(req, res) {
     }
 
     // The body must contain a corresponding value that gives the project id.
-    var project;
-    if (req.user.isSubuser()) {
-        project = req.user.projectid;
-    } else {
-        project = parseInt(req.body.project);
-    }
+    // var project;
+    var project = parseInt(req.body.project);
+    // if (req.user.isSubuser()) {
+    //     project = req.user.projectid;
+    // } else {
+    //     project = parseInt(req.body.project);
+    // }
     if (_.isNaN(project)) {
         res.send(400, new errors.APIErrResp(2, 'Invalid project provided.'));
         // Simply delete invalid image.
