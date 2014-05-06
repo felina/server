@@ -21,6 +21,7 @@ var projects = require('./projects.js');
 var jobAPI = require('./windows_api/api.js');
 var fs = require('fs');
 var https = require('https');
+var RedisStore = require('connect-redis')(express);
 
 // Call the init function on the database to check configuration.
 db.init(function(err) {
@@ -75,6 +76,17 @@ var robots = function(req, res, next) {
     }
 };
 
+/**
+ * Options to use when storing sessions in Redis.
+ */
+var redisOpts = {
+    'host': 'localhost',
+    'port': '6379',
+    'db': 0,
+    'ttl': 60 * 60,
+    'prefix': 'darwinSess:'
+};
+
 // Configure Express to use the various middleware we require.
 app.configure(function() {
     // Disallow crawlers from accessing the API.
@@ -87,12 +99,13 @@ app.configure(function() {
     app.use('/static', express.static(__dirname + '/../static'));
     // Enable the parsing of cookies for session support.
     app.use(express.cookieParser());
-    // Enable JSON parsing for all request bodies.
-    app.use(express.json());
     // Enable Express session management.
     app.use(express.session({
+        store: new RedisStore(redisOpts),
         secret: 'I should be something else'
     }));
+    // Enable JSON parsing for all request bodies.
+    app.use(express.json());
     // Enable Passport based authentication.
     app.use(passport.initialize());
     // Enable persistent login sessions.
