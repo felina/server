@@ -31,7 +31,8 @@
     "async": "~0.2.10",
     "lazystream": "~0.1.0",
     "archiver": "~0.8.1",
-    "gm": "~1.14.2"
+    "gm": "~1.14.2",
+    "connect-redis": "~1.4.7"
   },
   "devDependencies": {
     "grunt": "~0.4.2",
