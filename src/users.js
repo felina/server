@@ -121,7 +121,7 @@ function patchSubusersId(req, res) {
         if (refresh === false) {
             console.log('new token');
             var hash = util.getRandomHash();
-            return util.newToken(email, hash, db, function(er, re){
+            return util.newToken(email, hash, function(er, re){
                 if (er) {
                     return res.send(new errors.APIErrResp(2, 'Database error.'));
                 } else if (!re) {
